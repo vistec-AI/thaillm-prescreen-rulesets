@@ -1,0 +1,7 @@
+*.venv
+*.env
+**/__pycache__
+**/*.ipynb*
+notebooks
+.pytest_cache
+**/.DS_Store

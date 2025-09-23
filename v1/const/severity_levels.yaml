@@ -1,0 +1,9 @@
+- name: Observe at Home
+  name_th: เฝ้าสังเกตอาการที่บ้าน
+  description: Symptoms are mild and carry very low risk. The patient can stay home, use self-care, and simply monitor the situation.
+- name: Visit Hospital / Clinic
+  name_th: เข้าพบโรงพยาบาลหรือคลินิก
+  description: Symptoms require medical evaluation (out-patient clinic, urgent-care centre, or possible admission) but are not life-threatening at this moment. This level excludes conditions needing immediate emergency-room care.
+- name: Emergency
+  name_th: ฉุกเฉิน
+  description: Life-threatening or time-critical condition. The patient must proceed to the Emergency Room without delay (e.g. severe chest pain, sudden focal weakness, severe bleeding, altered consciousness).

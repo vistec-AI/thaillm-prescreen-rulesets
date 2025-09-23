@@ -1,0 +1,32 @@
+- name: Headache
+  name_th: ปวดหัว
+- name: Dizziness
+  name_th: เวียนหัว
+- name: Pain in Joint
+  name_th: ปวดข้อ
+- name: Muscle Pain
+  name_th: เจ็บกล้ามเนื้อ
+- name: Fever
+  name_th: ไข้
+- name: Cough
+  name_th: ไอ
+- name: Sore Throat
+  name_th: เจ็บคอ
+- name: Stomachache
+  name_th: ปวดท้อง
+- name: Constipation
+  name_th: ท้องผูก
+- name: Diarrhea
+  name_th: ท้องเสีย
+- name: Dysuria
+  name_th: ถ่ายปัสสาวะขัด, ปัสสาวะลำบาก, ปัสสาวะเจ็บ
+- name: Vaginal Discharge
+  name_th: ตกขาวผิดปกติ
+- name: Skin Rash/Lesion
+  name_th: อาการทางผิวหนัง ผื่น คัน
+- name: Wound
+  name_th: บาดแผล
+- name: Eye Disorder
+  name_th: ความผิดปกติต่างๆที่เกิดขึ้นกับตา
+- name: Ear Disorder
+  name_th: ความผิดปกติต่างๆ ที่เกิดขึ้นกับหู

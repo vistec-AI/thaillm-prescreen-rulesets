@@ -1,0 +1,79 @@
+- id: dept001
+  description: Deals with diseases and conditions of the skin, hair, and nails.
+  genders: any
+  name: Dermatology
+  name_th: แผนกผิวหนัง
+- id: dept002
+  description: Focuses on the immediate diagnosis and treatment of acute and life-threatening
+    illnesses and injuries in patients requiring immediate medical attention.
+  genders: any
+  name: Emergency Medicine
+  name_th: แผนกฉุกเฉิน
+- id: dept003
+  description: Applies medical knowledge to legal matters, particularly in establishing
+    the cause of injury or death in cases that involve criminal investigation or legal
+    proceedings.
+  genders: any
+  name: Forensic Medicine
+  name_th: นิติเวชศาสตร์
+- id: dept004
+  description: Specializes in the prevention, diagnosis, and treatment of diseases
+    affecting adults, covering a wide range of conditions from common to complex,
+    often involving non-surgical methods.
+  genders: any
+  name: Internal Medicine
+  name_th: อายุรกรรม
+- id: dept005
+  description: 'Combines two fields: Obstetrics, which focuses on pregnancy, childbirth,
+    and the postpartum period, and Gynecology, which deals with the health of the
+    female reproductive system.'
+  genders: female
+  name: Obstetrics and Gynecology
+  name_th: สูติศาสตร์และนรีเวชวิทยา
+- id: dept006
+  description: Concerned with the study and treatment of disorders and diseases of
+    the eye, including medical and surgical care.
+  genders: any
+  name: Ophthalmology
+  name_th: จักษุวิทยา
+- id: dept007
+  description: Orthopedics focuses on conditions involving the musculoskeletal system
+    (bones, joints, ligaments, tendons, muscles, and nerves). Physical Therapy focuses
+    on restoring movement and function through exercise, manual therapy, and other
+    physical means, often used in rehabilitation after orthopedic injuries or surgery.
+  genders: any
+  name: Orthopedics and Physical Therapy
+  name_th: ออร์โธปิดิกส์และกายภาพบำบัด
+- id: dept008
+  description: Specializes in the diagnosis and treatment of diseases and disorders
+    of the ear, nose, throat (ENT), and related structures of the head and neck.
+  genders: any
+  name: Otorhinolaryngology
+  name_th: แผนกหูคอจมูก
+- id: dept009
+  description: Focuses on the medical care of infants, children, and adolescents,
+    providing primary care as well as specialized treatment for various health conditions
+    affecting younger patients.
+  genders: any
+  name: Pediatrics
+  name_th: กุมารเวชศาสตร์
+- id: dept010
+  description: Deals with the diagnosis, treatment, and prevention of mental, emotional,
+    and behavioral disorders, utilizing medication, psychotherapy, and other interventions.
+  genders: any
+  name: Psychiatry
+  name_th: จิตเวชศาสตร์
+- id: dept011
+  description: Aims to enhance and restore functional ability and quality of life
+    to those with physical impairments or disabilities affecting the brain, spinal
+    cord, nerves, bones, joints, ligaments, muscles, and tendons.
+  genders: any
+  name: Rehabilitation
+  name_th: เวชศาสตร์ฟื้นฟู
+- id: dept012
+  description: A broad field that involves treating diseases, injuries, and deformities
+    through operative procedures. It encompasses various subspecialties like general
+    surgery, neurosurgery, and plastic surgery.
+  genders: any
+  name: Surgery
+  name_th: ศัลยกรรม

@@ -1,0 +1,2535 @@
+"Headache":
+  - qid: hea_o_001
+    question: เริ่มมีอาการปวดหัวตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - hea_o_002
+      - hea_o_003
+      - hea_o_004
+  - qid: hea_o_002
+    question: เคยปวดหัวแบบนี้มาก่อนไหม?
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+        - hea_o_003
+        - hea_o_004
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+        - hea_o_003
+        - hea_o_004
+  - qid: hea_o_003
+    question: อาการปวดหัวเป็นแบบเฉียบพลัน หรือค่อย ๆ มีอาการ
+    question_type: single_select
+    options:
+    - id: เฉียบพลัน
+      label: เฉียบพลัน
+      action:
+        action: goto
+        qid:
+        - hea_o_004
+    - id: ค่อย_มีอาการ
+      label: ค่อย ๆ มีอาการ
+      action:
+        action: goto
+        qid:
+        - hea_o_004
+  - qid: hea_o_004
+    question: เกิดอุบัติเหตุล้มศีรษะกระแทกพื้นก่อนมีอาการหรือไม่?
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+          - hea_l_001
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid: 
+          - hea_l_001
+  - qid: hea_l_001
+    question: ปวดบริเวณไหนของศีรษะ?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - hea_d_001
+  - qid: hea_d_001
+    question: ปวดหัวแต่ละครั้งนานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - hea_d_002
+  - qid: hea_d_002
+    question: มีอาการปวดหัวกี่ครั้งต่อวัน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - hea_c_001
+  - qid: hea_c_001
+    question: ลักษณะอาการ ปวดหัวเป็นแบบใด? ตุบ ตื้อ แปล๊บ หรือแน่นๆ
+    question_type: multi_select
+    options:
+      - id: ตุบ
+        label: ตุบ
+      - id: ตื้อ
+        label: ตื้อ
+      - id: แปล๊บ
+        label: แปล๊บ
+      - id: แน่นๆ
+        label: แน่นๆ
+    next:
+      action: goto
+      qid:
+        - hea_a_001
+  - qid: hea_a_001
+    question: มีอะไรที่ทำให้อาการปวดหัวดีขึ้นหรือแย่ลง?
+    question_type: free_text_with_fields
+    fields:
+      - id: สิ่งที่ทำแล้วอาการดีขึ้น
+        label: สิ่งที่ทำแล้วอาการดีขึ้น
+        kind: "text"
+      - id: สิ่งที่ทำแล้วอาการแย่ลง
+        label: สิ่งที่ทำแล้วอาการแย่ลง
+        kind: "text"
+    on_submit:
+      action: goto
+      qid:
+        - hea_t_001
+  - qid: hea_t_001
+    question: มีอาการปวดหัวช่วงเวลาใดของวันเป็นพิเศษ
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid: 
+        - hea_s_001
+  - qid: hea_s_001
+    question: ถ้าให้คะแนนจาก 0-10 ตอนนี้ปวดหัวระดับไหน?
+    question_type: number_range
+    min_value: 0
+    max_value: 10
+    step: 1
+    inclusive: true
+    on_submit:
+      action: goto
+      qid:
+      - hea_s_002
+  - qid: hea_s_002
+    question: อาการปวดหัวรบกวนการทำงาน การใช้ชีวิตประจำวันหรือไม่
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - hea_as_001
+  - qid: hea_as_001
+    question: มีอาการอื่นดังนี้ร่วมไหม?
+    question_type: multi_select
+    options:
+    - id: ไข้
+      label: ไข้
+    - id: ไอ
+      label: ไอ
+    - id: เจ็บคอ
+      label: เจ็บคอ
+    - id: คลื่นไส้
+      label: คลื่นไส้
+    - id: อาเจียน
+      label: อาเจียน
+    - id: ตาพร่า
+      label: ตาพร่า
+    - id: น้ำตาไหล
+      label: น้ำตาไหล
+    - id: ตาแดง
+      label: ตาแดง
+    - id: ปวดตา
+      label: ปวดตา
+    - id: กลัวแสง_เสียง
+      label: กลัวแสง/เสียง
+    - id: ตาแพ้แสง
+      label: ตาแพ้แสง
+    - id: เวียนศีรษะ
+      label: เวียนศีรษะ
+    - id: บ้านหมุน
+      label: บ้านหมุน
+    - id: มี_ปัญหาการได้ยิน
+      label: มีปัญหาการได้ยิน
+    - id: คอแข็ง
+      label: คอแข็ง
+    - id: เบื่ออาหารน้ำหนักลด
+      label: เบื่ออาหารน้ำหนักลด
+    - id: อ่อนแรง
+      label: อ่อนแรง
+    - id: เครียด
+      label: เครียด
+    - id: วิตกกังวล
+      label: วิตกกังวล
+    - id: มี_ปัญหาด้านการนอนหลับ
+      label: มีปัญหาด้านการนอนหลับ
+    next:
+      action: opd
+"Dizziness":
+  - qid: diz_o_001
+    question: เริ่มมีอาการเวียนศีรษะตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - diz_o_002
+      - diz_o_003
+      - diz_o_004
+  - qid: diz_o_002
+    question: เคยมีอาการเวียนศีรษะแบบนี้มาก่อนหรือไม่?
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+        - diz_o_003
+        - diz_o_004
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+        - diz_o_003
+        - diz_o_004
+  - qid: diz_o_003
+    question: อาการเวียนศีรษะเป็นเฉียบพลัน หรือค่อย ๆ มีอาการ
+    question_type: single_select
+    options:
+    - id: เฉียบพลัน
+      label: เฉียบพลัน
+      action:
+        action: goto
+        qid:
+        - diz_o_004
+    - id: ค่อย_ๆ_มีอาการ
+      label: ค่อย ๆ มีอาการ
+      action:
+        action: goto
+        qid:
+        - diz_o_004
+  - qid: diz_o_004
+    question: เกิดอุบัติเหตุล้มศีรษะกระแทกพื้นก่อนมีอาการหรือไม่?
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid: 
+          - diz_d_001
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid: 
+          - diz_d_001
+  - qid: diz_d_001
+    question: มีอาการเวียนศีรษะมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - diz_d_002
+  - qid: diz_d_002
+    question: เวียนศีรษะแต่ละครั้งนานเท่าไร? เป็นกี่ครั้งต่อวัน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid: 
+        - diz_c_001
+  - qid: diz_c_001
+    question: ลักษณะการเวียนศีรษะเป็นแบบใด? เหมือนสิ่งรอบตัวหมุน หรือมึนศีรษะ โคลงเคลง
+    question_type: single_select
+    options:
+    - id: เหมือนสิ่งรอบตัวหมุน
+      label: เหมือนสิ่งรอบตัวหมุน
+      action:
+        action: goto
+        qid: 
+          - diz_a_001
+    - id: มึนศีรษะ
+      label: มึนศีรษะ
+      action:
+        action: goto
+        qid: 
+          - diz_a_001
+    - id: โคลงเคลง
+      label: โคลงเคลง
+      action:
+        action: goto
+        qid: 
+          - diz_a_001
+  - qid: diz_a_001
+    question: มีอะไรทำให้อาการเวียนศีรษะดีขึ้นหรือแย่ลง? เช่นการเปลี่ยนท่าทาง
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid: 
+        - diz_t_001
+  - qid: diz_t_001
+    question: มีอาการเวียนศีรษะช่วงเวลาใดของวัน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid: 
+        - diz_s_001
+  - qid: diz_s_001
+    question: อาการเวียนศีรษะรบกวนการทำงาน การใช้ชีวิตประจำวัน หรือการเดินหรือไม่?
+    question_type: single_select
+    options:
+    - id: รบกวน
+      label: รบกวน
+      action:
+        action: goto
+        qid: 
+          - diz_as_001
+    - id: ไม่รบกวน
+      label: ไม่รบกวน
+      action:
+        action: goto
+        qid: 
+          - diz_as_001
+  - qid: diz_as_001
+    question: มีอาการอื่นร่วมไหม เช่น หูอื้อ สายตาพร่ามัว พูดไม่ชัด กลืนลำบาก อ่อนแรง เดินเซ ชาที่ใบหน้า
+      ชารอบปาก ปวดศีรษะ ใจสั่น?
+    question_type: multi_select
+    options:
+    - id: หูอื้อ
+      label: หูอื้อ
+    - id: สายตาพร่ามัว
+      label: สายตาพร่ามัว
+    - id: พูดไม่ชัด
+      label: พูดไม่ชัด
+    - id: กลืนลำบาก
+      label: กลืนลำบาก
+    - id: อ่อนแรง
+      label: อ่อนแรง
+    - id: เดินเซ
+      label: เดินเซ
+    - id: ชาที่ใบหน้า
+      label: ชาที่ใบหน้า
+    - id: ชารอบปาก
+      label: ชารอบปาก
+    - id: ปวดศีรษะ
+      label: ปวดศีรษะ
+    - id: ใจสั่น
+      label: ใจสั่น
+    next:
+      action: opd
+"Pain in Joint":
+  - qid: pai_o_001
+    question: เริ่มมีอาการปวดข้อตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - pai_o_002
+      - pai_o_003
+      - pai_o_004
+  - qid: pai_o_002
+    question: เคยมีอาการปวดข้อมาก่อนหรือไม่?
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+        - pai_o_003
+        - pai_o_004
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+        - pai_o_003
+        - pai_o_004
+  - qid: pai_o_003
+    question: อาการเป็นเฉียบพลัน หรือค่อย ๆ มีอาการ
+    question_type: single_select
+    options:
+    - id: เฉียบพลัน
+      label: เฉียบพลัน
+      action:
+        action: goto
+        qid:
+        - pai_o_004
+    - id: ค่อย_ๆ_มีอาการ
+      label: ค่อย ๆ มีอาการ
+      action:
+        action: goto
+        qid:
+        - pai_o_004
+  - qid: pai_o_004
+    question: เกิดอุบัติเหตุที่ส่วนนั้นก่อนมีอาการหรือไม่
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid: 
+          - pai_l_001
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid: 
+          - pai_l_001
+  - qid: pai_l_001
+    question: อาการปวด ปวดข้อเดียวหรือหลายข้อ
+    question_type: single_select
+    options:
+    - id: ปวดข้อเดียว
+      label: ปวดข้อเดียว
+      action:
+        action: goto
+        qid:
+        - pai_l_001-1
+    - id: ปวดหลายข้อ
+      label: ปวดหลายข้อ
+      action:
+        action: goto
+        qid:
+        - pai_l_001-1
+  - qid: pai_l_001-1
+    question: อาการปวด เป็นที่ข้อบริเวณใดบ้าง
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - pai_l_002
+  - qid: pai_l_002
+    question: มีปวดย้ายข้อร่วมด้วยหรือไม่? # TODO: not sure what this means
+    question_type: single_select
+    options:
+    - id: มี
+      label: มี
+      action:
+        action: goto
+        qid: 
+            - pai_d_001
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid: 
+            - pai_d_001
+  - qid: pai_d_001
+    question: มีอาการปวดข้อมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - pai_d_002
+  - qid: pai_d_002
+    question: อาการปวดข้อแต่ละครั้งนานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid: 
+        - pai_a_001
+  - qid: pai_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง? เช่นการใช้งาน การพัก สัมพันธ์กับท่าทางใด
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid: 
+        - pai_t_001
+  - qid: pai_t_001
+    question: มีอาการมากขึ้นช่วงเวลาใดของวัน เช่น หลังตื่นนอน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid: 
+        - pai_s_001
+  - qid: pai_s_001
+    question: อาการปวดข้อ รบกวนการทำงาน การใช้ชีวิตประจำวัน หรือการเดินหรือไม่?
+    question_type: single_select
+    options:
+    - id: รบกวน
+      label: รบกวน
+      action:
+        action: goto
+        qid: 
+          - pai_as_001
+    - id: ไม่รบกวน
+      label: ไม่รบกวน
+      action:
+        action: goto
+        qid: 
+          - pai_as_001
+  - qid: pai_as_001
+    question: มีอาการอื่นร่วมไหม เช่น ข้อบวม แดง ร้อน มีไข้ ผื่น
+    question_type: multi_select
+    options:
+    - id: ข้อบวม
+      label: ข้อบวม
+    - id: แดง
+      label: แดง
+    - id: ร้อน
+      label: ร้อน
+    - id: มีไข้
+      label: มีไข้
+    - id: ผื่น
+      label: ผื่น
+    next:
+      action: goto
+      qid:
+      - pai_as_002
+  - qid: pai_as_002
+    question: มีการใช้งานข้อที่ปวดบ่อยหรือไม่?
+    question_type: single_select
+    options:
+    - id: บ่อย
+      label: บ่อย
+      action:
+        action: opd
+    - id: ไม่บ่อย
+      label: ไม่บ่อย
+      action:
+        action: opd
+"Muscle Pain":
+  - qid: mus_o_001
+    question: เริ่มมีอาการเจ็บกล้ามเนื้อตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - mus_o_002
+      - mus_o_003
+      - mus_o_004
+  - qid: mus_o_002
+    question: เคยมีอาการเจ็บกล้ามเนื้อมาก่อนหรือไม่?
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+        - mus_o_003
+        - mus_o_004
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+        - mus_o_003
+        - mus_o_004
+  - qid: mus_o_003
+    question: อาการเจ็บกล้ามเนื้อเป็นแบบเฉียบพลัน หรือค่อย ๆ มีอาการ
+    question_type: single_select
+    options:
+    - id: เฉียบพลัน
+      label: เฉียบพลัน
+      action:
+        action: goto
+        qid:
+        - mus_o_004
+    - id: ค่อย_ๆ_มีอาการ
+      label: ค่อย ๆ มีอาการ
+      action:
+        action: goto
+        qid:
+        - mus_o_004
+  - qid: mus_o_004
+    question: เคยเกิดอุบัติเหตุที่ส่วนนั้นก่อนมีอาการหรือถูกใช่งานหนักและมีอาการบาดเจ็บมาก่อนหรือไม่
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+          - mus_l_001
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+          - mus_l_001
+  - qid: mus_l_001
+    question: เจ็บกล้ามเนื้อ เป็นเฉพาะที่หรือไม่?
+    question_type: single_select
+    options:
+    - id: เฉพาะที่
+      label: เฉพาะที่
+      action:
+        action: goto
+        qid:
+        - mus_l_001-1
+    - id: กระจาย
+      label: กระจาย
+      action:
+        action: goto
+        qid:
+        - mus_l_001-1
+  - qid: mus_l_001-1
+    question: เจ็บกล้ามเนื้อตำแหน่งใดบ้าง?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - mus_d_001
+  - qid: mus_d_001
+    question: มีอาการเจ็บกล้ามเนื้อมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - mus_d_002
+  - qid: mus_d_002
+    question: มีอาการแต่ละครั้งนานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - mus_c_001
+  - qid: mus_c_001
+    question: ลักษณะอาการเจ็บเป็นอย่างไร เช่น ปวดเสียวตามแนวเส้นประสาท เฉพาะตำแหน่ง
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - mus_a_001
+  - qid: mus_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง? เช่นการใช้งาน การพัก หรือการทำท่าทางต่างๆ
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid:
+        - mus_r_001
+  - qid: mus_r_001
+    question: อาการปวดกล้ามเนื้อมีปวดร้าวไปตำแหน่งอื่นด้วยหรือไม่?
+    question_type: single_select
+    options:
+    - id: มี
+      label: มี
+      action:
+        action: goto
+        qid:
+          - mus_r_001-01
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - mus_t_001
+  - qid: mus_r_001-01
+    question: อาการปวดร้าว ร้าวไปยังตำแหน่งใด?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - mus_t_001
+  - qid: mus_t_001
+    question: มีอาการมากขึ้นช่วงเวลาใดของวัน เช่น ตอนกลางคืน หลังตื่นนอน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - mus_s_001
+  - qid: mus_s_001
+    question: รบกวนการทำงาน การใช้ชีวิตประจำวัน หรือการเดินหรือไม่?
+    question_type: single_select
+    options:
+    - id: รบกวน
+      label: รบกวน
+      action:
+        action: goto
+        qid:
+        - mus_s_002
+    - id: ไม่รบกวน
+      label: ไม่รบกวน
+      action:
+        action: goto
+        qid:
+        - mus_s_002
+  - qid: mus_s_002
+    question: กินยาแก้ปวดแล้วดีขึ้นหรือไม่
+    question_type: single_select
+    options:
+    - id: ดีขึ้น
+      label: ดีขึ้น
+      action:
+        action: goto
+        qid:
+          - mus_as_001
+    - id: ไม่ดีขึ้น
+      label: ไม่ดีขึ้น
+      action:
+        action: goto
+        qid:
+          - mus_as_001
+    - id: ยังไม่ได้กินยาแก้ปวด
+      label: ยังไม่ได้กินยาแก้ปวด
+      action:
+        action: goto
+        qid:
+          - mus_as_001
+  - qid: mus_as_001
+    question: มีอาการอื่นร่วมไหม?
+    question_type: multi_select
+    options:
+    - id: ชา
+      label: ชา
+    - id: อ่อนแรง
+      label: อ่อนแรง
+    - id: ขับถ่ายปัสสาวะหรืออุจจาระผิดปกติ
+      label: ขับถ่ายปัสสาวะหรืออุจจาระผิดปกติ
+    - id: น้ำหนักลดผิดปกติ
+      label: น้ำหนักลดผิดปกติ
+    - id: ไข้
+      label: ไข้
+    - id: อ่อนเพลีย
+      label: อ่อนเพลีย
+    next:
+      action: goto
+      qid:
+      - mus_as_002
+  - qid: mus_as_002
+    question: มีการใช้งานกล้ามเนื้อที่เจ็บส่วนนั้นบ่อยหรือไม่?
+    question_type: single_select
+    options:
+    - id: บ่อย
+      label: บ่อย
+      action:
+        action: opd
+    - id: ไม่บ่อย
+      label: ไม่บ่อย
+      action:
+        action: opd
+"Fever":
+  - qid: fev_o_001
+    question: เริ่มมีไข้ตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - fev_o_002
+  - qid: fev_o_002
+    question: มีไข้สูงแบบเฉียบพลัน หรือค่อย ๆ มีไข้
+    question_type: single_select
+    options:
+      - id: ไข้สูงแบบเฉียบพลัน
+        label: ไข้สูงแบบเฉียบพลัน
+        action:
+          action: goto
+          qid: 
+            - fev_d_001
+      - id: ค่อย ๆ มีไข้
+        label: ค่อย ๆ มีไข้
+        action:
+          action: goto
+          qid: 
+            - fev_d_001
+  - qid: fev_d_001
+    question: มีไข้มาตลอด หรือเป็น ๆ หาย ๆ ช่วงมีไข้นานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid: 
+        - fev_c_001
+  - qid: fev_c_001
+    question: ลักษณะของไข้ เช่น มีไข้สูงลอย ไข้ต่ำ หรือไข้ขึ้นลงสลับกัน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - fev_a_001
+  - qid: fev_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง?
+    question_type: free_text_with_fields
+    fields:
+      - id: สิ่งที่ทำแล้วอาการดีขึ้น
+        label: สิ่งที่ทำแล้วอาการดีขึ้น
+        kind: text
+      - id: สิ่งที่ทำแล้วอาการแย่ลง
+        label: สิ่งที่ทำแล้วอาการแย่ลง
+        kind: text
+    on_submit:
+      action: goto
+      qid:
+        - fev_t_001
+  - qid: fev_t_001
+    question: มีไข้ช่วงเวลาใดของวัน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - fev_s_001
+  - qid: fev_s_001
+    question: วัดอุณหภูมิได้เท่าไร?
+    question_type: number_range
+    min_value: 20
+    max_value: 46
+    step: 1
+    inclusive: true
+    on_submit:
+      action: goto
+      qid: 
+        - fev_as_001
+  - qid: fev_as_001
+    question: มีอาการอื่นร่วมหรือไม่?
+    question_type: multi_select
+    options:
+      - id: ไอ
+        label: ไอ
+      - id: เจ็บคอ
+        label: เจ็บคอ
+      - id: หอบเหนื่อย
+        label: หอบเหนื่อย
+      - id: ปวดศีรษะ
+        label: ปวดศีรษะ
+      - id: ปวดท้อง
+        label: ปวดท้อง
+      - id: ปวดเอว
+        label: ปวดเอว
+      - id: ปวดข้อ
+        label: ปวดข้อ
+      - id: ผื่นขึ้น
+        label: ผื่นขึ้น
+      - id: ตัวตาเหลือง
+        label: ตัวตาเหลือง
+      - id: ปัสสาวะแสบขัด
+        label: ปัสสาวะแสบขัด
+      - id: ปัสสาวะขุ่น
+        label: ปัสสาวะขุ่น
+      - id: แผล
+        label: แผล
+      - id: มองเห็นภาพไม่ชัด
+        label: มองเห็นภาพไม่ชัด
+      - id: ตาพร่ามัว
+        label: ตาพร่ามัว
+      - id: ปวดหู
+        label: ปวดหู
+      - id: หูอื้อ
+        label: หูอื้อ
+      - id: ปัญหาการได้ยิน
+        label: ปัญหาการได้ยิน
+    next:
+      action: goto
+      qid:
+        - fev_as_002
+  - qid: fev_as_002
+    question: มีประวัติส่วนตัวตามข้อใดต่อไปนี้
+    question_type: multi_select
+    options:
+      - id: เพศสัมพันธ์ไม่ป้องกัน
+        label: เพศสัมพันธ์ไม่ป้องกัน
+      - id: สารเสพติดเข้าเส้น
+        label: สารเสพติดเข้าเส้น
+      - id: การเลี้ยงสัตว์
+        label: การเลี้ยงสัตว์
+      - id: การกินอาหารดิบ
+        label: การกินอาหารดิบ
+      - id: เดินทางไปพื้นที่เสี่ยงติดโรค
+        label: เดินทางไปพื้นที่เสี่ยงติดโรค
+      - id: ภูมิลำเนา
+        label: ภูมิลำเนา
+      - id: ใกล้ชิดผู้ป่วยไข้หรือโรคติดเชื้อ
+        label: ใกล้ชิดผู้ป่วยไข้หรือโรคติดเชื้อ
+    next:
+      action: opd
+"Cough":
+  - qid: cou_o_001
+    question: เริ่มมีอาการไอตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - cou_o_002
+  - qid: cou_o_002
+    question: อาการเป็นเฉียบพลัน หรือค่อย ๆ เป็น
+    question_type: single_select
+    options:
+      - id: เฉียบพลัน
+        label: เฉียบพลัน
+        action:
+          action: goto
+          qid: 
+            - cou_d_001
+      - id: ค่อย ๆ เป็น
+        label: ค่อย ๆ เป็น
+        action:
+          action: goto
+          qid:
+            - cou_d_001
+  - qid: cou_d_001
+    question: มีอาการมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - cou_c_001
+  - qid: cou_c_001
+    question: ลักษณะการไอ เช่น ไอแห้ง ไอมีเสมหะ
+    question_type: single_select
+    options:
+      - id: ไอแห้ง
+        label: ไอแห้ง
+        action:
+          action: goto
+          qid:
+            - cou_c_002
+      - id: ไอมีเสมหะ
+        label: ไอมีเสมหะ
+        action:
+          action: goto
+          qid:
+            - cou_c_001-01
+            - cou_c_001-02
+      - id: ไอเป็นเลือด
+        label: ไอเป็นเลือด
+        action:
+          action: goto
+          qid:
+            - cou_c_003-01
+            - cou_c_003-02
+            - cou_c_003-03
+  - qid: cou_c_001-01
+    question: สีของเสมหะเป็นสีใด?
+    question_type: single_select
+    options:
+      - id: สีขาว
+        label: สีขาว
+        action:
+          action: goto
+          qid:
+            - cou_c_001-02
+      - id: สีเหลือง
+        label: สีเหลือง
+        action:
+          action: goto
+          qid:
+            - cou_c_001-02
+      - id: สีเขียว
+        label: สีเขียว
+        action:
+          action: goto
+          qid:
+            - cou_c_001-02
+      - id: สีน้ำตาล
+        label: สีน้ำตาล
+        action:
+          action: goto
+          qid:
+            - cou_c_001-02
+      - id: สีดำ
+        label: สีดำ
+        action:
+          action: goto
+          qid:
+            - cou_c_001-02
+      - id: อื่นๆ
+        label: อื่นๆ
+        action:
+          action: goto
+          qid:
+            - cou_c_001-02
+  - qid: cou_c_001-02
+    question: เสมหะมีกลิ่นเหม็นหรือไม่?
+    question_type: single_select
+    options:
+      - id: มีกลิ่นเหม็น
+        label: มีกลิ่นเหม็น
+        action:
+          action: goto
+          qid:
+            - cou_c_002
+      - id: ไม่มี
+        label: ไม่มี
+        action:
+          action: goto
+          qid:
+            - cou_c_002
+  - qid: cou_c_002
+    question: มีไอเป็นชุดหรือไม่?
+    question_type: single_select
+    options:
+      - id: มี
+        label: มี
+        action:
+          action: goto
+          qid:
+            - cou_a_001
+      - id: ไม่มี
+        label: ไม่มี
+        action:
+          action: goto
+          qid:
+            - cou_a_001
+  - qid: cou_c_003-01
+    question: ลักษณะของเลือดที่ออกมา เป็นเส้นๆ ริ้วๆ หรือออกมาเป็นก้อน? สีแดงสดหรือคล้ำ? มีฟองหรือไม่
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - cou_c_003-02
+        - cou_c_003-03
+  - qid: cou_c_003-02
+    question: มีเลือดออกเยอะขึ้นเรื่อยๆ หรือเป็นช่วงๆ?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - cou_c_003-03
+  - qid: cou_c_003-03
+    question: ปริมาณเลือดที่ออกมา มากหรือน้อยแค่ไหน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - cou_a_001
+  - qid: cou_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง เช่นอากาศ สิ่งแวดล้อม ท่าทาง
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid:
+        - cou_t_001
+  - qid: cou_t_001
+    question: มีอาการช่วงเวลาใดของวัน เช่น ไอหนักขึ้นเวลากลางคืน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - cou_as_001
+  - qid: cou_as_001
+    question: มีอาการอื่นดังนี้ร่วมไหม?
+    question_type: multi_select
+    options:
+      - id: ไข้
+        label: ไข้
+      - id: เหนื่อยง่ายขึ้น
+        label: เหนื่อยง่ายขึ้น
+      - id: หอบ
+        label: หอบ
+      - id: นอนราบไม่ได้
+        label: นอนราบไม่ได้
+      - id: สะดุ้งตื่นมาหายใจหอบ
+        label: สะดุ้งตื่นมาหายใจหอบ
+      - id: เจ็บคอ
+        label: เจ็บคอ
+      - id: เจ็บหน้าอก
+        label: เจ็บหน้าอก
+      - id: คัดจมูก
+        label: คัดจมูก
+      - id: มีน้ำมูก
+        label: มีน้ำมูก
+      - id: น้ำหนักลดผิดปกติ
+        label: น้ำหนักลดผิดปกติ
+    next:
+      action: opd
+"Sore Throat":
+  - qid: sor_o_001
+    question: เริ่มมีอาการเจ็บคอตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - sor_o_002
+  - qid: sor_o_002
+    question: อาการเป็นเฉียบพลัน หรือค่อย ๆ เป็น
+    question_type: single_select
+    options:
+    - id: เฉียบพลัน
+      label: เฉียบพลัน
+      action:
+        action: goto
+        qid:
+          - sor_d_001
+    - id: ค่อย_ๆ_เป็น
+      label: ค่อย ๆ เป็น
+      action:
+        action: goto
+        qid:
+          - sor_d_001
+  - qid: sor_d_001
+    question: มีอาการมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - sor_a_001
+  - qid: sor_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง เช่นการกิน
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid:
+        - sor_as_001
+  - qid: sor_as_001
+    question: มีอาการอื่นร่วมไหม? (เลือกได้หลายข้อ)
+    question_type: multi_select
+    options:
+    - id: ไข้
+      label: ไข้
+    - id: ไอ
+      label: ไอ
+    - id: น้ำมูก
+      label: น้ำมูก
+    - id: เสมหะ
+      label: เสมหะ
+    - id: ปวดหู
+      label: ปวดหู
+    - id: แผลที่ริมฝีปาก
+      label: แผลที่ริมฝีปาก
+    - id: แผลในปาก
+      label: แผลในปาก
+    - id: เสียงเปลี่ยน
+      label: เสียงเปลี่ยน
+    - id: กลืนลำบาก
+      label: กลืนลำบาก
+    - id: กลืนเจ็บ
+      label: กลืนเจ็บ
+    - id: คลื่นไส้อาเจียน
+      label: คลื่นไส้อาเจียน
+    - id: เรอเปรี้ยว
+      label: เรอเปรี้ยว
+    - id: แสบร้อนกลางอก
+      label: แสบร้อนกลางอก
+    - id: ผื่นผิวหนังตำแหน่งอื่น
+      label: ผื่นผิวหนังตำแหน่งอื่น
+    - id: เบื่ออาหาร
+      label: เบื่ออาหาร
+    - id: น้ำหนักลดผิดปกติ
+      label: น้ำหนักลดผิดปกติ
+    next:
+      action: goto
+      qid:
+      - sor_as_002
+      - sor_as_003
+  - qid: sor_as_002
+    question: กินอะไรที่ผิดปกติ หรือทานอาหารที่เป็นสารเคมีหรือไม่?
+    question_type: single_select
+    options:
+    - id: มีประวัติเคยกินของผิดปกติ
+      label: มีประวัติเคยกินของผิดปกติ
+      action:
+        action: goto
+        qid:
+        - sor_as_003
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+        - sor_as_003
+  - qid: sor_as_003
+    question: มีการใช้เสียงที่มากเกินไปหรือไม่?
+    question_type: single_select
+    options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: opd
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: opd
+"Stomachache":
+  - qid: sto_o_001
+    question: เริ่มมีอาการปวดท้องตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - sto_o_002
+      - sto_o_003
+      - sto_o_004
+  - qid: sto_o_002
+    question: เคยมีอาการปวดท้องแบบนี้มาก่อนหรือไม่?
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+        - sto_o_003
+        - sto_o_004
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+        - sto_o_003
+        - sto_o_004
+  - qid: sto_o_003
+    question: อาการเป็นเฉียบพลัน หรือค่อย ๆ มีอาการ
+    question_type: single_select
+    options:
+    - id: เฉียบพลัน
+      label: เฉียบพลัน
+      action:
+        action: goto
+        qid:
+        - sto_o_004
+    - id: ค่อย_มีอาการ
+      label: ค่อย ๆ มีอาการ
+      action:
+        action: goto
+        qid:
+        - sto_o_004
+  - qid: sto_o_004
+    question: เคยเกิดอุบัติเหตุที่บริเวณท้องก่อนมีอาการหรือไม่
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+          - sto_l_001
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+          - sto_l_001
+  - qid: sto_l_001
+    question: ปวดบริเวณใดของท้อง มีจุดปวดชัดเจนหรือปวดทั่วท้อง?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - sto_d_001
+  - qid: sto_d_001
+    question: ปวดแต่ละครั้งนานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - sto_d_002
+  - qid: sto_d_002
+    question: ปวดกี่ครั้งต่อวัน เป็นๆ หายๆ หรือปวดต่อเนื่อง?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - sto_c_001
+  - qid: sto_c_001
+    question: ปวดแบบไหน? บีบๆ จี๊ดๆ ตื้อๆ ปวดจุกแน่น ปวดเกร็งเป็นพัก ๆ ปวดรุนแรงตลอดเวลา
+      หรือแสบร้อนลิ้นปี่
+    question_type: single_select
+    options:
+    - id: บีบๆ
+      label: บีบๆ
+      action:
+        action: goto
+        qid:
+          - sto_a_001
+    - id: จี๊ดๆ
+      label: จี๊ดๆ
+      action:
+        action: goto
+        qid:
+          - sto_a_001
+    - id: ตื้อๆ
+      label: ตื้อๆ
+      action:
+        action: goto
+        qid:
+          - sto_a_001
+    - id: จุกแน่น
+      label: จุกแน่น
+      action:
+        action: goto
+        qid:
+          - sto_a_001
+    - id: เกร็งเป็นพัก
+      label: เกร็งเป็นพัก ๆ
+      action:
+        action: goto
+        qid:
+          - sto_a_001
+    - id: รุนแรงตลอด
+      label: รุนแรงตลอด
+      action:
+        action: goto
+        qid:
+          - sto_a_001
+    - id: แสบร้อนลิ้นปี่
+      label: แสบร้อนลิ้นปี่
+      action:
+        action: goto
+        qid:
+          - sto_a_001
+  - qid: sto_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง เช่น ท่าทาง การกินอาหาร การขับถ่าย หรือการมีประจำเดือน
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid:
+        -  sto_r_001
+  - qid: sto_r_001
+    question: ปวดร้าวไปที่อื่นหรือไม่ ปวดไปที่ใด เช่น หลัง ไหล่ หรือขาหนีบ?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - sto_t_001
+  - qid: sto_t_001
+    question: มีอาการช่วงเวลาใดของวัน เช่น ก่อนหรือหลังอาหาร ตอนกลางคืน หรือตอนตื่นนอน?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - sto_s_001
+  - qid: sto_s_001
+    question: ระดับความปวดจาก 0-10 เป็นเท่าไหร่?
+    question_type: number_range
+    min_value: 0
+    max_value: 10
+    step: 1
+    inclusive: true
+    on_submit:
+      action: goto
+      qid:
+      - sto_s_002
+  - qid: sto_s_002
+    question: อาการปวดท้องรบกวนการทำงาน การใช้ชีวิตประจำวันหรือไม่
+    question_type: single_select
+    options:
+    - id: รบกวน
+      label: รบกวน
+      action:
+        action: goto
+        qid:
+          - sto_as_001
+    - id: ไม่รบกวน
+      label: ไม่รบกวน
+      action:
+        action: goto
+        qid:
+          - sto_as_001
+  - qid: sto_as_001
+    question: มีอาการอื่นร่วมไหม?
+    question_type: multi_select
+    options:
+    - id: ไข้
+      label: ไข้
+    - id: คลื่นไส้
+      label: คลื่นไส้
+    - id: อาเจียน
+      label: อาเจียน
+    - id: ถ่ายเหลว
+      label: ถ่ายเหลว
+    - id: ท้องอืด
+      label: ท้องอืด
+    - id: แสบร้อนกลางอก
+      label: แสบร้อนกลางอก
+    - id: อิ่มไว
+      label: อิ่มไว
+    - id: ปัสสาวะผิดปกติ
+      label: ปัสสาวะผิดปกติ
+    - id: ตกขาวผิดปกติ
+      label: ตกขาวผิดปกติ
+    - id: เบื่ออาหาร
+      label: เบื่ออาหาร
+    - id: น้ำหนักลด
+      label: น้ำหนักลด
+    - id: ตั้งครรภ์
+      label: ตั้งครรภ์
+    - id: ประวัติผ่าตัดช่องท้อง
+      label: ประวัติผ่าตัดช่องท้อง
+    next:
+      action: goto
+      qid:
+        - sto_as_002
+  - qid: sto_as_002
+    question: ประวัติส่วนตัวอื่นๆที่เกี่ยวข้อง เช่น การดื่มสุรา หรือประวัติเพศสัมพันธ์
+    question_type: free_text
+    on_submit:
+      action: opd
+"Constipation":
+  - qid: con_o_001
+    question: เริ่มมีอาการถ่ายอุจจาระยากตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - con_o_002
+  - qid: con_o_002
+    question: เดิมถ่ายอุจจาระบ่อยแค่ไหน
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - con_d_001
+  - qid: con_d_001
+    question: มีอาการมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - con_c_001
+  - qid: con_c_001
+    question: ลักษณะของอุจจาระเป็นอย่างไร แข็งหรือเป็นก้อนเล็ก ๆ
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - con_c_001-01
+      - con_c_001-02
+      - con_c_001-03
+      - con_c_001-04
+  - qid: con_c_001-01
+    question: ปริมาณของการอุจจาระมากหรือน้อยกว่าปกติ
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - con_c_001-02
+      - con_c_001-03
+      - con_c_001-04
+  - qid: con_c_001-02
+    question: ระยะเวลาที่ใช้ถ่ายนานแค่ไหน?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - con_c_001-03
+      - con_c_001-04
+  - qid: con_c_001-03
+    question: มีเลือดปนหรือไม่
+    question_type: single_select
+    options:
+    - id: มี
+      label: มี
+      action:
+        action: goto
+        qid:
+        - con_c_001-04
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+        - con_c_001-04
+  - qid: con_c_001-04
+    question: ต้องใช้แรงเบ่งมากแค่ไหน รู้สึกถ่ายไม่สุดไหม?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - con_a_001
+  - qid: con_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง เช่น ลักษณะอาหาร การดื่มน้ำ ออกกำลังกาย
+      หรือใช้ยาระบาย?
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid:
+        - con_s_001
+  - qid: con_s_001
+    question: ถ่ายอุจจาระกี่ครั้งต่อสัปดาห์?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - con_as_001
+  - qid: con_as_001
+    question: มีอาการอื่นร่วมไหม?
+    question_type: multi_select
+    options:
+    - id: ปวดท้อง
+      label: ปวดท้อง
+    - id: ท้องอืด
+      label: ท้องอืด
+    - id: แน่น
+      label: แน่น
+    - id: คลื่นไส้
+      label: คลื่นไส้
+    - id: ปวดเบ่ง
+      label: ปวดเบ่ง
+    - id: เจ็บทวารขณะถ่าย
+      label: เจ็บทวารขณะถ่าย
+    - id: ท้องผูกสลับท้องเสีย
+      label: ท้องผูกสลับท้องเสีย
+    - id: น้ำหนักลดผิดปกติ
+      label: น้ำหนักลดผิดปกติ
+    - id: ปวดศีรษะ
+      label: ปวดศีรษะ
+    - id: อ่อนเพลีย
+      label: อ่อนเพลีย
+    - id: ขี้หนาว
+      label: ขี้หนาว
+    - id: ปวดหลัง
+      label: ปวดหลัง
+    - id: ตั้งครรภ์
+      label: ตั้งครรภ์
+    - id: ความเครียด
+      label: ความเครียด
+    next:
+      action: opd
+"Diarrhea":
+  - qid: dia_o_001
+    question: เริ่มมีท้องเสียตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - dia_d_001
+  - qid: dia_d_001
+    question: มีอาการมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - dia_c_001
+  - qid: dia_c_001
+    question: ลักษณะอุจจาระเป็นอย่างไร ถ่ายเป็นน้ำ เนื้อปนน้ำ มีมูกเลือด หรือเลือดสด?
+    question_type: single_select
+    options:
+      - id: ถ่ายเป็นน้ำ
+        label: ถ่ายเป็นน้ำ
+        action:
+          action: goto
+          qid:
+            - dia_c_001-01
+      - id: เนื้อปนน้ำ
+        label: เนื้อปนน้ำ
+        action:
+          action: goto
+          qid:
+            - dia_c_001-01
+      - id: มีมูกเลือด
+        label: มีมูกเลือด
+        action:
+          action: goto
+          qid:
+            - dia_c_001-01
+      - id: เลือดสด
+        label: เลือดสด
+        action:
+          action: goto
+          qid:
+            - dia_c_001-01
+  - qid: dia_c_001-01
+    question: กลิ่นอุจจาระมีอะไรผิดปกติหรือไม่?
+    question_type: single_select
+    options:
+      - id: มี
+        label: มี
+        action:
+          action: goto
+          qid:
+            - dia_a_001
+      - id: ไม่มี
+        label: ไม่มี
+        action:
+          action: goto
+          qid:
+            - dia_a_001
+  - qid: dia_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง เช่น กินอาหาร นม ยา หรือพักผ่อน?
+    question_type: free_text_with_fields
+    fields:
+      - id: สิ่งที่ทำแล้วอาการดีขึ้น
+        label: สิ่งที่ทำแล้วอาการดีขึ้น
+        kind: text
+      - id: สิ่งที่ทำแล้วอาการแย่ลง
+        label: สิ่งที่ทำแล้วอาการแย่ลง
+        kind: text
+    on_submit:
+      action: goto
+      qid:
+        - dia_s_001
+  - qid: dia_s_001
+    question: ถ่ายอุจจาระวันละกี่ครั้ง? มีอาการขาดน้ำ (ปากแห้ง วูบ ใจสั่น) หรือไม่
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - dia_as_001
+  - qid: dia_as_001
+    question: มีอาการอื่นร่วมไหม?
+    question_type: multi_select
+    options:
+      - id: ปวดเมื่อยตัว
+        label: ปวดเมื่อยตัว
+      - id: ปากแห้ง
+        label: ปากแห้ง
+      - id: ปวดเบ่ง
+        label: ปวดเบ่ง
+      - id: ปวดท้อง
+        label: ปวดท้อง
+      - id: คลื่นไส้
+        label: คลื่นไส้
+      - id: อาเจียน
+        label: อาเจียน
+      - id: ไข้
+        label: ไข้
+      - id: ใจสั่น
+        label: ใจสั่น
+      - id: เวียนศีรษะ
+        label: เวียนศีรษะ
+      - id: ท้องผูกสลับท้องเสีย
+        label: ท้องผูกสลับท้องเสีย
+      - id: น้ำหนักลดผิดปกติ
+        label: น้ำหนักลดผิดปกติ
+      - id: ความเครียด
+        label: ความเครียด
+    next:
+      action: goto
+      qid:
+        - dia_as_002
+  - qid: dia_as_002
+    question: ประวัติส่วนตัวที่เกี่ยวข้อง เช่น มีคนใกล้ชิดอาการเหมือนกัน เดินทางไปแหล่งระบาด หรือประวัติเพศสัมพันธ์ที่อาจจะเกี่ยวข้อง?
+    question_type: free_text
+    on_submit:
+      action: opd
+"Dysuria":
+  - qid: dys_o_001
+    question: เริ่มมีอาการปัสสาวะผิดปกติตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - dys_o_002
+        - dys_o_003
+  - qid: dys_o_002
+    question: เคยเป็นมาก่อนหรือไม่?
+    question_type: single_select
+    options:
+      - id: เคย
+        label: เคย
+        action:
+          action: goto
+          qid:
+            - dys_o_003
+      - id: ไม่เคย
+        label: ไม่เคย
+        action:
+          action: goto
+          qid:
+            - dys_o_003
+  - qid: dys_o_003
+    question: เกิดอุบัติเหตุก่อนมีอาการหรือไม่
+    question_type: single_select
+    options:
+      - id: เคย
+        label: เคย
+        action:
+          action: goto
+          qid:
+            - dys_d_001
+      - id: ไม่เคย
+        label: ไม่เคย
+        action:
+          action: goto
+          qid:
+            - dys_d_001
+  - qid: dys_d_001
+    question: มีอาการมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - dys_c_001
+  - qid: dys_c_001
+    question: ลักษณะปัสสาวะ สีเหลืองใส ขุ่น มีฟอง หรือมีเลือดปน? กลั้นปัสสาวะได้หรือไม่?
+    question_type: single_select
+    options:
+      - id: สีเหลืองใส
+        label: สีเหลืองใส
+        action:
+          action: goto
+          qid:
+            - dys_c_001-01
+      - id: ขุ่น
+        label: ขุ่น
+        action:
+          action: goto
+          qid:
+            - dys_c_001-01
+      - id: มีฟอง
+        label: มีฟอง
+        action:
+          action: goto
+          qid:
+            - dys_c_001-01
+      - id: มีเลือดปน
+        label: มีเลือดปน
+        action:
+          action: goto
+          qid:
+            - dys_c_001-01
+  - qid: dys_c_001-01
+    question: กลั้นปัสสาวะได้หรือไม่?
+    question_type: single_select
+    options:
+      - id: ได้
+        label: ได้
+        action:
+          action: goto
+          qid:
+            - dys_a_001
+      - id: ไม่ได้
+        label: ไม่ได้
+        action:
+          action: goto
+          qid:
+            - dys_a_001
+  - qid: dys_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง?
+    question_type: free_text_with_fields
+    fields:
+      - id: สิ่งที่ทำแล้วอาการดีขึ้น
+        label: สิ่งที่ทำแล้วอาการดีขึ้น
+        kind: text
+      - id: สิ่งที่ทำแล้วอาการแย่ลง
+        label: สิ่งที่ทำแล้วอาการแย่ลง
+        kind: text
+    on_submit:
+      action: goto
+      qid:
+        - dys_as_001
+  - qid: dys_as_001
+    question: มีอาการอื่นร่วมไหม?
+    question_type: multi_select
+    options:
+      - id: ไข้
+        label: ไข้
+      - id: หนาวสั่น
+        label: หนาวสั่น
+      - id: ปวดท้องน้อย
+        label: ปวดท้องน้อย
+      - id: ปวดหลัง
+        label: ปวดหลัง
+      - id: เวียนศีรษะ
+        label: เวียนศีรษะ
+      - id: คลื่นไส้
+        label: คลื่นไส้
+      - id: เบื่ออาหาร
+        label: เบื่ออาหาร
+      - id: น้ำหนักลด
+        label: น้ำหนักลด
+      - id: ตกขาวผิดปกติ
+        label: ตกขาวผิดปกติ
+      - id: เลือดออกจากช่องคลอด
+        label: เลือดออกจากช่องคลอด
+      - id: ตั้งครรภ์
+        label: ตั้งครรภ์
+      - id: ปวดเอว
+        label: ปวดเอว
+    next:
+      action: goto
+      qid:
+        - dys_as_002
+  - qid: dys_as_002
+    question: ประวัติส่วนตัวที่อาจจะเกี่ยวข้อง เช่น ประวัติเพศสัมพันธ์
+    question_type: free_text
+    on_submit:
+      action: opd
+"Vaginal Discharge":
+  - qid: vag_o_001
+    question: เริ่มมีอาการตกขาวผิดปกติตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - vag_o_001-01
+  - qid: vag_o_001-01
+    question: เคยเป็นมาก่อนหรือไม่?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - vag_d_001
+  - qid: vag_d_001
+    question: มีอาการมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - vag_c_001
+  - qid: vag_c_001
+    question: ลักษณะตกขาว (สี กลิ่น ปริมาณ) หรือมีเลือดปนหรือไม่
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - vag_a_001
+  - qid: vag_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง?
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid:
+        - vag_t_001
+  - qid: vag_t_001
+    question: สัมพันธ์กับรอบเดือนหรือไม่
+    question_type: single_select
+    options:
+    - id: สัมพันธ์
+      label: สัมพันธ์
+      action:
+        action: goto
+        qid:
+          - vag_as_001
+    - id: ไม่สัมพันธ์
+      label: ไม่สัมพันธ์
+      action:
+        action: goto
+        qid:
+          - vag_as_001
+    - id: ไม่แน่ใจ
+      label: ไม่แน่ใจ
+      action:
+        action: goto
+        qid:
+          - vag_as_001
+  - qid: vag_as_001
+    question: มีอาการอื่นร่วมไหม?
+    question_type: multi_select
+    options:
+    - id: ปวดท้อง
+      label: ปวดท้อง
+    - id: ปัสสาวะแสบขัด
+      label: ปัสสาวะแสบขัด
+    - id: ตั้งครรภ์
+      label: ตั้งครรภ์
+    next:
+      action: goto
+      qid:
+        - vag_as_002
+  - qid: vag_as_002
+    question: ประวัติส่วนตัวที่อาจจะเกี่ยวข้อง เช่น ประวัติการมีเพศสัมพันธ์ ประวัติประจำเดือน การสวนล้างช่องคลอด การคุมกำเนิด
+    question_type: free_text
+    on_submit:
+      action: opd
+"Skin Rash/Lesion":
+  - qid: rash_o_001
+    question: เริ่มมีผื่นตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - rash_o_002
+      - rash_o_003
+  - qid: rash_o_002
+    question: เคยเป็นมาก่อนหรือไม่?
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+        - rash_o_003
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+        - rash_o_003
+  - qid: rash_o_003
+    question: อาการเป็นเฉียบพลัน หรือค่อย ๆ มีอาการ
+    question_type: single_select
+    options:
+    - id: เฉียบพลัน
+      label: เฉียบพลัน
+      action:
+        action: goto
+        qid:
+          - rash_l_001
+    - id: ค่อย_มีอาการ
+      label: ค่อย ๆ มีอาการ
+      action:
+        action: goto
+        qid:
+          - rash_l_001
+  - qid: rash_l_001
+    question: มีอาการตำแหน่งใดบ้าง? เฉพาะที่ หรือกระจายทั่วตัว
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - rash_l_002
+  - qid: rash_l_002
+    question: เปลี่ยนตำแหน่งหรือไม่? ถ้ามี เปลี่ยนแปลงอย่างไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - rash_d_001
+  - qid: rash_d_001
+    question: อาการเป็นตลอดหรือเป็นๆ หายๆ?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - rash_c_001
+  - qid: rash_c_001
+    question: มีอาการที่ผื่นหรือไม่? เช่น คัน ปวด บวม
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - rash_c_002
+  - qid: rash_c_002
+    question: ผื่นมีสีอะไร รูปร่างอย่างไร เรียงตัวแบบใด
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - rash_c_003
+  - qid: rash_c_003
+    question: ลักษณะของผื่น เรียบ นูน มีตุ่มน้ำ สะเก็ด หรือหนอง
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - rash_a_001
+  - qid: rash_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง? เช่น สภาพแวดล้อม อากาศ
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid:
+        - rash_s_001
+  - qid: rash_s_001
+    question: รบกวนการทำงาน การใช้ชีวิตประจำวันหรือไม่?
+    question_type: single_select
+    options:
+    - id: รบกวน
+      label: รบกวน
+      action:
+        action: goto
+        qid:
+          - rash_as_001
+    - id: ไม่รบกวน
+      label: ไม่รบกวน
+      action:
+        action: goto
+        qid:
+          - rash_as_001
+  - qid: rash_as_001
+    question: มีอาการอื่นร่วมไหม?
+    question_type: multi_select
+    options:
+    - id: ไข้
+      label: ไข้
+    - id: หายใจลำบาก
+      label: หายใจลำบาก
+    - id: ปากบวม
+      label: ปากบวม
+    - id: หน้าบวม
+      label: หน้าบวม
+    - id: ปวดศีรษะ
+      label: ปวดศีรษะ
+    - id: ปวดเมื่อย
+      label: ปวดเมื่อย
+    - id: ไอ
+      label: ไอ
+    - id: อ่อนเพลีย
+      label: อ่อนเพลีย
+    - id: น้ำมูก
+      label: น้ำมูก
+    - id: คัดจมูก
+      label: คัดจมูก
+    - id: แสบคันตา
+      label: แสบคันตา
+    - id: ปัสสาวะผิดปกติ
+      label: ปัสสาวะผิดปกติ
+    - id: ขาบวม
+      label: ขาบวม
+    - id: น้ำหนักลด
+      label: น้ำหนักลด
+    next:
+      action: goto
+      qid:
+        - rash_as_002
+  - qid: rash_as_002
+    question: ประวัติส่วนตัวที่อาจจะเกี่ยวข้อง เช่น งานอดิเรก การเลี้ยงสัตว์ ประวัติทางเพศสัมพันธ์
+    question_type: free_text
+    on_submit:
+      action: opd
+"Wound":
+  - qid: wou_o_001
+    question: บาดแผลเกิดขึ้นเมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - wou_o_002
+        - wou_o_003
+        - wou_o_004
+  - qid: wou_o_002
+    question: เคยเป็นแผลแบบนี้มาก่อนหรือไม่?
+    question_type: single_select
+    options:
+      - id: เคย
+        label: เคย
+        action:
+          action: goto
+          qid:
+            - wou_o_003
+            - wou_o_004
+      - id: ไม่เคย
+        label: ไม่เคย
+        action:
+          action: goto
+          qid:
+            - wou_o_003
+            - wou_o_004
+  - qid: wou_o_003
+    question: อาการเป็นเฉียบพลัน หรือค่อย ๆ มีอาการ
+    question_type: single_select
+    options:
+      - id: เฉียบพลัน
+        label: เฉียบพลัน
+        action:
+          action: goto
+          qid:
+            - wou_o_004
+      - id: ค่อย ๆ มีอาการ
+        label: "ค่อย ๆ มีอาการ"
+        action:
+          action: goto
+          qid:
+            - wou_o_004
+  - qid: wou_o_004
+    question: ก่อนหน้านี้มีเหตุการณ์ที่เกี่ยวข้อง (อุบัติเหตุ แมลง/สัตว์กัดต่อย โดนสารเคมี ฯลฯ) หรือไม่
+    question_type: single_select
+    options:
+      - id: เคย
+        label: เคย
+        action:
+          action: goto
+          qid:
+            - wou_l_001
+      - id: ไม่เคย
+        label: ไม่เคย
+        action:
+          action: goto
+          qid:
+            - wou_l_001
+  - qid: wou_l_001
+    question: ตำแหน่งบาดแผลเป็นแบบเฉพาะที่ หรือกระจายทั่วตัว
+    question_type: single_select
+    options:
+      - id: เฉพาะที่
+        label: เฉพาะที่
+        action:
+          action: goto
+          qid:
+            - wou_l_002
+      - id: กระจายทั่วตัว
+        label: กระจายทั่วตัว
+        action:
+          action: goto
+          qid:
+            - wou_l_002
+  - qid: wou_l_002
+    question: เปลี่ยนตำแหน่งหรือไม่? ถ้ามี เปลี่ยนแปลงอย่างไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - wou_d_001
+  - qid: wou_d_001
+    question: บาดแผลมีมานานเท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - wou_c_001
+  - qid: wou_c_001
+    question: ลักษณะบาดแผล ฉีกขาด ถลอก ไหม้ หรือมีหนอง?
+    question_type: single_select
+    options:
+      - id: ฉีกขาด
+        label: ฉีกขาด
+        action:
+          action: goto
+          qid:
+            - wou_c_002
+      - id: ถลอก
+        label: ถลอก
+        action:
+          action: goto
+          qid:
+            - wou_c_002
+      - id: ไหม้
+        label: ไหม้
+        action:
+          action: goto
+          qid:
+            - wou_c_002
+      - id: มีหนอง
+        label: มีหนอง
+        action:
+          action: goto
+          qid:
+            - wou_c_002
+  - qid: wou_c_002
+    question: ความร้ายแรงบาดแผลขนาดไหน?
+    question_type: single_select
+    options:
+      - id: บาดแผลถลอดเล็กน้อย
+        label: บาดแผลถลอดเล็กน้อย
+        action:
+          action: goto
+          qid:
+            - wou_c_002-01
+      - id: บาดแผลมีเลือดออดขนาดเล็กถึงปานกลาง
+        label: บาดแผลมีเลือดออดขนาดเล็กถึงปานกลาง
+        action:
+          action: goto
+          qid:
+            - wou_c_002-01
+      - id: บาดแผลมีขนาดใหญ่และลึก
+        label: บาดแผลมีขนาดใหญ่และลึก
+        action:
+          action: goto
+          qid:
+            - wou_c_002-01
+      - id: บาดแผลรุนแรง_มองเห็นกระดูก_เอ็น_หรืออวัยวะภายใน
+        label: บาดแผลรุนแรง มองเห็นกระดูก เอ็น หรืออวัยวะภายใน
+        action:
+          action: goto
+          qid:
+            - wou_c_002-01
+  - qid: wou_c_002-01
+    question: ขนาดแผล (กว้าง/ยาว/ลึก) เท่าไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - wou_c_003
+  - qid: wou_c_003
+    question: อาการอื่นบริเวณแผลที่มี เช่น ปวด คัน ชา บวม เลือดออก?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - wou_a_001
+  - qid: wou_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง?
+    question_type: free_text_with_fields
+    fields:
+      - id: สิ่งที่ทำแล้วอาการดีขึ้น
+        label: สิ่งที่ทำแล้วอาการดีขึ้น
+        kind: text
+      - id: สิ่งที่ทำแล้วอาการแย่ลง
+        label: สิ่งที่ทำแล้วอาการแย่ลง
+        kind: text
+    on_submit:
+      action: goto
+      qid:
+        - wou_as_001
+  - qid: wou_as_001
+    question: มีอาการอื่นร่วมไหม เช่น ไข้ หนอง บวมแดงร้อน ตุ่มน้ำ หรือกลิ่นผิดปกติ?
+    question_type: multi_select
+    options:
+      - id: ไข้
+        label: ไข้
+      - id: หนอง
+        label: หนอง
+      - id: บวมแดงร้อน
+        label: บวมแดงร้อน
+      - id: ตุ่มน้ำ
+        label: ตุ่มน้ำ
+      - id: กลิ่นผิดปกติ
+        label: กลิ่นผิดปกติ
+    next:
+      action: opd
+"Eye Disorder":
+  - qid: eye_o_001
+    question: เริ่มมีอาการตั้งแต่เมื่อไร?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - eye_o_002
+      - eye_o_003
+      - eye_o_004
+  - qid: eye_o_002
+    question: เคยมีอาการที่ตาแบบนี้มาก่อนหรือไม่?
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+        - eye_o_003
+        - eye_o_004
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+        - eye_o_003
+        - eye_o_004
+  - qid: eye_o_003
+    question: อาการเป็นเฉียบพลัน หรือค่อย ๆ มีอาการ
+    question_type: single_select
+    options:
+    - id: เฉียบพลัน
+      label: เฉียบพลัน
+      action:
+        action: goto
+        qid:
+        - eye_o_004
+    - id: ค่อย_ๆ_มีอาการ
+      label: ค่อย ๆ มีอาการ
+      action:
+        action: goto
+        qid:
+        - eye_o_004
+  - qid: eye_o_004
+    question: เคยมีอุบัติเหตุบริเวณดวงตามาก่อนหรือไม่
+    question_type: single_select
+    options:
+    - id: เคย
+      label: เคย
+      action:
+        action: goto
+        qid:
+          - eye_l_001
+    - id: ไม่เคย
+      label: ไม่เคย
+      action:
+        action: goto
+        qid:
+          - eye_l_001
+  - qid: eye_l_001
+    question: มีอาการตำแหน่งใดบ้าง? เช่น เปลือกตา ตาข้างใด?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - eye_d_001
+  - qid: eye_d_001
+    question: อาการเป็นตลอดหรือเป็นๆ หายๆ?
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - eye_c_001
+  - qid: eye_c_001
+    question: มีอาการอะไรบ้าง เช่น ตามัว ตาแดง ปวดตา
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - eye_c_002
+  - qid: eye_c_002
+    question: ลักษณะอาการ เช่น คัน เคืองตา มีขี้ตา (ถ้ามี ขี้ตาสีอะไร) ตาแฉะ น้ำตาไหล
+      เปลือกตาผิดปกติ หนังตาตก
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+      - eye_c_003
+  - qid: eye_c_003
+    question: มีปัญหาการมองเห็นหรือไม่? ถ้ามีเป็นอย่างไร ตัวอย่างเช่น ภาพซ้อน ภาพเบลอ มองเห็นลดลง เห็นเส้นลอย
+    question_type: free_text
+    on_submit:
+      action: goto
+      qid:
+        - eye_a_001
+  - qid: eye_a_001
+    question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง? เช่น การใช้งาน สภาพแวดล้อม
+    question_type: free_text_with_fields
+    fields:
+    - id: สิ่งที่ทำแล้วอาการดีขึ้น
+      label: สิ่งที่ทำแล้วอาการดีขึ้น
+      kind: text
+    - id: สิ่งที่ทำแล้วอาการแย่ลง
+      label: สิ่งที่ทำแล้วอาการแย่ลง
+      kind: text
+    on_submit:
+      action: goto
+      qid:
+        - eye_s_001
+  - qid: eye_s_001
+    question: รบกวนการทำงาน การใช้ชีวิตประจำวันหรือไม่?
+    question_type: single_select
+    options:
+    - id: รบกวน
+      label: รบกวน
+      action:
+        action: goto
+        qid:
+          - eye_as_001
+    - id: ไม่รบกวน
+      label: ไม่รบกวน
+      action:
+        action: goto
+        qid:
+          - eye_as_001
+  - qid: eye_as_001
+    question: มีอาการอื่นร่วมดังนี้ไหม?
+    question_type: multi_select
+    options:
+    - id: ไข้
+      label: ไข้
+    - id: ปวดศีรษะ
+      label: ปวดศีรษะ
+    - id: น้ำมูก
+      label: น้ำมูก
+    - id: คลื่นไส้
+      label: คลื่นไส้
+    next:
+      action: goto
+      qid:
+        - eye_as_002
+  - qid: eye_as_002
+    question: ประวัติส่วนตัวที่เกี่ยวข้อง เช่น การใส่คอนแทกเลนส์ การทำงาน สภาพแวดล้อม (ลม ฝุ่นแสง)
+    question_type: free_text
+    on_submit:
+      action: opd
+"Ear Disorder":
+    - qid: ear_o_001
+      question: เริ่มมีอาการตั้งแต่เมื่อไร?
+      question_type: free_text
+      on_submit:
+        action: goto
+        qid:
+        - ear_o_002
+        - ear_o_003
+        - ear_o_004
+    - qid: ear_o_002
+      question: เคยมีอาการที่หูแบบนี้มาก่อนหรือไม่?
+      question_type: single_select
+      options:
+      - id: เคย
+        label: เคย
+        action:
+          action: goto
+          qid:
+          - ear_o_003
+          - ear_o_004
+      - id: ไม่เคย
+        label: ไม่เคย
+        action:
+          action: goto
+          qid:
+          - ear_o_003
+          - ear_o_004
+    - qid: ear_o_003
+      question: อาการเป็นเฉียบพลัน หรือค่อย ๆ มีอาการ
+      question_type: single_select
+      options:
+      - id: เฉียบพลัน
+        label: เฉียบพลัน
+        action:
+          action: goto
+          qid:
+          - ear_o_004
+      - id: ค่อย_มีอาการ
+        label: "ค่อย ๆ มีอาการ"
+        action:
+          action: goto
+          qid:
+          - ear_o_004
+    - qid: ear_o_004
+      question: มีอุบัติเหตุบริเวณหูมาก่อนหรือไม่
+      question_type: single_select
+      options:
+      - id: เคย
+        label: เคย
+        action:
+          action: goto
+          qid:
+            - ear_l_001
+      - id: ไม่เคย
+        label: ไม่เคย
+        action:
+          action: goto
+          qid:
+            - ear_l_001
+    - qid: ear_l_001
+      question: มีอาการที่ตำแหน่งใดบ้างบริเวณหู? เช่น ใบหู หรือหูข้างใด?
+      question_type: free_text
+      on_submit:
+        action: goto
+        qid:
+          - ear_d_001
+    - qid: ear_d_001
+      question: อาการเป็นตลอดหรือเป็นๆ หายๆ?
+      question_type: single_select
+      options:
+      - id: เป็นตลอด
+        label: เป็นตลอด
+        action: 
+          action: goto
+          qid:
+            - ear_c_001
+      - id: เป็น ๆ หาย ๆ
+        label: เป็น ๆ หาย ๆ
+        action: 
+          action: goto
+          qid:
+            - ear_c_001
+    - qid: ear_c_001
+      question: มีอาการอะไรบ้างที่เกี่ยวข้อง เช่น ปวดหู หูอื้อ ปัญหาการได้ยิน มีเสียงแว่ว เสียงดังในหู
+        น้ำ หนอง หรือเลือดไหลจากหู หูบวม แดง มีแผล
+      question_type: free_text
+      on_submit:
+        action: goto
+        qid:
+          - ear_a_001
+    - qid: ear_a_001
+      question: มีอะไรทำให้อาการดีขึ้นหรือแย่ลง?
+      question_type: free_text_with_fields
+      fields:
+      - id: สิ่งที่ทำแล้วอาการดีขึ้น
+        label: สิ่งที่ทำแล้วอาการดีขึ้น
+        kind: text
+      - id: สิ่งที่ทำแล้วอาการแย่ลง
+        label: สิ่งที่ทำแล้วอาการแย่ลง
+        kind: text
+      on_submit:
+        action: goto
+        qid:
+          - ear_r_001
+    - qid: ear_r_001
+      question: ปวดร้าวไปกรามหรือฟันหรือไม่?
+      question_type: single_select
+      options:
+      - id: ใช่
+        label: ใช่
+        action:
+          action: goto
+          qid:
+            - ear_s_001
+      - id: ไม่ใช่
+        label: ไม่ใช่
+        action:
+          action: goto
+          qid:
+            - ear_s_001
+    - qid: ear_s_001
+      question: รบกวนการทำงาน การใช้ชีวิตประจำวันหรือไม่?
+      question_type: single_select
+      options:
+      - id: รบกวน
+        label: รบกวน
+        action:
+          action: goto
+          qid:
+            - ear_as_001
+      - id: ไม่รบกวน
+        label: ไม่รบกวน
+        action:
+          action: goto
+          qid:
+            - ear_as_001
+    - qid: ear_as_001
+      question: มีอาการอื่นร่วมไหม?
+      question_type: multi_select
+      options:
+      - id: ไข้
+        label: ไข้
+      - id: ปวดศีรษะ
+        label: ปวดศีรษะ
+      - id: น้ำมูก
+        label: น้ำมูก
+      - id: คัดจมูก
+        label: คัดจมูก
+      - id: ปวดฟัน
+        label: ปวดฟัน
+      - id: หน้าเบี้ยว
+        label: หน้าเบี้ยว
+      - id: เวียนศีรษะ
+        label: เวียนศีรษะ
+      - id: บ้านหมุน
+        label: บ้านหมุน
+      next:
+        action: goto
+        qid:
+          - ear_as_002
+    - qid: ear_as_002
+      question: ประวัติส่วนตัวที่เกี่ยวข้อง เช่น การใช้สำลีหรืออุปกรณ์แคะหู อยู่ในสถานที่เสียงดัง
+        หรือว่ายน้ำบ่อยหรือไม่
+      question_type: free_text
+      on_submit:
+        action: opd

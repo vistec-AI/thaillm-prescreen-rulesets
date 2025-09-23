@@ -1,0 +1,32 @@
+- name: Hypertension
+  name_th: ความดันโลหิตสูง
+- name: Dyslipidemia
+  name_th: ไขมันในเลือดผิดปกติ
+- name: Diabetes Mellitus
+  name_th: เบาหวาน
+- name: Chronic kidney disease
+  name_th: โรคไตเรื้อรัง
+- name: Chronic liver disease
+  name_th: โรคตับเรื้อรัง
+- name: Heart disease
+  name_th: โรคหัวใจ
+- name: Thyroid disease
+  name_th: ความผิดปกติของต่อมไทรอยด์
+- name: Stroke
+  name_th: โรคหลอดเลือดสมอง
+- name: Obesity
+  name_th: โรคอ้วน
+- name: Chronic Obstructive Pulmonary Disease
+  name_th: โรคปอดอุดกั้นเรื้อรัง
+- name: Asthma
+  name_th: โรคหอบหืด
+- name: Tuberculosis
+  name_th: วัณโรค
+- name: HIV/AIDS
+  name_th: เอดส์
+- name: Cancer
+  name_th: มะเร็ง (ระบุชนิดหรืออวัยวะที่เป็น หากทราบ)
+- name: Allergy
+  name_th: โรคภูมิแพ้ / หรือระบุว่าแพ้อาหาร-ยาใด
+- name: Alzheimer disease
+  name_th: โรคอัลไซเมอร์
