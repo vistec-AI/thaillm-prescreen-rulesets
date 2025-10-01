@@ -10,6 +10,7 @@ variables:
 image: python:3.13-slim
 
 before_script:
+  - echo token: $HF_TOKEN
   - python --version
   - pip install --upgrade pip
   - pip install uv
