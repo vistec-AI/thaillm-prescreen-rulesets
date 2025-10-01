@@ -4,6 +4,7 @@ stages:
 variables:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PIP_NO_CACHE_DIR: "1"
+  HF_TOKEN: $HF_TOKEN
 
 # Use a recent Python image; uv is installed via pipx for speed where available
 image: python:3.13-slim
