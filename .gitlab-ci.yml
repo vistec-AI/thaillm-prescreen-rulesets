@@ -10,7 +10,6 @@ variables:
 image: python:3.13-slim
 
 before_script:
-  - echo "hf token: $HF_TOKEN"
   - python --version
   - pip install --upgrade pip
   - pip install uv
@@ -23,6 +22,7 @@ pytest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   script:
+    - echo "hf token: '$HF_TOKEN'"
     - uv run pytest -q --junitxml=junit.xml
   artifacts:
     when: always
