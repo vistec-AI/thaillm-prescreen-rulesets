@@ -258,8 +258,8 @@
     question: ลักษณะการเวียนศีรษะเป็นแบบใด? เหมือนสิ่งรอบตัวหมุน หรือมึนศีรษะ โคลงเคลง
     question_type: single_select
     options:
-    - id: เหมือนสิ่งรอบตัวหมุน
-      label: เหมือนสิ่งรอบตัวหมุน
+    - id: บ้านหมุน เหมือนสิ่งรอบตัวหมุน
+      label: บ้านหมุน เหมือนสิ่งรอบตัวหมุน
       action:
         action: goto
         qid: 
@@ -312,7 +312,18 @@
       action:
         action: goto
         qid: 
-          - diz_as_001
+          - diz_s_002
+  - qid: diz_s_002
+    question: ระดับความเวียนหัวจาก 0-10 เป็นเท่าไหร่?
+    question_type: number_range
+    min_value: 0
+    max_value: 10
+    step: 1
+    inclusive: true
+    on_submit:
+      action: goto
+      qid:
+        - diz_as_001
   - qid: diz_as_001
     question: มีอาการอื่นร่วมไหม เช่น หูอื้อ สายตาพร่ามัว พูดไม่ชัด กลืนลำบาก อ่อนแรง เดินเซ ชาที่ใบหน้า
       ชารอบปาก ปวดศีรษะ ใจสั่น?
@@ -338,6 +349,12 @@
       label: ปวดศีรษะ
     - id: ใจสั่น
       label: ใจสั่น
+    - id: หน้ามืด
+      label: หน้ามืด
+    - id: เจ็บหน้าอก
+      label: เจ็บหน้าอก
+    - id: เหนื่อยง่าย
+      label: เหนื่อยง่าย
     next:
       action: opd
 "Pain in Joint":
@@ -424,7 +441,7 @@
       qid:
       - pai_l_002
   - qid: pai_l_002
-    question: มีปวดย้ายข้อร่วมด้วยหรือไม่? # TODO: not sure what this means
+    question: ปวดที่เดิมตลอดไหมหรือมีย้ายไปปวดที่อื่นด้วย # TODO: not sure what this means
     question_type: single_select
     options:
     - id: มี
@@ -590,8 +607,8 @@
         action: goto
         qid:
         - mus_l_001-1
-    - id: กระจาย
-      label: กระจาย
+    - id: กระจายทั่วๆไปตามตัว
+      label: กระจายทั่วๆไปตามตัว
       action:
         action: goto
         qid:
@@ -712,8 +729,6 @@
     options:
     - id: ชา
       label: ชา
-    - id: อ่อนแรง
-      label: อ่อนแรง
     - id: ขับถ่ายปัสสาวะหรืออุจจาระผิดปกติ
       label: ขับถ่ายปัสสาวะหรืออุจจาระผิดปกติ
     - id: น้ำหนักลดผิดปกติ
@@ -800,9 +815,10 @@
   - qid: fev_s_001
     question: วัดอุณหภูมิได้เท่าไร?
     question_type: number_range
-    min_value: 20
+    min_value: 25
     max_value: 46
-    step: 1
+    default_value: 37
+    step: 0.5
     inclusive: true
     on_submit:
       action: goto
@@ -846,6 +862,8 @@
         label: หูอื้อ
       - id: ปัญหาการได้ยิน
         label: ปัญหาการได้ยิน
+      - id: หนาวสั่น
+        label: หนาวสั่น
     next:
       action: goto
       qid:
@@ -895,6 +913,22 @@
           qid:
             - cou_d_001
   - qid: cou_d_001
+    question: มีอาการมานานเกิน 1 สัปดาห์ (>7 วัน) หรือไม่
+    question_type: single_select
+    options:
+      - id: นานเกิน 1 สัปดาห์
+        label: นานเกิน 1 สัปดาห์
+        action:
+          action: goto
+          qid:
+            - cou_d_001-1
+      - id: น้อยกว่า 1 สัปดาห์
+        label: น้อยกว่า 1 สัปดาห์
+        action:
+          action: goto
+          qid:
+            - cou_d_001-1
+  - qid: cou_d_001-1
     question: มีอาการมานานเท่าไร?
     question_type: free_text
     on_submit:
@@ -1065,6 +1099,12 @@
         label: มีน้ำมูก
       - id: น้ำหนักลดผิดปกติ
         label: น้ำหนักลดผิดปกติ
+      - id: แสบคอ
+        label: แสบคอ
+      - id: คันคอ
+        label: คันคอ
+      - id: มีอะไรติดคอ
+        label: มีอะไรติดคอ
     next:
       action: opd
 "Sore Throat":
@@ -1243,8 +1283,28 @@
           - sto_l_001
   - qid: sto_l_001
     question: ปวดบริเวณใดของท้อง มีจุดปวดชัดเจนหรือปวดทั่วท้อง?
-    question_type: free_text
-    on_submit:
+    question_type: image_multi_select
+    image: stomach.png
+    options:
+    - id: stomach_1
+      label: ท้องส่วนบนด้านขวา
+    - id: stomach_2
+      label: ลิ้นปี่
+    - id: stomach_3
+      label: ท้องส่วนบนด้านซ้าย
+    - id: stomach_4
+      label: เอวด้านขวา
+    - id: stomach_5
+      label: รอบสะดือ
+    - id: stomach_6
+      label: เอวด้านซ้าย
+    - id: stomach_7
+      label: ท้องน้อยด้านขวา
+    - id: stomach_8
+      label: ท้องน้อย
+    - id: stomach_9
+      label: ท้องน้อยด้านซ้าย
+    next:
       action: goto
       qid:
         - sto_d_001
@@ -1394,6 +1454,10 @@
       label: ตั้งครรภ์
     - id: ประวัติผ่าตัดช่องท้อง
       label: ประวัติผ่าตัดช่องท้อง
+    - id: ตัวเหลือง
+      label: ตัวเหลือง
+    - id: ตาเหลือง
+      label: ตาเหลือง
     next:
       action: goto
       qid:
@@ -1419,6 +1483,22 @@
       qid:
         - con_d_001
   - qid: con_d_001
+    question: อาการท้องผูกเป็นมากกว่า 2 วันหรือไม่
+    question_type: single_select
+    options:
+      - id: เป็นมามากกว่า 2 วัน
+        label: เป็นมามากกว่า 2 วัน
+        action:
+          action: goto
+          qid:
+            - con_d_001-1
+      - id: น้อยกว่า 2 วัน
+        label: น้อยกว่า 2 วัน
+        action:
+          action: goto
+          qid:
+            - con_d_001-1
+  - qid: con_d_001-1
     question: มีอาการมานานเท่าไร?
     question_type: free_text
     on_submit:
@@ -1639,6 +1719,14 @@
         label: น้ำหนักลดผิดปกติ
       - id: ความเครียด
         label: ความเครียด
+      - id: คอแห้ง
+        label: คอแห้ง
+      - id: ปัสสาวะน้อยลง
+        label: ปัสสาวะน้อยลง
+      - id: อ่อนเพลียมาก
+        label: อ่อนเพลียมาก
+      - id: หน้ามืด
+        label: หน้ามืด
     next:
       action: goto
       qid:
