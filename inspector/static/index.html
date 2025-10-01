@@ -1,0 +1,377 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prescreen Initial Assessment Rules Inspector</title>
+    <link rel="icon" type="image/png" href="/static/brand/thaillm.png" />
+    <link rel="shortcut icon" type="image/png" href="/static/brand/thaillm.png" />
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { height: 100%; width: 100%; }
+      body { display: flex; flex-direction: column; margin: 0; max-width: 100%; padding: 8px 12px; }
+      h3 { margin: 0; font-size: 22px; }
+      .titlebar { display: flex; align-items: center; gap: 8px; margin: 8px 0 10px; }
+      .titlebar img.logo { height: 28px; object-fit: contain; }
+      #toolbar { display: flex; gap: 8px; align-items: center; padding-bottom: 6px; flex-wrap: wrap; }
+      #main { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 12px; min-height: 0; width: 100%; }
+      #cy { width: 100%; height: 100%; border: 1px solid #ddd; min-width: 0; overflow: hidden; }
+      #details { border: 1px solid #ddd; padding: 8px; overflow: auto; min-width: 420px; max-width: 420px; }
+      .legend { font-size: 0.85em; color: #555; }
+      #valid-output { font-size: 12px; line-height: 1.2; max-height: 120px; overflow: auto; background: #f7f7f7; padding: 6px; border-radius: 4px; border: 1px solid #eee; }
+      footer { margin-top: 8px; padding-top: 6px; border-top: 1px solid #e5e5e5; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand img { height: 22px; object-fit: contain; }
+      .brand img#brand-bdi { height: 26px; }
+      #overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.75); display: none; align-items: center; justify-content: center; z-index: 1000; }
+      #overlay .card { background: white; border: 1px solid #ddd; border-radius: 6px; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); font-size: 14px; display: flex; align-items: center; gap: 10px; }
+      #overlay .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #bbb; border-top-color: #555; animation: spin 0.8s linear infinite; }
+      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div id="overlay"><div class="card"><div class="spinner"></div><div id="overlay-text">Saving and running tests…</div></div></div>
+    <div class="titlebar">
+      <img class="logo" src="/static/brand/thaillm.png" alt="ThaiLLM" />
+      <h3>Prescreen Initial Assessment Rules Inspector</h3>
+    </div>
+    <div id="toolbar">
+      <label>Symptom: <select id="symptom"></select></label>
+      <label>Mode: 
+        <select id="mode">
+          <option value="combined">Combined</option>
+          <option value="oldcarts">Oldcarts</option>
+          <option value="opd">OPD</option>
+        </select>
+      </label>
+      <button id="reload">Load</button>
+      <button id="reset">Reset view</button>
+    </div>
+    <div class="legend">Node colors: terminate=red, opd node=blue, others=gray.</div>
+    <details>
+      <summary>Validation</summary>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="validate">Run tests</button>
+        <span id="valid-status"></span>
+      </div>
+      <pre id="valid-output"></pre>
+    </details>
+    <div id="main">
+      <div id="cy"></div>
+      <div id="details">
+        <h4>Details</h4>
+        <div id="details-content">Click a node to inspect its details.</div>
+          <div id="editor" style="display:none; margin-top:8px;">
+            <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
+              <b>Raw Editor</b>
+              <span id="editor-status" style="margin-left:auto;"></span>
+            </div>
+            <textarea id="editor-text" style="width:100%; height:220px; font-family: ui-monospace, Menlo, monospace; font-size:12px;"></textarea>
+            <div style="display:flex; gap:8px; margin-top:6px;">
+              <button id="editor-save">Save</button>
+              <button id="editor-cancel">Cancel</button>
+            </div>
+          </div>
+      </div>
+    </div>
+    <footer>
+      <div>Developed by <b>VISAI</b> • Sponsored by <b>VISTEC</b> & <b>BDI</b></div>
+      <div class="brand">
+        <img src="/static/brand/visai.png" alt="VISAI" onerror="this.style.display='none'" />
+        <img src="/static/brand/vistec.png" alt="VISTEC" onerror="this.style.display='none'" />
+        <img id="brand-bdi" src="/static/brand/bdi.webp" alt="BDI" onerror="this.style.display='none'" />
+      </div>
+    </footer>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+    <script>
+      const symptomSel = document.getElementById('symptom');
+      const modeSel = document.getElementById('mode');
+      const reloadBtn = document.getElementById('reload');
+      let cy;
+      let lastVersion = null;
+      let lastGraphData = null; // cache latest /api/graph payload
+      let selectedNodeId = null; // persist current selection across reloads
+      let pollTimer = null;
+      function showOverlay(text) {
+        const ov = document.getElementById('overlay');
+        const txt = document.getElementById('overlay-text');
+        if (text) txt.textContent = text;
+        ov.style.display = 'flex';
+      }
+      function hideOverlay() {
+        const ov = document.getElementById('overlay');
+        ov.style.display = 'none';
+      }
+
+      async function loadSymptoms() {
+        const { data } = await axios.get('/api/symptoms');
+        symptomSel.innerHTML = '';
+        for (const s of data.symptoms) {
+          const opt = document.createElement('option');
+          opt.value = s; opt.textContent = s;
+          symptomSel.appendChild(opt);
+        }
+      }
+
+      function layout() {
+        cy.layout({ name: 'breadthfirst', directed: true, padding: 20, spacingFactor: 1.2 }).run();
+        cy.resize();
+        cy.fit(cy.elements(), 40);
+      }
+
+      function style() {
+        cy.style([
+          { selector: 'node', style: { 'label': 'data(label)', 'text-valign': 'center', 'background-color': '#888', 'color': '#222', 'font-size': 10 } },
+          { selector: 'node[type = "terminate"]', style: { 'background-color': '#e57373', 'shape': 'round-rectangle' } },
+          { selector: 'node[type = "opd"]', style: { 'background-color': '#64b5f6', 'shape': 'diamond' } },
+          { selector: 'edge', style: { 'curve-style': 'bezier', 'target-arrow-shape': 'triangle', 'width': 2, 'label': 'data(label)', 'font-size': 9 } },
+        ]);
+      }
+
+      async function loadGraph() {
+        const s = symptomSel.value; const m = modeSel.value;
+        if (!s) return;
+        const { data } = await axios.get(`/api/graph/${encodeURIComponent(s)}?mode=${encodeURIComponent(m)}`);
+        lastGraphData = data;
+        const elements = [
+          ...data.nodes.map(n => ({ data: n.data, group: 'nodes' })),
+          ...data.edges.map(e => ({ data: e.data, group: 'edges' })),
+        ];
+        if (!cy) {
+          cy = cytoscape({ container: document.getElementById('cy'), elements });
+          style();
+          layout();
+          cy.on('tap', 'node', (evt) => {
+            const n = evt.target;
+            selectedNodeId = n.id();
+            renderDetails(n.data());
+          });
+          cy.on('tap', (evt) => {
+            if (evt.target === cy) {
+              document.getElementById('details-content').innerHTML = 'Click a node to inspect its details.';
+            }
+          });
+        } else {
+          cy.elements().remove();
+          cy.add(elements);
+          layout();
+        }
+        // After graph is ready, try to keep the details panel in sync with selection
+        if (selectedNodeId) {
+          const node = cy.getElementById(selectedNodeId);
+          if (node && node.length) {
+            renderDetails(node.data());
+          }
+        }
+      }
+
+      function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+      function pre(obj) { return `<pre>${escapeHtml(JSON.stringify(obj, null, 2))}</pre>`; }
+      function renderDetails(d) {
+        const el = document.getElementById('details-content');
+        const editor = document.getElementById('editor');
+        // Always show editor read-only initially
+        editor.style.display = 'block';
+        setEditorDisabled(true);
+        document.getElementById('editor-text').value = JSON.stringify(d?.raw || {}, null, 2);
+        document.getElementById('editor-status').textContent = '';
+        if (!d) { el.innerHTML = 'No data'; return; }
+        let html = '';
+        html += `<div><b>QID</b>: ${escapeHtml(d.id || '')}</div>`;
+        html += `<div><b>Type</b>: ${escapeHtml(d.type || '')}</div>`;
+        html += `<div style="margin: 4px 0;"><b>Question</b>: ${escapeHtml(d.label || '')}</div>`;
+        if (d.image) {
+          html += `<div><b>Image</b>:</div><img src="${d.image}" alt="image" style="max-width: 100%; border: 1px solid #ccc;" />`;
+        }
+        if (d.type === 'number_range') {
+          html += `<div><b>Range</b>: ${escapeHtml(d.min_value)} .. ${escapeHtml(d.max_value)} step ${escapeHtml(d.step)}</div>`;
+          if (d.default_value !== undefined) {
+            html += `<div><b>Default</b>: ${escapeHtml(d.default_value)}</div>`;
+          }
+        }
+        if (d.fields) {
+          html += `<div><b>Fields</b>:</div>`;
+          html += '<ul>' + d.fields.map(f => `<li>${escapeHtml(f.label || f.id)}</li>`).join('') + '</ul>';
+        }
+        if (d.options) {
+          html += `<div><b>Options</b>:</div>`;
+          html += '<ul>' + d.options.map(o => {
+            const lbl = escapeHtml(o.label || o.id || '');
+            const a = o.action || {};
+            let actionStr = '';
+            if (a.action === 'goto') { actionStr = `→ ${escapeHtml((a.qid||[]).join(', '))}`; }
+            else if (a.action === 'opd') { actionStr = `→ OPD`; }
+            else if (a.action === 'terminate') { actionStr = `↯ ${escapeHtml(a.metadata?.department || '')}`; }
+            return `<li>${lbl} <small>${actionStr}</small></li>`;
+          }).join('') + '</ul>';
+        }
+        if (d.rules) {
+          html += `<div><b>Rules</b>:</div>`;
+          html += '<ol>' + d.rules.map(r => {
+            const cond = (r.when || []).map(w => `${escapeHtml(w.qid)} ${escapeHtml(w.op)} ${escapeHtml(typeof w.value === 'object' ? JSON.stringify(w.value) : String(w.value))}`).join(' AND ');
+            const a = r.then || {};
+            let thenStr = '';
+            if (a.action === 'goto') { thenStr = `goto → ${escapeHtml((a.qid||[]).join(', '))}`; }
+            else if (a.action === 'terminate') { thenStr = `terminate ↯ ${escapeHtml(a.metadata?.department || '')}`; }
+            return `<li><div><b>When</b>: ${cond || '(none)'}</div><div><b>Then</b>: ${thenStr}</div></li>`;
+          }).join('') + '</ol>';
+          if (d.default) {
+            const a = d.default;
+            let thenStr = '';
+            if (a.action === 'goto') { thenStr = `goto → ${escapeHtml((a.qid||[]).join(', '))}`; }
+            else if (a.action === 'terminate') { thenStr = `terminate ↯ ${escapeHtml(a.metadata?.department || '')}`; }
+            html += `<div><b>Default</b>: ${thenStr}</div>`;
+          }
+        }
+        // Raw content shown in editor. Provide Edit button to enable editing.
+        html += `<div style="margin-top:8px;"><button id="edit-raw">Edit</button></div>`;
+        el.innerHTML = html;
+
+        const editBtn = document.getElementById('edit-raw');
+        if (editBtn) {
+          editBtn.addEventListener('click', () => openEditor(d));
+        }
+      }
+
+      let editorCtx = null; // {source, symptom, qid, data}
+      function openEditor(d) {
+        editorCtx = {
+          source: d.source, // 'oldcarts' | 'opd'
+          symptom: symptomSel.value,
+          qid: d.id,
+          data: d.raw
+        };
+        selectedNodeId = d.id;
+        const ta = document.getElementById('editor-text');
+        ta.value = JSON.stringify(editorCtx.data, null, 2);
+        document.getElementById('editor-status').textContent = '';
+        document.getElementById('editor').style.display = 'block';
+        setEditorDisabled(false);
+      }
+
+      async function saveEditor() {
+        if (!editorCtx) return;
+        const status = document.getElementById('editor-status');
+        status.textContent = '';
+        let obj;
+        try {
+          obj = JSON.parse(document.getElementById('editor-text').value);
+        } catch (e) {
+          status.textContent = 'Invalid JSON';
+          return;
+        }
+        const payload = { source: editorCtx.source, symptom: editorCtx.symptom, qid: editorCtx.qid, data: obj };
+        // Optimistically disable controls
+        setEditorDisabled(true);
+        status.textContent = 'Saving and running tests...';
+        try {
+          showOverlay('Saving and running tests…');
+          const { data } = await axios.post('/api/update_question', payload);
+          if (!data.ok) {
+            alert('Save failed. Tests failed or validation error.\n' + ((data.stdout || '') + (data.stderr || '')));
+            status.textContent = 'Save failed';
+          } else {
+            status.textContent = 'Saved';
+            selectedNodeId = editorCtx.qid;
+            await loadGraph();
+            // Re-render details for the same node using the freshly fetched graph data
+            if (editorCtx && lastGraphData) {
+              const nd = (lastGraphData.nodes || []).find(n => n?.data?.id === editorCtx.qid);
+              if (nd && nd.data) {
+                renderDetails(nd.data);
+              } else if (cy) {
+                const node = cy.getElementById(editorCtx.qid);
+                if (node && node.length) renderDetails(node.data());
+              }
+            }
+            await runValidate();
+            document.getElementById('editor').style.display = 'none';
+            editorCtx = null;
+          }
+        } catch (e) {
+          // Try to extract detailed server error
+          let msg = '';
+          if (e.response && e.response.data) {
+            try {
+              const err = e.response.data;
+              msg = JSON.stringify(err, null, 2);
+            } catch (_) {
+              msg = String(e);
+            }
+          } else {
+            msg = String(e);
+          }
+          alert('Save error:\n' + msg);
+          status.textContent = 'Error';
+        } finally {
+          setEditorDisabled(false);
+          hideOverlay();
+        }
+        hideOverlay();
+      }
+
+      function cancelEditor() {
+        // Revert to original content of the last selected node
+        if (editorCtx) {
+          document.getElementById('editor-text').value = JSON.stringify(editorCtx.data || {}, null, 2);
+        }
+        setEditorDisabled(true);
+        editorCtx = null;
+      }
+
+      function setEditorDisabled(disabled) {
+        document.getElementById('editor-save').disabled = disabled;
+        document.getElementById('editor-cancel').disabled = disabled;
+        const ta = document.getElementById('editor-text');
+        ta.disabled = disabled;
+        ta.readOnly = disabled;
+        ta.style.background = disabled ? '#f9f9f9' : 'white';
+      }
+
+      async function pollVersion() {
+        try {
+          const { data } = await axios.get('/api/version');
+          if (lastVersion && data.version !== lastVersion) {
+            await loadGraph();
+            await runValidate();
+          }
+          lastVersion = data.version;
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      async function runValidate() {
+        const btn = document.getElementById('validate');
+        const out = document.getElementById('valid-output');
+        const status = document.getElementById('valid-status');
+        btn.disabled = true; status.textContent = 'Running tests...'; out.textContent = '';
+        try {
+          const { data } = await axios.get('/api/validate');
+          status.textContent = data.ok ? 'OK' : 'FAILED';
+          out.textContent = (data.stdout || '') + (data.stderr || '');
+        } catch (e) {
+          status.textContent = 'ERROR';
+          out.textContent = String(e);
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      document.getElementById('validate').addEventListener('click', runValidate);
+      reloadBtn.addEventListener('click', async () => { await loadGraph(); await runValidate(); });
+      symptomSel.addEventListener('change', async () => { await loadGraph(); await runValidate(); });
+      document.getElementById('reset').addEventListener('click', () => { if (cy) { cy.fit(cy.elements(), 40); } });
+      document.getElementById('editor-save').addEventListener('click', saveEditor);
+      document.getElementById('editor-cancel').addEventListener('click', cancelEditor);
+      loadSymptoms().then(async () => { await loadGraph(); await runValidate(); });
+      window.addEventListener('resize', () => { if (cy) { cy.resize(); } });
+      pollTimer = setInterval(pollVersion, 2000);
+    </script>
+  </body>
+  </html>
+
+

@@ -1,6 +1,6 @@
-## Visualizer (debug rule trees)
+## Inspector (debug rule trees)
 
-This repository includes a small visualizer web app to inspect and debug the Oldcarts → OPD rule flows using the YAML files in `v1/`.
+This repository includes a small inspector web app to inspect and debug the Oldcarts → OPD rule flows using the YAML files in `v1/`.
 
 ### Quickstart
 
@@ -10,10 +10,10 @@ This repository includes a small visualizer web app to inspect and debug the Old
 uv pip install -e .
 ```
 
-2. Run the visualizer:
+2. Run the inspector:
 
 ```bash
-prescreenviz
+prescreen-inspector
 ```
 
 3. Open the browser at `http://localhost:8000`.

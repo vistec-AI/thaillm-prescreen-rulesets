@@ -16,14 +16,17 @@ dependencies = [
 ]
 
 [project.scripts]
-prescreenviz = "visualizer.server:cli"
+prescreen-inspector = "inspector.server:cli"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
-exclude = ["tests*"]
+include = ["inspector"]
 
 [tool.setuptools.package-data]
-visualizer = ["static/*"]
+inspector = ["static/*", "static/**/*"]
