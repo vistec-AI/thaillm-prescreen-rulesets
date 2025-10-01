@@ -1,1760 +1,1766 @@
-"Headache":
-  - qid: hea_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: lt_15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: gte_15
-        label: ">=15"
-        action:
-          action: goto
-          qid:
-            - hea_opd_002
-  - qid: hea_opd_002
-    question: มีอาการรุนแรงผิดปกติ เช่น ปวดหัวรุนแรงที่สุดในชีวิต, เกิดขึ้นเฉียบพลัน, หรือมีอาการทางระบบประสาทร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: hea_s_001
-            op: ge
-            value: 7
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-      - when:
-          - qid: hea_o_003
-            op: eq
-            value: เฉียบพลัน
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-      - when:
-          - qid: hea_as_001
-            op: contains_any
-            value:
-              - แขนขาอ่อนแรง
-              - ชา
-              - ปากเบี้ยว
-              - คอแข็ง
-              - พูดไม่ชัด
-              - อาเจียนพุ่ง
-              - เห็นภาพซ้อน
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-    default:
-      action: goto
-      qid:
-        - hea_opd_003
-  - qid: hea_opd_003
-    question: มีปัญหาเกี่ยวกับการมองเห็น ปวดตา หรือเห็นแสงจ้าไม่ได้หรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: hea_as_001
-            op: contains_any
-            value:
-              - ตาพร่า
-              - ปวดตา
-              - ตาแดง
-              - น้ำตาไหล
-              - ตาแพ้แสง
-        then:
-          action: terminate
-          metadata:
-            department: Ophthalmology
-    default:
-      action: goto
-      qid:
-        - hea_opd_004
-  - qid: hea_opd_004
-    question: มีอาการเวียนศีรษะ บ้านหมุน และมีปัญหาเกี่ยวกับการได้ยินร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: hea_as_001
-            op: contains_any
-            value:
-              - เวียนศีรษะ
-              - มีปัญหาการได้ยิน
-        then:
-          action: terminate
-          metadata:
-            department: Otorhinolaryngology
-      - when:
-          - qid: hea_as_001
-            op: contains_any
-            value:
-              - บ้านหมุน
-              - มีปัญหาการได้ยิน
-        then:
-          action: terminate
-          metadata:
-            department: Otorhinolaryngology
-    default:
-      action: goto
-      qid:
-        - hea_opd_005
-  - qid: hea_opd_005
-    question: มีไข้ ไอ เจ็บคอ หรืออาการเหมือนเป็นหวัดร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: hea_as_001
-            op: contains_any
-            value:
-              - ไข้
-              - ไอ
-              - เจ็บคอ
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: goto
-      qid:
-        - hea_opd_006
-  - qid: hea_opd_006
-    question: มีปวดหัวเรื้อรังมานานหรือเป็นๆ หายๆ บ่อยไหม?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: hea_o_002
-            op: eq
-            value: ไม่เคย
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - when:
-          - qid: hea_o_002
-            op: eq
-            value: เคย
-        then:
-          action: goto
-          qid:
-            - hea_opd_007
-  - qid: hea_opd_007
-    question: มีความเครียด วิตกกังวล หรือปัญหาการนอนหลับหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: hea_as_001
-            op: contains_any
-            value:
-              - เครียด
-              - วิตกกังวล
-              - มีปัญหาด้านการนอนหลับ
-        then:
-          action: terminate
-          metadata:
-            department: Psychiatry
-    default:
+Headache:
+- qid: hea_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
       action: terminate
       metadata:
-        department: Internal Medicine
-"Dizziness":
-  - qid: diz_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: lt_15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: gte_15
-        label: ">=15"
-        action:
-          action: goto
-          qid:
-            - diz_opd_002
-  - qid: diz_opd_002
-    question: อาการเวียนหัวเป็นแบบบ้านหมุน (รู้สึกสิ่งแวดล้อมหมุน) หรือเป็นแบบมึนงง โคลงเคลง?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: diz_c_001
-        op: eq
-        value: บ้านหมุน เหมือนสิ่งรอบตัวหมุน
-      then:
-        action: goto
-        qid:
-          - diz_opd_003
-    - when:
-      - qid: diz_c_001
-        op: eq
-        value: มึนศีรษะ
-      then:
-        action: goto
-        qid: 
-          - diz_opd_004
-    - when:
-      - qid: diz_c_001
-        op: eq
-        value: โคลงเคลง
-      then:
-        action: goto
-        qid: 
-          - diz_opd_004
-  - qid: diz_opd_003
-    question: อาการเวียนหัวสัมพันธ์กับการเปลี่ยนท่าทาง (เช่น ลุก นั่ง ก้ม เงย) หรือไม่? มีปัญหาการได้ยิน หรือเสียงดังในหูร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: diz_as_001
-          op: contains_any
-          value:
-            - หูอื้อ
-        then:
-          action: terminate
-          metadata:
-            department: Otorhinolaryngology
-    default:
-      action: goto
-      qid: 
-        - diz_opd_004
-  - qid: diz_opd_004
-    question: มีอาการปวดหัวรุนแรงร่วมด้วยหรือไม่
-    question_type: conditional
-    rules:
-      - when:
-        - qid: diz_as_001
-          op: contains_any
-          value:
-            - ปวดศีรษะ
-        then:
-          action: goto
-          qid: 
-            - diz_opd_004-1
-    default:
+        department: Pediatrics
+  - id: gte_15
+    label: '>=15'
+    action:
       action: goto
       qid:
-        - diz_opd_004-2
-  - qid: diz_opd_004-1
-    question: อากาสปวดศีรษะร่วมด้วยกับเวียนหัว มีระดับความปวดเท่าไร ต่อสุด (ไม่ปวด) 0 คะแนน สูงสุด 10 คะแนน
-    question_type: number_range
-    min_value: 0
-    max_value: 10
-    step: 1
-    inclusive: true
-    on_submit:
-      action: goto
-      qid:
-        - diz_opd_004-1-2
-  - qid: diz_opd_004-1-2
-    question: มีอาการปวดหัวรุนแรง ในระดับความปวดหัวมากกว่า 7/10 คะแนน (pain score > 7/10) หรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: diz_opd_004-1
-          op: gt
-          value: 7
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-    default:
-      action: goto
-      qid:
-      - diz_opd_004-2
-  - qid: diz_opd_004-2
-    question: มีอาการเห็นภาพซ้อน พูดไม่ชัด ซึมลง หรือแขนขาอ่อนแรงร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: diz_as_001
-          op: contains_any
-          value:
-            - ปวดศีรษะ
-            - สายตาพร่ามัว
-            - พูดไม่ชัด
-            - อ่อนแรง
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-    default:
-      action: goto
-      qid:
-        - diz_opd_005
-  - qid: diz_opd_005
-    question: มีอาการหน้ามืดคล้ายจะเป็นลม เจ็บหน้าอก ใจสั่น หรือเหนื่อยง่ายร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: diz_as_001
-          op: contains_any
-          value:
-            - หน้ามืด
-            - เจ็บหน้าอก
-            - ใจสั่น
-            - เหนื่อยง่าย
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-    default:
+      - hea_opd_002
+- qid: hea_opd_002
+  question: มีอาการรุนแรงผิดปกติ เช่น ปวดหัวรุนแรงที่สุดในชีวิต, เกิดขึ้นเฉียบพลัน,
+    หรือมีอาการทางระบบประสาทร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: hea_s_001
+      op: ge
+      value: 7
+    then:
       action: terminate
       metadata:
-        department: Internal Medicine
-"Pain in Joint":
-  - qid: pai_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-    - id: 'lt15'
-      label: "<15"
-      action:
-        action: terminate
-        metadata:
-          department: Pediatrics
-    - id: 'ge15'
-      label: ">=15"
-      action:
-        action: goto
-        qid:
-        - pai_opd_002
-  - qid: pai_opd_002
-    question: อาการปวดข้อเกิดจากอุบัติเหตุ หรือการบาดเจ็บหรือไม่?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: pai_o_004
-        op: eq
-        value: เคย
-      then:
-        action: terminate
-        metadata:
-          department: Orthopedics and Physical Therapy
-    - when:
-      - qid: pai_o_004
-        op: eq
-        value: ไม่เคย
-      then:
-        action: goto
-        qid:
-        - pai_opd_003
-  - qid: pai_opd_003
-    question: ปวดข้อเดียว หรือปวดหลายข้อ?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: pai_l_001
-        op: eq
-        value: ปวดข้อเดียว
-      then:
-        action: goto
-        qid:
-          - pai_opd_004
-    - when:
-      - qid: pai_l_001
-        op: eq
-        value: ปวดหลายข้อ
-      then:
-        action: goto
-        qid:
-          - pai_opd_005
-  - qid: pai_opd_004
-    question: มีอาการบวม แดง ร้อน ที่ข้อหรือไม่?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: pai_as_001
-        op: contains_any
-        value:
-        - ข้อบวม
-        - แดง
-        - ร้อน
-      then:
-        action: terminate
-        metadata:
-          department: Internal Medicine
-    default:
+        department: Emergency Medicine
+  - when:
+    - qid: hea_o_003
+      op: eq
+      value: เฉียบพลัน
+    then:
       action: terminate
       metadata:
-        department: Orthopedics and Physical Therapy
-  - qid: pai_opd_005
-    question: มีอาการข้อติดขัดตอนเช้า (ตื่นนอนแล้วขยับข้อยาก) นานเกิน 30 นาทีหรือไม่? มีไข้
-      ผื่น หรืออาการผิดปกติอื่นๆ ร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: pai_as_001
-        op: contains_any
-        value:
-        - มีไข้
-        - ผื่น
-      then:
-        action: terminate
-        metadata:
-          department: Internal Medicine
-    default:
-      action: goto
-      qid:
-      - pai_opd_005-1
-  - qid: pai_opd_005-1
-    question: มีอาการข้อติดขัดตอนเช้า (ตื่นนอนแล้วขยับข้อยาก) นานเกิน 30 นาทีหรือไม่?
-    question_type: single_select
-    options:
-    - id: ใช
-      label: ใช่
-      action:
-        action: terminate
-        metadata:
-          department: Internal Medicine
-    - id: ไม_ใช
-      label: ไม่ใช่
-      action:
-        action: goto
-        qid:
-        - pai_opd_006
-  - qid: pai_opd_006
-    question: อายุของผู้ป่วยมากกว่า 50 ปีหรือไม่?
-    question_type: age_filter
-    options:
-    - id: '50'
-      label: ">50"
-      action:
-        action: terminate
-        metadata:
-          department: Orthopedics and Physical Therapy
-    - id: '50'
-      label: "<=50"
-      action:
-        action: terminate
-        metadata:
-          department: Internal Medicine
-"Muscle Pain":
-  - qid: mus_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: 'lt15'
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: 'ge15'
-        label: ">=15"
-        action:
-          action: goto
-          qid:
-            - mus_opd_002
-  - qid: mus_opd_002
-    question: อาการเจ็บกล้ามเนื้อเกิดจากการใช้งานหนัก ออกกำลังกาย หรือการบาดเจ็บหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: mus_o_004
-            op: eq
-            value: เคย
-        then:
-          action: terminate
-          metadata:
-            department: Orthopedics and Physical Therapy
-      - when:
-          - qid: mus_as_002
-            op: eq
-            value: บ่อย
-        then:
-          action: terminate
-          metadata:
-            department: Orthopedics and Physical Therapy
-    default:
-      action: goto
-      qid:
-        - mus_opd_003
-  - qid: mus_opd_003
-    question: มีไข้ อ่อนเพลีย หรืออาการระบบอื่นๆ ร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: mus_as_001
-            op: contains_any
-            value:
-              - ไข้
-              - อ่อนเพลีย
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: goto
-      qid:
-        - mus_opd_004
-  - qid: mus_opd_004
-    question: อาการเจ็บกล้ามเนื้อเป็นเฉพาะที่ หรือเป็นทั่วๆ ไปตามตัว?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: mus_l_001
-            op: eq
-            value: เฉพาะที่
-        then:
-          action: goto
-          qid:
-            - mus_opd_005
-      - when:
-          - qid: mus_l_001
-            op: eq
-            value: กระจายทั่วๆไปตามตัว
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-  - qid: mus_opd_005
-    question: ปวดกล้ามเนื้อเฉพาะที่เล็กน้อยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: mus_s_001
-            op: eq
-            value: ไม่รบกวน
-        then:
-          action: terminate
-          metadata:
-            department: Self-care / Observation
-      - when:
-          - qid: mus_s_001
-            op: eq
-            value: รบกวน
-        then:
-          action: terminate
-          metadata:
-            department: Orthopedics and Physical Therapy
-"Fever":
-  - qid: fev_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: lt_15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: gte_15
-        label: ">=15"
-        action:
-          action: goto
-          qid:
-            - fev_opd_002
-  - qid: fev_opd_002
-    question: ไข้สูงมาก (เกิน 39°C) หรือมีอาการหนาวสั่นรุนแรงหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: fev_s_001
-          op: ge
-          value: 39
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-      - when:
-        - qid: fev_as_001
-          op: contains_any
-          value:
-            - หนาวสั่น
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-    default:
-      action: goto
-      qid:
-        - fev_opd_003
-  - qid: fev_opd_003
-    question: มีอาการปวดบริเวณท้องน้อยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: fev_as_001
-          op: contains_any
-          value:
-            - ปวดท้อง
-        then:
-          action: goto
-          qid:
-            - fev_opd_003-1
-    default:
-      action: goto
-      qid:
-        - fev_opd_004
-  - qid: fev_opd_003-1
-    question: มีประวัติกำลังตั้งครรภ์หรือไม่?
-    question_type: single_select
-    options:
-      - id: ใช่
-        label: ใช่
-        action:
-          action: terminate
-          metadata:
-            department: Obstetrics and Gynecology
-      - id: ไม่ใช่
-        label: ไม่ใช่
-        action:
-          action: goto
-          qid:
-            - fev_opd_004
-  - qid: fev_opd_004
-    question: อาการปวดท้องมีความปวดรุนแรงเท่าเต็ม 10?
-    question_type: number_range
-    min_value: 0
-    max_value: 10
-    step: 1
-    inclusive: true
-    on_submit:
-      action: goto
-      qid:
-        - fev_opd_004-1
-  - qid: fev_opd_004-1
-    question: PS > 7/10?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: fev_opd_004
-          op: ge
-          value: 7
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-    default:
-      action: goto
-      qid:
-        - fev_opd_004-2
-  - qid: fev_opd_004-2
-    question: มีอาการปวดท้อง กดแล้วเจ็บท้อง หรือปวดบริเวณด้านขวาล่าง หรือไม่?
-    question_type: single_select
-    options:
-    - id: ใช่
-      label: มีอาการดังกล่าว
-      action:
-        action: terminate
-        metadata:
-          department: Emergency Medicine
-    - id: ไม่
-      label: ไม่มีอาการดังกล่าว
-      action:
-        action: goto
-        qid:
-        - fev_opd_005
-  - qid: fev_opd_005
-    question: มีอาการเกี่ยวกับระบบตา เช่น มองเห็นภาพไม่ชัด ตาพร่ามัว หรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: fev_as_001
-          op: contains_any
-          value:
-            - มองเห็นภาพไม่ชัด
-            - ตาพร่ามัว
-        then:
-          action: terminate
-          metadata:
-            department: Ophthalmology
-    default:
-      action: goto
-      qid:
-        - fev_opd_006
-  - qid: fev_opd_006
-    question: มีอาการเกี่ยวกับระบบหู เช่น ปวดหู หูอื้อ ไม่ได้ยินเสียง หรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: fev_as_001
-          op: contains_any
-          value:
-            - ปวดหู
-            - หูอื้อ
-            - ปัญหาการได้ยิน
-        then:
-          action: terminate
-          metadata:
-            department: Otorhinolaryngology
-    default:
-      action: goto
-      qid:
-        - fev_opd_007
-  - qid: fev_opd_007
-    question: มีอาการอื่นๆ ร่วมด้วย ได้แก่ ไอ เจ็บคอ ปวดหัว ปวดท้อง เจ็บตามตัว ผื่น ปัสสาวะแสบขัด หรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-        - qid: fev_as_001
-          op: contains_any
-          value: 
-            - ไอ
-            - เจ็บคอ
-            - ปวดศีรษะ
-            - ปวดท้อง
-            - ปวดข้อ
-            - ผื่นขึ้น
-            - ปัสสาวะแสบขัด
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
+        department: Emergency Medicine
+  - when:
+    - qid: hea_as_001
+      op: contains_any
+      value:
+      - แขนขาอ่อนแรง
+      - ชา
+      - ปากเบี้ยว
+      - คอแข็ง
+      - พูดไม่ชัด
+      - อาเจียนพุ่ง
+      - เห็นภาพซ้อน
+    then:
       action: terminate
       metadata:
-        department: Self-care / Observation
-"Cough":
-  - qid: cou_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: lt_15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: gte_15
-        label: ">=15"
-        action:
-          action: goto
-          qid:
-            - cou_opd_002
-  - qid: cou_opd_002
-    question: มีไข้ เจ็บคอ หรือน้ำมูกร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: cou_as_001
-            op: contains_any
-            value:
-              - ไข้
-              - เจ็บคอ
-              - มีน้ำมูก
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: goto
-      qid:
-        - cou_opd_003
-  - qid: cou_opd_003
-    question: ไอมีเสมหะหรือไม่? ถ้ามี เสมหะสีอะไร (เช่น ใส ขาว เหลือง เขียว หรือมีเลือดปน)?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: cou_c_001
-            op: eq
-            value: ไอเป็นเลือด
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - when:
-          - qid: cou_c_001-01
-            op: eq
-            value: สีเหลือง
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - when:
-          - qid: cou_c_001-01
-            op: eq
-            value: สีเขียว
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: goto
-      qid:
-        - cou_opd_004
-  - qid: cou_opd_004
-    question: ไอเรื้อรัง (นานกว่า 1-2 สัปดาห์) หรือไม่? มีอาการเหนื่อยหอบ หรือเจ็บหน้าอกร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: cou_as_001
-            op: contains_any
-            value:
-              - เหนื่อยง่ายขึ้น
-              - หอบ
-              - เจ็บหน้าอก
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - when:
-          - qid: cou_d_001
-            op: eq
-            value: นานเกิน 1 สัปดาห์
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: goto
-      qid:
-        - cou_opd_005
-  - qid: cou_opd_005
-    question: มีอาการแสบคอ คันคอ หรือรู้สึกเหมือนมีอะไรติดคอร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: cou_as_001
-            op: contains_any
-            value:
-              - แสบคอ
-              - คันคอ
-              - มีอะไรติดคอ
-        then:
-          action: terminate
-          metadata:
-            department: Otorhinolaryngology
-    default:
-      action: terminate
-      metadata:
-        department: Internal Medicine
-"Sore Throat":
-  - qid: sor_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: lt_15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: gte_15
-        label: ">=15"
-        action:
-          action: goto
-          qid:
-            - sor_opd_002
-  - qid: sor_opd_002
-    question: มีไข้ ไอ หรือน้ำมูก คล้ายหวัดร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: sor_as_001
-            op: contains_any
-            value:
-              - ไข้
-              - ไอ
-              - น้ำมูก
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: goto
-      qid:
-        - sor_opd_003
-  - qid: sor_opd_003
-    question: เจ็บคอมาก กลืนลำบากจนรับประทานอาหารหรือน้ำไม่ได้หรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: sor_as_001
-            op: contains_any
-            value:
-              - กลืนลำบาก
-              - กลืนเจ็บ
-        then:
-          action: terminate
-          metadata:
-            department: Otorhinolaryngology
-    default:
-      action: goto
-      qid:
-        - sor_opd_004
-  - qid: sor_opd_004
-    question: อาการเสียงแหบ หรือรู้สึกมีก้อนในคอร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: sor_as_001
-            op: contains_any
-            value:
-              - เสียงเปลี่ยน
-        then:
-          action: terminate
-          metadata:
-            department: Otorhinolaryngology
-    default:
-      action: terminate
-      metadata:
-        department: Internal Medicine
-"Stomachache":
-  - qid: sto_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-    - id: lt_15
-      label: "<15"
-      action:
-        action: terminate
-        metadata:
-          department: Pediatrics
-    - id: ge_15
-      label: ">=15"
-      action:
-        action: goto
-        qid:
-        - sto_opd_002
-  - qid: sto_opd_002
-    question: ท่านเป็นเพศหญิงหรือไม่??
-    question_type: gender_filter
-    options:
-    - id: male
-      label: male
-      action:
-        action: goto
-        qid:
-        - sto_opd_004
-    - id: female
-      label: female
-      action:
-        action: goto
-        qid:
-        - sto_opd_002-1
-  - qid: sto_opd_002-1
-    question: มีประวัติกำลังตั้งครรภ์หรือไม่?
-    question_type: single_select
-    options:
-    - id: ใช่ กำลังตั้งครรภ์อยู่
-      label: ใช่ กำลังตั้งครรภ์อยู่
-      action:
-        action: terminate
-        metadata:
-          department: Obstetrics and Gynecology
-    - id: ไม่
-      label: ไม่
-      action:
-        action: goto
-        qid:
-        - sto_opd_003
-  - qid: sto_opd_003
-    question: มีเลือดออกผิดปกติทางช่องคลอด หรือตกขาวผิดปกติร่วมด้วยหรือไม่? อาการปวดสัมพันธ์กับรอบเดือนหรือไม่?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: sto_as_001
-        op: contains_any
-        value:
-        - ตกขาวผิดปกติ
-      then:
-        action: terminate
-        metadata:
-          department: Obstetrics and Gynecology
-    default:
-      action: goto
-      qid:
-      - sto_opd_004
-  - qid: sto_opd_004
-    question: อาการปวดท้องรุนแรงมาก (PS > 7/10) หรือปวดเฉียบพลัน กดเจ็บ หรือมีเลือดออก
-      เช่น อาเจียนหรือถ่ายเป็นเลือดสด หรือไม่?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: sto_s_001
-        op: ge
-        value: 7
-      then:
-        action: terminate
-        metadata:
-          department: Emergency Medicine
-    - when:
-      - qid: sto_o_003
-        op: eq
-        value: เฉียบพลัน
-      then:
-        action: terminate
-        metadata:
-          department: Emergency Medicine
-    - when:
-      - qid: sto_as_001
-        op: contains_any
-        value:
-        - อาเจียน
-        - ถ่ายเป็นเลือด
-      then:
-        action: terminate
-        metadata:
-          department: Emergency Medicine
-    default:
-      action: goto
-      qid:
-      - sto_opd_005
-  - qid: sto_opd_005
-    question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: sto_l_001
-        op: contains_any
-        value:
-        - ท้องน้อยด้านขวา
-        - รอบสะดือ
-      then:
-        action: terminate
-        metadata:
-          department: Internal Medicine
-    - when:
-      - qid: sto_l_001
-        op: contains_any
-        value:
-        - ท้องส่วนบนด้านซ้าย
-      then:
-        action: goto
-        qid:
-        - sto_opd_006
-    default:
-      action: terminate
-      metadata:
-        department: Internal Medicine
-  - qid: sto_opd_006
-    question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: sto_as_001
-        op: contains_any
-        value:
-        - ไข้
-        - ตัวเหลือง
-        - ตาเหลือง
-      then:
-        action: terminate
-        metadata:
-          department: Surgery
-    default:
-      action: terminate
-      metadata:
-        department: Internal Medicine
-  - qid: sto_opd_006-2
-    question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-    - when:
-      - qid: sto_as_001
-        op: contains_any
-        value:
-        - มีไข้
-        - ตัวเหลือง
-        - ตาเหลือง
-      then:
-        action: terminate
-        metadata:
-          department: Surgery
-    default:
-      action: terminate
-      metadata:
-        department: Internal Medicine
-"Constipation":
-  - qid: con_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: _15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: _15
-        label: ">=15"
-        action:
-          action: goto
-          qid:
-            - con_opd_002
-  - qid: con_opd_002
-    question: อาการท้องผูกเป็นมานานหลายวัน (> 2 วัน) หรือ ปวดท้องรุนแรง?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: con_d_001
-            op: eq
-            value: น้อยกว่า 2 วัน
-        then:
-          action: goto
-          qid:
-            - con_opd_002-1
-      - when:
-          - qid: con_d_001
-            op: eq
-            value: เป็นมามากกว่า 2 วัน
-        then:
-          action: goto
-          qid:
-            - con_opd_003
-    default:
-      action: goto
-      qid:
-        - con_opd_003
-  - qid: con_opd_002-1
-    question: อายุมากกว่า 50 ปีหรือไม่
-    question_type: age_filter
-    options:
-      - id: lt50
-        label: "<50"
-        action:
-          action: terminate
-          metadata:
-            department: Self-care / Observation
-      - id: ge50
-        label: ">=15"
-        action:
-          action: terminate
-          metadata:
-            department: Surgery
-  - qid: con_opd_003
-    question: มีอาการปวดท้องรุนแรง อืดแน่นท้องมาก ไม่ผายลม หรืออาเจียนร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: con_as_001
-            op: contains_any
-            value:
-              - ปวดท้อง
-              - ท้องอืด
-              - แน่น
-              - คลื่นไส้
-        then:
-          action: terminate
-          metadata:
-            department: Surgery
-    default:
-      action: goto
-      qid:
-        - con_opd_004
-  - qid: con_opd_004
-    question: มีถ่ายเป็นเลือดออกมามากหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: con_c_001-03
-            op: eq
-            value: มี
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-      - when:
-          - qid: con_as_001
-            op: contains_any
-            value:
-              - ปวดท้อง
-        then:
-          action: goto
-          qid:
-            - con_opd_005
-      - when:
-          - qid: con_c_001-03
-            op: eq
-            value: ไม่มี
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-  - qid: con_opd_005
-    question: อาการปวดท้องรุนแรงแค่ไหน?
-    question_type: number_range
-    min_value: 0
-    max_value: 10
-    step: 1
-    inclusive: true
-    on_submit:
-      action: goto
-      qid:
-        - con_opd_005-01
-  - qid: con_opd_005-01
-    question: อาการปวดท้องรุนแรง (PS > 7/10)?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: con_opd_005
-            op: ge
-            value: 7
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-      - when:
-          - qid: con_opd_005
-            op: lt
-            value: 7
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-"Diarrhea":
-  - qid: dia_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: lt_15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: gte_15
-        label: ">=15"
-        action:
-          action: goto
-          qid:
-            - dia_opd_002
-  - qid: dia_opd_002
-    question: มีอาการขาดน้ำรุนแรงหรือไม่? (เช่น ปากแห้ง คอแห้ง ปัสสาวะน้อยลง อ่อนเพลียมาก
-      หน้ามืด)
-    question_type: conditional
-    rules:
-      - when:
-          - qid: dia_as_001
-            op: contains_any
-            value:
-              - ปากแห้ง
-              - คอแห้ง
-              - ปัสสาวะน้อยลง
-              - อ่อนเพลียมาก
-              - หน้ามืด
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-    default:
-      action: goto
-      qid:
-        - dia_opd_003
-  - qid: dia_opd_003
-    question: ถ่ายเหลวเป็นน้ำ หรือมีมูกเลือดปนในอุจจาระ?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: dia_c_001
-            op: eq
-            value: มีมูกเลือด
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - when:
-          - qid: dia_c_001
-            op: eq
-            value: เลือดสด
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - when:
-          - qid: dia_c_001
-            op: eq
-            value: ถ่ายเป็นน้ำ
-        then:
-          action: goto
-          qid:
-            - dia_opd_004
-  - qid: dia_opd_004
-    question: มีไข้ ปวดท้องรุนแรง หรืออาเจียนร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: dia_as_001
-            op: contains_any
-            value:
-              - ไข้
-              - ปวดท้อง
-              - อาเจียน
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: terminate
-      metadata:
-        department: Self-care / Observation
-"Dysuria":
-  - qid: dys_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: lt_15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: gte_15
-        label: ">=15"
-        action:
-          action: goto
-          qid:
-            - dys_opd_002
-  - qid: dys_opd_002
-    question: ท่านเป็นเพศหญิงหรือไม่?
-    question_type: gender_filter
-    options:
-      - id: male
-        label: male
-        action:
-          action: goto
-          qid:
-            - dys_opd_004
-      - id: female
-        label: female
-        action:
-          action: goto
-          qid:
-            - dys_opd_003
-  - qid: dys_opd_003
-    question: มีประวัติกำลังตั้งครรภ์หรือไม่?
-    question_type: single_select
-    options:
-      - id: mee
-        label: มี
-        action:
-          action: terminate
-          metadata:
-            department: Obstetrics and Gynecology
-      - id: mai_mee
-        label: ไม่มี
-        action:
-          action: goto
-          qid:
-            - dys_opd_003-1
-  - qid: dys_opd_003-1
-    question: มีตกขาวผิดปกติ ปวดท้องน้อยร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: dys_as_001
-            op: contains_any
-            value:
-              - ตกขาวผิดปกติ
-              - ปวดท้องน้อย
-        then:
-          action: terminate
-          metadata:
-            department: Obstetrics and Gynecology
-    default:
-      action: goto
-      qid:
-        - dys_opd_005
-  - qid: dys_opd_004
-    question: มีหนองไหลออกจากอวัยวะเพศหรือไม่? มีอาการปวดอัณฑะร่วมด้วยหรือไม่?
-    question_type: single_select
-    options:
-      - id: mee_nong_lhai
-        label: มีหนองไหล
-        action:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - id: puad_untha
-        label: ปวดอัณฑะ
-        action:
-          action: terminate
-          metadata:
-            department: Surgery
-      - id: mai_mee
-        label: ไม่มี
-        action:
-          action: goto
-          qid:
-            - dys_opd_005
-  - qid: dys_opd_005
-    question: มีไข้ หนาวสั่น หรือปวดหลังบริเวณเอวร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: dys_as_001
-            op: contains_any
-            value:
-              - ปวดหลัง
-        then:
-          action: goto
-          qid:
-            - dys_opd_005-1
-      - when:
-          - qid: dys_as_001
-            op: contains_any
-            value:
-              - ไข้
-              - หนาวสั่น
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: goto
-      qid:
-        - dys_opd_006
-  - qid: dys_opd_005-1
-    question: ปวดหลังบริเวณเอวร่วมด้วยหรือไม่?
-    question_type: single_select
-    options:
-      - id: chai
-        label: ใช่
-        action:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - id: mai_chai
-        label: ไม่ใช่
-        action:
-          action: goto
-          qid:
-            - dys_opd_006
-  - qid: dys_opd_006
-    question: ปัสสาวะมีเลือดปน หรือสีขุ่นผิดปกติหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: dys_c_001
-            op: eq
-            value: ขุ่น
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - when:
-          - qid: dys_c_001
-            op: eq
-            value: มีเลือดปน
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: goto
-      qid:
-        - dys_opd_007
-  - qid: dys_opd_007
-    question: อายุมากกว่า 50 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: lt_50
-        label: "<50"
-        action:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-      - id: gte_50
-        label: ">=50"
-        action:
-          action: goto
-          qid:
-            - dys_opd_007-1
-  - qid: dys_opd_007-1
-    question: ท่านเป็นเพศชายหรือไม่?
-    question_type: gender_filter
-    options:
-      - id: male
-        label: male
-        action:
-          action: goto
-          qid:
-            - dys_opd_007-2
-      - id: female
-        label: female
-        action:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-  - qid: dys_opd_007-2
-    question: กลั้นปัสสาวะไม่ได้หรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: dys_c_001-01
-            op: eq
-            value: ไม่ได้
-        then:
-          action: terminate
-          metadata:
-            department: Surgery
-    default:
-      action: goto
-      qid:
-        - dys_opd_007-3
-  - qid: dys_opd_007-3
-    question: มีอาการเฉพาะปัสสาวะลำบาก ปัสสาวะไม่พุ่ง หรือไม่?
-    question_type: single_select
-    options:
-      - id: chai
-        label: ใช่
-        action:
-          action: terminate
-          metadata:
-            department: Surgery
-      - id: mai_chai
-        label: ไม่ใช่
-        action:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-"Vaginal Discharge":
-  - qid: vag_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: lt_15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: gte_15
-        label: ">=15"
-        action:
-          action: terminate
-          metadata:
-            department: Obstetrics and Gynecology
-"Skin Rash/Lesion":
-  - qid: rash_opd_001
-    question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-    question_type: age_filter
-    options:
-      - id: less_than_15
-        label: <15
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: greater_than_or_equal_to_15
-        label: '>=15'
-        action:
-          action: goto
-          qid:
-            - rash_opd_002
-  - qid: rash_opd_002
-    question: ผื่น/รอยโรค เกิดขึ้นเฉียบพลัน และลุกลามรวดเร็วในหลักนาที หรือชั่วโมงหรือไม่?
-      มีอาการอื่นๆ ร่วมด้วยหรือไม่ เช่น ไข้สูง หายใจลำบาก ปากบวม หน้าบวม?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: rash_o_003
-            op: eq
-            value: เฉียบพลัน
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-      - when:
-          - qid: rash_as_001
-            op: contains_any
-            value:
-              - ไข้
-              - หายใจลำบาก
-              - ปากบวม
-              - หน้าบวม
-        then:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-    default:
-      action: goto
-      qid:
-        - rash_opd_003
-  - qid: rash_opd_003
-    question: มีไข้ หรืออาการผิดปกติระบบอื่นๆ ทั่วร่างกายร่วมด้วยหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: rash_as_001
-            op: contains_any
-            value:
-              - ไข้
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: terminate
-      metadata:
-        department: Dermatology
-"Wound":
-  - qid: wou_opd_001
-    question: บาดแผลเกิดจากอะไร? และเกิดเหตุภายใน 24 ชม. แรก?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: wou_o_004
-            op: eq
-            value: เคย
-        then:
-          action: goto
-          qid:
-            - wou_opd_001-1
-    default:
-      action: goto
-      qid:
-        - wou_opd_002
-  - qid: wou_opd_001-1
-    question: เกิดเหตุภายใน 24 ชม. แรกหรือไม่
-    question_type: single_select
-    options:
-      - id: ใช่_เกิดเหตุการณ์ที่เกี่ยวข้องภายใน_24_ชั่วโมง
-        label: ใช่ เกิดเหตุการณ์ที่เกี่ยวข้องภายใน 24 ชั่วโมง
-        action:
-          action: terminate
-          metadata:
-            department: Emergency Medicine
-      - id: ไม่ใช่
-        label: ไม่ใช่
-        action:
-          action: goto
-          qid:
-            - wou_opd_002
-  - qid: wou_opd_002
-    question: แผลมีเลือดออกมาก หรือหยุดไหลแล้ว?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: wou_c_002
-            op: eq
-            value: บาดแผลมีเลือดออดขนาดเล็กถึงปานกลาง
-        then:
-          action: goto
-          qid:
-            - wou_opd_002-1
-    default:
-      action: goto
-      qid:
-        - wou_opd_003
-  - qid: wou_opd_002-1
-    question: เลือดหลุดไหลหรือยัง?
-    question_type: single_select
-    options:
-      - id: หยุดแล้ว
-        label: หยุดแล้ว
-        action:
-          action: goto
-          qid:
-            - wou_opd_004
-      - id: ยังไม่หยุด
-        label: ยังไม่หยุด
-        action:
-          action: goto
-          qid:
-            - wou_opd_004
-  - qid: wou_opd_003
-    question: บาดแผลลึก หรือกว้างมากหรือไม่? มองเห็นกระดูก เอ็น หรืออวัยวะภายในหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: wou_c_002
-            op: eq
-            value: บาดแผลมีขนาดใหญ่และลึก
-        then:
-          action: terminate
-          metadata:
-            department: Surgery
-      - when:
-          - qid: wou_c_002
-            op: eq
-            value: บาดแผลรุนแรง มองเห็นกระดูก เอ็น หรืออวัยวะภายใน
-        then:
-          action: terminate
-          metadata:
-            department: Surgery
-    default:
-      action: goto
-      qid:
-        - wou_opd_004
-  - qid: wou_opd_004
-    question: บาดแผลสกปรก หรือมีสิ่งแปลกปลอมติดอยู่หรือไม่?
-    question_type: single_select
-    options:
-      - id: มี
-        label: มี
-        action:
-          action: terminate
-          metadata:
-            department: Surgery
-      - id: ไม่มี
-        label: ไม่มี
-        action:
-          action: goto
-          qid:
-            - wou_opd_005
-  - qid: wou_opd_005
-    question: มีอาการปวด บวม แดง ร้อน รอบแผล หรือมีหนองไหลหรือไม่?
-    question_type: conditional
-    rules:
-      - when:
-          - qid: wou_as_001
-            op: contains_any
-            value:
-              - หนอง
-              - บวมแดงร้อน
-        then:
-          action: terminate
-          metadata:
-            department: Internal Medicine
-    default:
-      action: goto
-      qid:
-        - wou_opd_006
-  - qid: wou_opd_006
-    question: บาดแผลเกิดที่บริเวณใบหน้า ข้อต่อ มือ เท้า อวัยวะเพศ หรือไม่?
-    question_type: single_select
-    options:
-      - id: มีแผลบริเวณดังกล่าว (ใบหน้า ข้อต่อ มือ เท้า อวัยวะเพศ)
-        label: มีแผลบริเวณดังกล่าว (ใบหน้า ข้อต่อ มือ เท้า อวัยวะเพศ)
-        action: 
-          action: terminate
-          metadata:
-            department: Surgery
-      - id: บริเวณอื่น (ผิวหนังทั่วไป)
-        label: บริเวณอื่น (ผิวหนังทั่วไป)
-        action:
-          action: goto
-          qid:
-            - wou_opd_007
-  - qid: wou_opd_007
-    question: ท่านอายุเท่าไร?
-    question_type: age_filter
-    options:
-      - id: lt_15
-        label: "<15"
-        action:
-          action: terminate
-          metadata:
-            department: Pediatrics
-      - id: gte_15
-        label: ">=15"
-        action:
-          action: terminate
-          metadata:
-            department: Surgery
-"Eye Disorder":
-  - qid: eye_opd_001
-    question: ท่านมีอาการในหัวข้ออื่นเด่นกว่าอาการทางตาหรือไม่?
-    question_type: conditional
-    rules: []
-    default:
+        department: Emergency Medicine
+  default:
+    action: goto
+    qid:
+    - hea_opd_003
+- qid: hea_opd_003
+  question: มีปัญหาเกี่ยวกับการมองเห็น ปวดตา หรือเห็นแสงจ้าไม่ได้หรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: hea_as_001
+      op: contains_any
+      value:
+      - ตาพร่า
+      - ปวดตา
+      - ตาแดง
+      - น้ำตาไหล
+      - ตาแพ้แสง
+    then:
       action: terminate
       metadata:
         department: Ophthalmology
-"Ear Disorder":
-  - qid: ear_opd_001
-    question: ท่านมีอาการในหัวข้ออื่นเด่นกว่าอาการทางหูหรือไม่?
-    question_type: conditional
-    rules: []
-    default:
+  default:
+    action: goto
+    qid:
+    - hea_opd_004
+- qid: hea_opd_004
+  question: มีอาการเวียนศีรษะ บ้านหมุน และมีปัญหาเกี่ยวกับการได้ยินร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: hea_as_001
+      op: contains_any
+      value:
+      - เวียนศีรษะ
+      - มีปัญหาการได้ยิน
+    then:
       action: terminate
       metadata:
         department: Otorhinolaryngology
+  - when:
+    - qid: hea_as_001
+      op: contains_any
+      value:
+      - บ้านหมุน
+      - มีปัญหาการได้ยิน
+    then:
+      action: terminate
+      metadata:
+        department: Otorhinolaryngology
+  default:
+    action: goto
+    qid:
+    - hea_opd_005
+- qid: hea_opd_005
+  question: มีไข้ ไอ เจ็บคอ หรืออาการเหมือนเป็นหวัดร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: hea_as_001
+      op: contains_any
+      value:
+      - ไข้
+      - ไอ
+      - เจ็บคอ
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - hea_opd_006
+- qid: hea_opd_006
+  question: มีปวดหัวเรื้อรังมานานหรือเป็นๆ หายๆ บ่อยไหม?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: hea_o_002
+      op: eq
+      value: ไม่เคย
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - when:
+    - qid: hea_o_002
+      op: eq
+      value: เคย
+    then:
+      action: goto
+      qid:
+      - hea_opd_007
+- qid: hea_opd_007
+  question: มีความเครียด วิตกกังวล หรือปัญหาการนอนหลับหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: hea_as_001
+      op: contains_any
+      value:
+      - เครียด
+      - วิตกกังวล
+      - มีปัญหาด้านการนอนหลับ
+    then:
+      action: terminate
+      metadata:
+        department: Psychiatry
+  default:
+    action: terminate
+    metadata:
+      department: Internal Medicine
+Dizziness:
+- qid: diz_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: gte_15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - diz_opd_002
+- qid: diz_opd_002
+  question: อาการเวียนหัวเป็นแบบบ้านหมุน (รู้สึกสิ่งแวดล้อมหมุน) หรือเป็นแบบมึนงง
+    โคลงเคลง?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: diz_c_001
+      op: eq
+      value: บ้านหมุน เหมือนสิ่งรอบตัวหมุน
+    then:
+      action: goto
+      qid:
+      - diz_opd_003
+  - when:
+    - qid: diz_c_001
+      op: eq
+      value: มึนศีรษะ
+    then:
+      action: goto
+      qid:
+      - diz_opd_004
+  - when:
+    - qid: diz_c_001
+      op: eq
+      value: โคลงเคลง
+    then:
+      action: goto
+      qid:
+      - diz_opd_004
+- qid: diz_opd_003
+  question: อาการเวียนหัวสัมพันธ์กับการเปลี่ยนท่าทาง (เช่น ลุก นั่ง ก้ม เงย) หรือไม่?
+    มีปัญหาการได้ยิน หรือเสียงดังในหูร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: diz_as_001
+      op: contains_any
+      value:
+      - หูอื้อ
+    then:
+      action: terminate
+      metadata:
+        department: Otorhinolaryngology
+  default:
+    action: goto
+    qid:
+    - diz_opd_004
+- qid: diz_opd_004
+  question: มีอาการปวดหัวรุนแรงร่วมด้วยหรือไม่
+  question_type: conditional
+  rules:
+  - when:
+    - qid: diz_as_001
+      op: contains_any
+      value:
+      - ปวดศีรษะ
+    then:
+      action: goto
+      qid:
+      - diz_opd_004-1
+  default:
+    action: goto
+    qid:
+    - diz_opd_004-2
+- qid: diz_opd_004-1
+  question: อากาสปวดศีรษะร่วมด้วยกับเวียนหัว มีระดับความปวดเท่าไร ต่อสุด (ไม่ปวด)
+    0 คะแนน สูงสุด 10 คะแนน
+  question_type: number_range
+  min_value: 0
+  max_value: 10
+  step: 1
+  inclusive: true
+  on_submit:
+    action: goto
+    qid:
+    - diz_opd_004-1-2
+- qid: diz_opd_004-1-2
+  question: มีอาการปวดหัวรุนแรง ในระดับความปวดหัวมากกว่า 7/10 คะแนน (pain score >
+    7/10) หรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: diz_opd_004-1
+      op: gt
+      value: 7
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  default:
+    action: goto
+    qid:
+    - diz_opd_004-2
+- qid: diz_opd_004-2
+  question: มีอาการเห็นภาพซ้อน พูดไม่ชัด ซึมลง หรือแขนขาอ่อนแรงร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: diz_as_001
+      op: contains_any
+      value:
+      - ปวดศีรษะ
+      - สายตาพร่ามัว
+      - พูดไม่ชัด
+      - อ่อนแรง
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  default:
+    action: goto
+    qid:
+    - diz_opd_005
+- qid: diz_opd_005
+  question: มีอาการหน้ามืดคล้ายจะเป็นลม เจ็บหน้าอก ใจสั่น หรือเหนื่อยง่ายร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: diz_as_001
+      op: contains_any
+      value:
+      - หน้ามืด
+      - เจ็บหน้าอก
+      - ใจสั่น
+      - เหนื่อยง่าย
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  default:
+    action: terminate
+    metadata:
+      department: Internal Medicine
+Pain in Joint:
+- qid: pai_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: ge15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - pai_opd_002
+- qid: pai_opd_002
+  question: อาการปวดข้อเกิดจากอุบัติเหตุ หรือการบาดเจ็บหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: pai_o_004
+      op: eq
+      value: เคย
+    then:
+      action: terminate
+      metadata:
+        department: Orthopedics and Physical Therapy
+  - when:
+    - qid: pai_o_004
+      op: eq
+      value: ไม่เคย
+    then:
+      action: goto
+      qid:
+      - pai_opd_003
+- qid: pai_opd_003
+  question: ปวดข้อเดียว หรือปวดหลายข้อ?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: pai_l_001
+      op: eq
+      value: ปวดข้อเดียว
+    then:
+      action: goto
+      qid:
+      - pai_opd_004
+  - when:
+    - qid: pai_l_001
+      op: eq
+      value: ปวดหลายข้อ
+    then:
+      action: goto
+      qid:
+      - pai_opd_005
+- qid: pai_opd_004
+  question: มีอาการบวม แดง ร้อน ที่ข้อหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: pai_as_001
+      op: contains_any
+      value:
+      - ข้อบวม
+      - แดง
+      - ร้อน
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: terminate
+    metadata:
+      department: Orthopedics and Physical Therapy
+- qid: pai_opd_005
+  question: มีอาการข้อติดขัดตอนเช้า (ตื่นนอนแล้วขยับข้อยาก) นานเกิน 30 นาทีหรือไม่?
+    มีไข้ ผื่น หรืออาการผิดปกติอื่นๆ ร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: pai_as_001
+      op: contains_any
+      value:
+      - มีไข้
+      - ผื่น
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - pai_opd_005-1
+- qid: pai_opd_005-1
+  question: มีอาการข้อติดขัดตอนเช้า (ตื่นนอนแล้วขยับข้อยาก) นานเกิน 30 นาทีหรือไม่?
+  question_type: single_select
+  options:
+  - id: ใช
+    label: ใช่
+    action:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - id: ไม_ใช
+    label: ไม่ใช่
+    action:
+      action: goto
+      qid:
+      - pai_opd_006
+- qid: pai_opd_006
+  question: อายุของผู้ป่วยมากกว่า 50 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: '50'
+    label: '>50'
+    action:
+      action: terminate
+      metadata:
+        department: Orthopedics and Physical Therapy
+  - id: '50'
+    label: <=50
+    action:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+Muscle Pain:
+- qid: mus_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: ge15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - mus_opd_002
+- qid: mus_opd_002
+  question: อาการเจ็บกล้ามเนื้อเกิดจากการใช้งานหนัก ออกกำลังกาย หรือการบาดเจ็บหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: mus_o_004
+      op: eq
+      value: เคย
+    then:
+      action: terminate
+      metadata:
+        department: Orthopedics and Physical Therapy
+  - when:
+    - qid: mus_as_002
+      op: eq
+      value: บ่อย
+    then:
+      action: terminate
+      metadata:
+        department: Orthopedics and Physical Therapy
+  default:
+    action: goto
+    qid:
+    - mus_opd_003
+- qid: mus_opd_003
+  question: มีไข้ อ่อนเพลีย หรืออาการระบบอื่นๆ ร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: mus_as_001
+      op: contains_any
+      value:
+      - ไข้
+      - อ่อนเพลีย
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - mus_opd_004
+- qid: mus_opd_004
+  question: อาการเจ็บกล้ามเนื้อเป็นเฉพาะที่ หรือเป็นทั่วๆ ไปตามตัว?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: mus_l_001
+      op: eq
+      value: เฉพาะที่
+    then:
+      action: goto
+      qid:
+      - mus_opd_005
+  - when:
+    - qid: mus_l_001
+      op: eq
+      value: กระจายทั่วๆไปตามตัว
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+- qid: mus_opd_005
+  question: ปวดกล้ามเนื้อเฉพาะที่เล็กน้อยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: mus_s_001
+      op: eq
+      value: ไม่รบกวน
+    then:
+      action: terminate
+      metadata:
+        department: Self-care / Observation
+  - when:
+    - qid: mus_s_001
+      op: eq
+      value: รบกวน
+    then:
+      action: terminate
+      metadata:
+        department: Orthopedics and Physical Therapy
+Fever:
+- qid: fev_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: gte_15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - fev_opd_002
+- qid: fev_opd_002
+  question: ไข้สูงมาก (เกิน 39°C) หรือมีอาการหนาวสั่นรุนแรงหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: fev_s_001
+      op: ge
+      value: 39
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  - when:
+    - qid: fev_as_001
+      op: contains_any
+      value:
+      - หนาวสั่น
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  default:
+    action: goto
+    qid:
+    - fev_opd_003
+- qid: fev_opd_003
+  question: มีอาการปวดบริเวณท้องน้อยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: fev_as_001
+      op: contains_any
+      value:
+      - ปวดท้อง
+    then:
+      action: goto
+      qid:
+      - fev_opd_003-1
+  default:
+    action: goto
+    qid:
+    - fev_opd_004
+- qid: fev_opd_003-1
+  question: มีประวัติกำลังตั้งครรภ์หรือไม่?
+  question_type: single_select
+  options:
+  - id: ใช่
+    label: ใช่
+    action:
+      action: terminate
+      metadata:
+        department: Obstetrics and Gynecology
+  - id: ไม่ใช่
+    label: ไม่ใช่
+    action:
+      action: goto
+      qid:
+      - fev_opd_004
+- qid: fev_opd_004
+  question: อาการปวดท้องมีความปวดรุนแรงเท่าเต็ม 10?
+  question_type: number_range
+  min_value: 0
+  max_value: 10
+  step: 1
+  inclusive: true
+  on_submit:
+    action: goto
+    qid:
+    - fev_opd_004-1
+- qid: fev_opd_004-1
+  question: PS > 7/10?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: fev_opd_004
+      op: ge
+      value: 7
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  default:
+    action: goto
+    qid:
+    - fev_opd_004-2
+- qid: fev_opd_004-2
+  question: มีอาการปวดท้อง กดแล้วเจ็บท้อง หรือปวดบริเวณด้านขวาล่าง หรือไม่?
+  question_type: single_select
+  options:
+  - id: ใช่
+    label: มีอาการดังกล่าว
+    action:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  - id: ไม่
+    label: ไม่มีอาการดังกล่าว
+    action:
+      action: goto
+      qid:
+      - fev_opd_005
+- qid: fev_opd_005
+  question: มีอาการเกี่ยวกับระบบตา เช่น มองเห็นภาพไม่ชัด ตาพร่ามัว หรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: fev_as_001
+      op: contains_any
+      value:
+      - มองเห็นภาพไม่ชัด
+      - ตาพร่ามัว
+    then:
+      action: terminate
+      metadata:
+        department: Ophthalmology
+  default:
+    action: goto
+    qid:
+    - fev_opd_006
+- qid: fev_opd_006
+  question: มีอาการเกี่ยวกับระบบหู เช่น ปวดหู หูอื้อ ไม่ได้ยินเสียง หรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: fev_as_001
+      op: contains_any
+      value:
+      - ปวดหู
+      - หูอื้อ
+      - ปัญหาการได้ยิน
+    then:
+      action: terminate
+      metadata:
+        department: Otorhinolaryngology
+  default:
+    action: goto
+    qid:
+    - fev_opd_007
+- qid: fev_opd_007
+  question: มีอาการอื่นๆ ร่วมด้วย ได้แก่ ไอ เจ็บคอ ปวดหัว ปวดท้อง เจ็บตามตัว ผื่น
+    ปัสสาวะแสบขัด หรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: fev_as_001
+      op: contains_any
+      value:
+      - ไอ
+      - เจ็บคอ
+      - ปวดศีรษะ
+      - ปวดท้อง
+      - ปวดข้อ
+      - ผื่นขึ้น
+      - ปัสสาวะแสบขัด
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: terminate
+    metadata:
+      department: Self-care / Observation
+Cough:
+- qid: cou_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: gte_15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - cou_opd_002
+- qid: cou_opd_002
+  question: มีไข้ เจ็บคอ หรือน้ำมูกร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: cou_as_001
+      op: contains_any
+      value:
+      - ไข้
+      - เจ็บคอ
+      - มีน้ำมูก
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - cou_opd_003
+- qid: cou_opd_003
+  question: ไอมีเสมหะหรือไม่? ถ้ามี เสมหะสีอะไร (เช่น ใส ขาว เหลือง เขียว หรือมีเลือดปน)?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: cou_c_001
+      op: eq
+      value: ไอเป็นเลือด
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - when:
+    - qid: cou_c_001-01
+      op: eq
+      value: สีเหลือง
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - when:
+    - qid: cou_c_001-01
+      op: eq
+      value: สีเขียว
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - cou_opd_004
+- qid: cou_opd_004
+  question: ไอเรื้อรัง (นานกว่า 1-2 สัปดาห์) หรือไม่? มีอาการเหนื่อยหอบ หรือเจ็บหน้าอกร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: cou_as_001
+      op: contains_any
+      value:
+      - เหนื่อยง่ายขึ้น
+      - หอบ
+      - เจ็บหน้าอก
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - when:
+    - qid: cou_d_001
+      op: eq
+      value: นานเกิน 1 สัปดาห์
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - cou_opd_005
+- qid: cou_opd_005
+  question: มีอาการแสบคอ คันคอ หรือรู้สึกเหมือนมีอะไรติดคอร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: cou_as_001
+      op: contains_any
+      value:
+      - แสบคอ
+      - คันคอ
+      - มีอะไรติดคอ
+    then:
+      action: terminate
+      metadata:
+        department: Otorhinolaryngology
+  default:
+    action: terminate
+    metadata:
+      department: Internal Medicine
+Sore Throat:
+- qid: sor_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: gte_15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - sor_opd_002
+- qid: sor_opd_002
+  question: มีไข้ ไอ หรือน้ำมูก คล้ายหวัดร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: sor_as_001
+      op: contains_any
+      value:
+      - ไข้
+      - ไอ
+      - น้ำมูก
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - sor_opd_003
+- qid: sor_opd_003
+  question: เจ็บคอมาก กลืนลำบากจนรับประทานอาหารหรือน้ำไม่ได้หรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: sor_as_001
+      op: contains_any
+      value:
+      - กลืนลำบาก
+      - กลืนเจ็บ
+    then:
+      action: terminate
+      metadata:
+        department: Otorhinolaryngology
+  default:
+    action: goto
+    qid:
+    - sor_opd_004
+- qid: sor_opd_004
+  question: อาการเสียงแหบ หรือรู้สึกมีก้อนในคอร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: sor_as_001
+      op: contains_any
+      value:
+      - เสียงเปลี่ยน
+    then:
+      action: terminate
+      metadata:
+        department: Otorhinolaryngology
+  default:
+    action: terminate
+    metadata:
+      department: Internal Medicine
+Stomachache:
+- qid: sto_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: ge_15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - sto_opd_002
+- qid: sto_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+  - id: male
+    label: male
+    action:
+      action: goto
+      qid:
+      - sto_opd_004
+  - id: female
+    label: female
+    action:
+      action: goto
+      qid:
+      - sto_opd_002-1
+- qid: sto_opd_002-1
+  question: มีประวัติกำลังตั้งครรภ์หรือไม่?
+  question_type: single_select
+  options:
+  - id: ใช่ กำลังตั้งครรภ์อยู่
+    label: ใช่ กำลังตั้งครรภ์อยู่
+    action:
+      action: terminate
+      metadata:
+        department: Obstetrics and Gynecology
+  - id: ไม่
+    label: ไม่
+    action:
+      action: goto
+      qid:
+      - sto_opd_003
+- qid: sto_opd_003
+  question: มีเลือดออกผิดปกติทางช่องคลอด หรือตกขาวผิดปกติร่วมด้วยหรือไม่? อาการปวดสัมพันธ์กับรอบเดือนหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: sto_as_001
+      op: contains_any
+      value:
+      - ตกขาวผิดปกติ
+    then:
+      action: terminate
+      metadata:
+        department: Obstetrics and Gynecology
+  default:
+    action: goto
+    qid:
+    - sto_opd_004
+- qid: sto_opd_004
+  question: อาการปวดท้องรุนแรงมาก (PS > 7/10) หรือปวดเฉียบพลัน กดเจ็บ หรือมีเลือดออก
+    เช่น อาเจียนหรือถ่ายเป็นเลือดสด หรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: sto_s_001
+      op: ge
+      value: 7
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  - when:
+    - qid: sto_o_003
+      op: eq
+      value: เฉียบพลัน
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  - when:
+    - qid: sto_as_001
+      op: contains_any
+      value:
+      - อาเจียน
+      - ถ่ายเป็นเลือด
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  default:
+    action: goto
+    qid:
+    - sto_opd_005
+- qid: sto_opd_005
+  question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: sto_l_001
+      op: contains_any
+      value:
+      - ท้องน้อยด้านขวา
+      - รอบสะดือ
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - when:
+    - qid: sto_l_001
+      op: contains_any
+      value:
+      - ท้องส่วนบนด้านซ้าย
+    then:
+      action: goto
+      qid:
+      - sto_opd_006
+  default:
+    action: terminate
+    metadata:
+      department: Internal Medicine
+- qid: sto_opd_006
+  question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: sto_as_001
+      op: contains_any
+      value:
+      - ไข้
+      - ตัวเหลือง
+      - ตาเหลือง
+    then:
+      action: terminate
+      metadata:
+        department: Surgery
+  default:
+    action: terminate
+    metadata:
+      department: Internal Medicine
+- qid: sto_opd_006-2
+  question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: sto_as_001
+      op: contains_any
+      value:
+      - มีไข้
+      - ตัวเหลือง
+      - ตาเหลือง
+    then:
+      action: terminate
+      metadata:
+        department: Surgery
+  default:
+    action: terminate
+    metadata:
+      department: Internal Medicine
+Constipation:
+- qid: con_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: _15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: _15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - con_opd_002
+- qid: con_opd_002
+  question: อาการท้องผูกเป็นมานานหลายวัน (> 2 วัน) หรือ ปวดท้องรุนแรง?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: con_d_001
+      op: eq
+      value: น้อยกว่า 2 วัน
+    then:
+      action: goto
+      qid:
+      - con_opd_002-1
+  - when:
+    - qid: con_d_001
+      op: eq
+      value: เป็นมามากกว่า 2 วัน
+    then:
+      action: goto
+      qid:
+      - con_opd_003
+  default:
+    action: goto
+    qid:
+    - con_opd_003
+- qid: con_opd_002-1
+  question: อายุมากกว่า 50 ปีหรือไม่
+  question_type: age_filter
+  options:
+  - id: lt50
+    label: <50
+    action:
+      action: terminate
+      metadata:
+        department: Self-care / Observation
+  - id: ge50
+    label: '>=15'
+    action:
+      action: terminate
+      metadata:
+        department: Surgery
+- qid: con_opd_003
+  question: มีอาการปวดท้องรุนแรง อืดแน่นท้องมาก ไม่ผายลม หรืออาเจียนร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: con_as_001
+      op: contains_any
+      value:
+      - ปวดท้อง
+      - ท้องอืด
+      - แน่น
+      - คลื่นไส้
+    then:
+      action: terminate
+      metadata:
+        department: Surgery
+  default:
+    action: goto
+    qid:
+    - con_opd_004
+- qid: con_opd_004
+  question: มีถ่ายเป็นเลือดออกมามากหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: con_c_001-03
+      op: eq
+      value: มี
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  - when:
+    - qid: con_as_001
+      op: contains_any
+      value:
+      - ปวดท้อง
+    then:
+      action: goto
+      qid:
+      - con_opd_005
+  - when:
+    - qid: con_c_001-03
+      op: eq
+      value: ไม่มี
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+- qid: con_opd_005
+  question: อาการปวดท้องรุนแรงแค่ไหน?
+  question_type: number_range
+  min_value: 0
+  max_value: 10
+  step: 1
+  inclusive: true
+  on_submit:
+    action: goto
+    qid:
+    - con_opd_005-01
+- qid: con_opd_005-01
+  question: อาการปวดท้องรุนแรง (PS > 7/10)?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: con_opd_005
+      op: ge
+      value: 7
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  - when:
+    - qid: con_opd_005
+      op: lt
+      value: 7
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+Diarrhea:
+- qid: dia_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: gte_15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - dia_opd_002
+- qid: dia_opd_002
+  question: มีอาการขาดน้ำรุนแรงหรือไม่? (เช่น ปากแห้ง คอแห้ง ปัสสาวะน้อยลง อ่อนเพลียมาก
+    หน้ามืด)
+  question_type: conditional
+  rules:
+  - when:
+    - qid: dia_as_001
+      op: contains_any
+      value:
+      - ปากแห้ง
+      - คอแห้ง
+      - ปัสสาวะน้อยลง
+      - อ่อนเพลียมาก
+      - หน้ามืด
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  default:
+    action: goto
+    qid:
+    - dia_opd_003
+- qid: dia_opd_003
+  question: ถ่ายเหลวเป็นน้ำ หรือมีมูกเลือดปนในอุจจาระ?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: dia_c_001
+      op: eq
+      value: มีมูกเลือด
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - when:
+    - qid: dia_c_001
+      op: eq
+      value: เลือดสด
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - when:
+    - qid: dia_c_001
+      op: eq
+      value: ถ่ายเป็นน้ำ
+    then:
+      action: goto
+      qid:
+      - dia_opd_004
+- qid: dia_opd_004
+  question: มีไข้ ปวดท้องรุนแรง หรืออาเจียนร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: dia_as_001
+      op: contains_any
+      value:
+      - ไข้
+      - ปวดท้อง
+      - อาเจียน
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: terminate
+    metadata:
+      department: Self-care / Observation
+Dysuria:
+- qid: dys_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: gte_15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - dys_opd_002
+- qid: dys_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+  - id: male
+    label: male
+    action:
+      action: goto
+      qid:
+      - dys_opd_004
+  - id: female
+    label: female
+    action:
+      action: goto
+      qid:
+      - dys_opd_003
+- qid: dys_opd_003
+  question: มีประวัติกำลังตั้งครรภ์หรือไม่?
+  question_type: single_select
+  options:
+  - id: mee
+    label: มี
+    action:
+      action: terminate
+      metadata:
+        department: Obstetrics and Gynecology
+  - id: mai_mee
+    label: ไม่มี
+    action:
+      action: goto
+      qid:
+      - dys_opd_003-1
+- qid: dys_opd_003-1
+  question: มีตกขาวผิดปกติ ปวดท้องน้อยร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: dys_as_001
+      op: contains_any
+      value:
+      - ตกขาวผิดปกติ
+      - ปวดท้องน้อย
+    then:
+      action: terminate
+      metadata:
+        department: Obstetrics and Gynecology
+  default:
+    action: goto
+    qid:
+    - dys_opd_005
+- qid: dys_opd_004
+  question: มีหนองไหลออกจากอวัยวะเพศหรือไม่? มีอาการปวดอัณฑะร่วมด้วยหรือไม่?
+  question_type: single_select
+  options:
+  - id: mee_nong_lhai
+    label: มีหนองไหล
+    action:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - id: puad_untha
+    label: ปวดอัณฑะ
+    action:
+      action: terminate
+      metadata:
+        department: Surgery
+  - id: mai_mee
+    label: ไม่มี
+    action:
+      action: goto
+      qid:
+      - dys_opd_005
+- qid: dys_opd_005
+  question: มีไข้ หนาวสั่น หรือปวดหลังบริเวณเอวร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: dys_as_001
+      op: contains_any
+      value:
+      - ปวดหลัง
+    then:
+      action: goto
+      qid:
+      - dys_opd_005-1
+  - when:
+    - qid: dys_as_001
+      op: contains_any
+      value:
+      - ไข้
+      - หนาวสั่น
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - dys_opd_006
+- qid: dys_opd_005-1
+  question: ปวดหลังบริเวณเอวร่วมด้วยหรือไม่?
+  question_type: single_select
+  options:
+  - id: chai
+    label: ใช่
+    action:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - id: mai_chai
+    label: ไม่ใช่
+    action:
+      action: goto
+      qid:
+      - dys_opd_006
+- qid: dys_opd_006
+  question: ปัสสาวะมีเลือดปน หรือสีขุ่นผิดปกติหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: dys_c_001
+      op: eq
+      value: ขุ่น
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - when:
+    - qid: dys_c_001
+      op: eq
+      value: มีเลือดปน
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - dys_opd_007
+- qid: dys_opd_007
+  question: อายุมากกว่า 50 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_50
+    label: <50
+    action:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  - id: gte_50
+    label: '>=50'
+    action:
+      action: goto
+      qid:
+      - dys_opd_007-1
+- qid: dys_opd_007-1
+  question: ท่านเป็นเพศชายหรือไม่?
+  question_type: gender_filter
+  options:
+  - id: male
+    label: male
+    action:
+      action: goto
+      qid:
+      - dys_opd_007-2
+  - id: female
+    label: female
+    action:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+- qid: dys_opd_007-2
+  question: กลั้นปัสสาวะไม่ได้หรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: dys_c_001-01
+      op: eq
+      value: ไม่ได้
+    then:
+      action: terminate
+      metadata:
+        department: Surgery
+  default:
+    action: goto
+    qid:
+    - dys_opd_007-3
+- qid: dys_opd_007-3
+  question: มีอาการเฉพาะปัสสาวะลำบาก ปัสสาวะไม่พุ่ง หรือไม่?
+  question_type: single_select
+  options:
+  - id: chai
+    label: ใช่
+    action:
+      action: terminate
+      metadata:
+        department: Surgery
+  - id: mai_chai
+    label: ไม่ใช่
+    action:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+Vaginal Discharge:
+- qid: vag_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: gte_15
+    label: '>=15'
+    action:
+      action: terminate
+      metadata:
+        department: Obstetrics and Gynecology
+Skin Rash/Lesion:
+- qid: rash_opd_001
+  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: less_than_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: greater_than_or_equal_to_15
+    label: '>=15'
+    action:
+      action: goto
+      qid:
+      - rash_opd_002
+- qid: rash_opd_002
+  question: ผื่น/รอยโรค เกิดขึ้นเฉียบพลัน และลุกลามรวดเร็วในหลักนาที หรือชั่วโมงหรือไม่?
+    มีอาการอื่นๆ ร่วมด้วยหรือไม่ เช่น ไข้สูง หายใจลำบาก ปากบวม หน้าบวม?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: rash_o_003
+      op: eq
+      value: เฉียบพลัน
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  - when:
+    - qid: rash_as_001
+      op: contains_any
+      value:
+      - ไข้
+      - หายใจลำบาก
+      - ปากบวม
+      - หน้าบวม
+    then:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  default:
+    action: goto
+    qid:
+    - rash_opd_003
+- qid: rash_opd_003
+  question: มีไข้ หรืออาการผิดปกติระบบอื่นๆ ทั่วร่างกายร่วมด้วยหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: rash_as_001
+      op: contains_any
+      value:
+      - ไข้
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: terminate
+    metadata:
+      department: Dermatology
+Wound:
+- qid: wou_opd_001
+  question: บาดแผลเกิดจากอะไร? และเกิดเหตุภายใน 24 ชม. แรก?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: wou_o_004
+      op: eq
+      value: เคย
+    then:
+      action: goto
+      qid:
+      - wou_opd_001-1
+  default:
+    action: goto
+    qid:
+    - wou_opd_002
+- qid: wou_opd_001-1
+  question: เกิดเหตุภายใน 24 ชม. แรกหรือไม่?
+  question_type: single_select
+  options:
+  - id: ใช่_เกิดเหตุการณ์ที่เกี่ยวข้องภายใน_24_ชั่วโมง
+    label: ใช่ เกิดเหตุการณ์ที่เกี่ยวข้องภายใน 24 ชั่วโมง
+    action:
+      action: terminate
+      metadata:
+        department: Emergency Medicine
+  - id: ไม่ใช่
+    label: ไม่ใช่
+    action:
+      action: goto
+      qid:
+      - wou_opd_002
+- qid: wou_opd_002
+  question: แผลมีเลือดออกมาก หรือหยุดไหลแล้ว?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: wou_c_002
+      op: eq
+      value: บาดแผลมีเลือดออดขนาดเล็กถึงปานกลาง
+    then:
+      action: goto
+      qid:
+      - wou_opd_002-1
+  default:
+    action: goto
+    qid:
+    - wou_opd_003
+- qid: wou_opd_002-1
+  question: เลือดหลุดไหลหรือยัง?
+  question_type: single_select
+  options:
+  - id: หยุดแล้ว
+    label: หยุดแล้ว
+    action:
+      action: goto
+      qid:
+      - wou_opd_004
+  - id: ยังไม่หยุด
+    label: ยังไม่หยุด
+    action:
+      action: goto
+      qid:
+      - wou_opd_004
+- qid: wou_opd_003
+  question: บาดแผลลึก หรือกว้างมากหรือไม่? มองเห็นกระดูก เอ็น หรืออวัยวะภายในหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: wou_c_002
+      op: eq
+      value: บาดแผลมีขนาดใหญ่และลึก
+    then:
+      action: terminate
+      metadata:
+        department: Surgery
+  - when:
+    - qid: wou_c_002
+      op: eq
+      value: บาดแผลรุนแรง มองเห็นกระดูก เอ็น หรืออวัยวะภายใน
+    then:
+      action: terminate
+      metadata:
+        department: Surgery
+  default:
+    action: goto
+    qid:
+    - wou_opd_004
+- qid: wou_opd_004
+  question: บาดแผลสกปรก หรือมีสิ่งแปลกปลอมติดอยู่หรือไม่?
+  question_type: single_select
+  options:
+  - id: มี
+    label: มี
+    action:
+      action: terminate
+      metadata:
+        department: Surgery
+  - id: ไม่มี
+    label: ไม่มี
+    action:
+      action: goto
+      qid:
+      - wou_opd_005
+- qid: wou_opd_005
+  question: มีอาการปวด บวม แดง ร้อน รอบแผล หรือมีหนองไหลหรือไม่?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: wou_as_001
+      op: contains_any
+      value:
+      - หนอง
+      - บวมแดงร้อน
+    then:
+      action: terminate
+      metadata:
+        department: Internal Medicine
+  default:
+    action: goto
+    qid:
+    - wou_opd_006
+- qid: wou_opd_006
+  question: บาดแผลเกิดที่บริเวณใบหน้า ข้อต่อ มือ เท้า อวัยวะเพศ หรือไม่?
+  question_type: single_select
+  options:
+  - id: มีแผลบริเวณดังกล่าว (ใบหน้า ข้อต่อ มือ เท้า อวัยวะเพศ)
+    label: มีแผลบริเวณดังกล่าว (ใบหน้า ข้อต่อ มือ เท้า อวัยวะเพศ)
+    action:
+      action: terminate
+      metadata:
+        department: Surgery
+  - id: บริเวณอื่น (ผิวหนังทั่วไป)
+    label: บริเวณอื่น (ผิวหนังทั่วไป)
+    action:
+      action: goto
+      qid:
+      - wou_opd_007
+- qid: wou_opd_007
+  question: ท่านอายุเท่าไร?
+  question_type: age_filter
+  options:
+  - id: lt_15
+    label: <15
+    action:
+      action: terminate
+      metadata:
+        department: Pediatrics
+  - id: gte_15
+    label: '>=15'
+    action:
+      action: terminate
+      metadata:
+        department: Surgery
+Eye Disorder:
+- qid: eye_opd_001
+  question: ท่านมีอาการในหัวข้ออื่นเด่นกว่าอาการทางตาหรือไม่?
+  question_type: conditional
+  rules: []
+  default:
+    action: terminate
+    metadata:
+      department: Ophthalmology
+Ear Disorder:
+- qid: ear_opd_001
+  question: ท่านมีอาการในหัวข้ออื่นเด่นกว่าอาการทางหูหรือไม่?
+  question_type: conditional
+  rules: []
+  default:
+    action: terminate
+    metadata:
+      department: Otorhinolaryngology
