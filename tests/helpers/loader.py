@@ -35,7 +35,7 @@ def load_constants() -> Dict[Literal["diseases", "departments", "severity", "nhs
     """
     diseases_path = hf_hub_download(repo_id=PRESCREEN_REPO, filename="diseases.yaml", repo_type="dataset")
     departments_path = hf_hub_download(repo_id=PRESCREEN_REPO, filename="departments.yaml", repo_type="dataset")
-    severity_path = hf_hub_download(repo_id=PRESCREEN_REPO, filename="severity.yaml", repo_type="dataset")
+    severity_path = hf_hub_download(repo_id=PRESCREEN_REPO, filename="severity_levels.yaml", repo_type="dataset")
     nhso_path = hf_hub_download(repo_id=PRESCREEN_REPO, filename="nhso_symptoms.yaml", repo_type="dataset")
 
     return {

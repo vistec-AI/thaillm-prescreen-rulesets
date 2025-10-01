@@ -49,12 +49,16 @@ class NumberRangeQuestion(BaseQuestion):
     min_value: float
     max_value: float
     step: float = 1.0
+    default_value: Optional[float] = None
     on_submit: Action
 
     @model_validator(mode="after")
     def _chk(self):
         if self.min_value >= self.max_value:
             raise ValueError("min_value must be < max_value")
+        # Set default_value to min_value if not provided
+        if self.default_value is None:
+            self.default_value = self.min_value
         return self
 
 class SingleSelectQuestion(BaseQuestion):
@@ -72,7 +76,13 @@ class ImageHotspot(Option):
 class ImageSelectQuestion(BaseQuestion):
     question_type: Literal["image_single_select"] = "image_single_select"
     image: str
-    options: List[ImageHotspot]
+    options: List[ActionOption]
+
+class ImageMultiSelectQuestion(BaseQuestion):
+    question_type: Literal["image_multi_select"] = "image_multi_select"
+    image: str
+    options: List[Option]          # options have NO per-option actions
+    next: Action
 
 class GenderQuestion(BaseQuestion):
     question_type: Literal["gender_filter"] = "gender_filter"
@@ -109,6 +119,7 @@ Question = Annotated[
         SingleSelectQuestion,
         MultiSelectQuestion,
         ImageSelectQuestion,
+        ImageMultiSelectQuestion,
         GenderQuestion,
         AgeFilterQuestion,
         ConditionalQuestion,
@@ -123,6 +134,7 @@ question_mapper = {
     "single_select": SingleSelectQuestion,
     "multi_select": MultiSelectQuestion,
     "image_single_select": ImageSelectQuestion,
+    "image_multi_select": ImageMultiSelectQuestion,
     "gender_filter": GenderQuestion,
     "age_filter": AgeFilterQuestion,
     "conditional": ConditionalQuestion

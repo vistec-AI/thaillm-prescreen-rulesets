@@ -7,6 +7,7 @@ from .question import (
     SingleSelectQuestion,
     MultiSelectQuestion,
     ImageSelectQuestion,
+    ImageMultiSelectQuestion,
     GenderQuestion,
     AgeFilterQuestion,
     ConditionalQuestion,

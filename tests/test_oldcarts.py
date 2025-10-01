@@ -2,18 +2,31 @@ from typing import List, Optional, Set
 
 from helpers.loader import load_rules, load_constants
 from helpers.data_model.question import question_mapper, Question
+from helpers.data_model.question import (
+    FreeTextQuestion,
+    FreeTextWithFieldQuestion,
+    NumberRangeQuestion,
+    SingleSelectQuestion,
+    MultiSelectQuestion,
+    ImageSelectQuestion,
+    ImageMultiSelectQuestion,
+)
+from helpers.utils import find_repo_root
+from pathlib import Path
 
 
 constant = load_constants()
 
 
 def test_load_rules():
+    """Ensure rules loader returns mapping with oldcarts and opd keys."""
     rules = load_rules()
     assert isinstance(rules, dict)
     assert all(k in rules for k in ["oldcarts", "opd"])
 
 
 def test_oldcarts_schema():
+    """Validate oldcarts schema, qid format, and action constraints."""
     rules = load_rules()
     symptom_list = [c["name"] for c in constant["nhso_symptoms"]]
         
@@ -101,8 +114,8 @@ def recursive_traverse(
     if qid_pools is None:
         qid_pools = {question.qid}
 
-    if question.question_type  in ["free_text", "free_text_with_fields", "number_range", "multi_select"]:
-        action = question.on_submit if question.question_type != "multi_select" else question.next
+    if question.question_type  in ["free_text", "free_text_with_fields", "number_range", "multi_select",  "image_multi_select"]:
+        action = question.on_submit if question.question_type not in ["multi_select", "image_multi_select"] else question.next
         # base case
         if action.action == "opd":
             return qid_pools
@@ -153,3 +166,94 @@ def test_trace_qids():
         if len(qid_pools) != len(rules["oldcarts"][symptom]):
             missing_qid = set([q["qid"] for q in rules["oldcarts"][symptom]]) - qid_pools
             raise Exception(f"In symptom {symptom}, Question id {missing_qid} was never referenced.")
+
+
+def test_oldcarts_unique_qids_and_prefix_consistency():
+    """Ensure qids are unique per symptom and share the same prefix."""
+    rules = load_rules()
+    for symptom, q_list in rules["oldcarts"].items():
+        all_qids = [q["qid"] for q in q_list]
+        # unique qids per symptom
+        assert len(set(all_qids)) == len(all_qids), f"Duplicate qid detected in symptom {symptom}"
+
+        # prefix consistency: first segment of qid should be the same for all questions under the symptom
+        prefixes = {qid.split("_")[0] for qid in all_qids}
+        assert len(prefixes) == 1, f"Multiple qid prefixes found in symptom {symptom}: {prefixes}"
+
+
+def test_oldcarts_all_goto_targets_exist_and_nonempty():
+    """Ensure all goto target qids are non-empty and exist within the symptom."""
+    rules = load_rules()
+    for symptom, q_list in rules["oldcarts"].items():
+        qid_set = {q["qid"] for q in q_list}
+        for q_dict in q_list:
+            qtype = q_dict["question_type"]
+            q_cls = question_mapper.get(qtype)
+            question: Question = q_cls(**q_dict)
+
+            # collect goto targets
+            goto_targets: List[str] = []
+            if isinstance(question, (FreeTextQuestion, FreeTextWithFieldQuestion, NumberRangeQuestion)):
+                if question.on_submit.action == "goto":
+                    assert len(question.on_submit.qid) > 0, f"Goto list empty for {question.qid}"
+                    goto_targets.extend(question.on_submit.qid)
+            elif isinstance(question, MultiSelectQuestion):
+                if question.next.action == "goto":
+                    assert len(question.next.qid) > 0, f"Goto list empty for {question.qid}"
+                    goto_targets.extend(question.next.qid)
+            elif isinstance(question, (SingleSelectQuestion, ImageSelectQuestion)):
+                for opt in question.options:
+                    if opt.action.action == "goto":
+                        assert len(opt.action.qid) > 0, f"Option action goto empty list at {question.qid}"
+                        goto_targets.extend(opt.action.qid)
+
+            # verify targets exist
+            for tgt in goto_targets:
+                assert tgt in qid_set, f"In {symptom}, goto target {tgt} from {question.qid} does not exist"
+
+
+def test_oldcarts_image_assets_exist():
+    """Ensure all referenced image assets exist in v1/images."""
+    rules = load_rules()
+    repo_root = find_repo_root()
+    images_dir = Path(repo_root) / "v1" / "images"
+    for symptom, q_list in rules["oldcarts"].items():
+        for q_dict in q_list:
+            qtype = q_dict["question_type"]
+            if qtype in ["image_single_select", "image_multi_select"]:
+                image_name = q_dict.get("image")
+                assert image_name, f"Missing image in {symptom}:{q_dict['qid']}"
+                img_path = images_dir / image_name
+                assert img_path.exists(), f"Missing image asset {image_name} for {symptom}:{q_dict['qid']}"
+
+
+def test_oldcarts_options_nonempty_and_unique_ids():
+    """Ensure options exist and have unique ids for selectable questions."""
+    rules = load_rules()
+    for symptom, q_list in rules["oldcarts"].items():
+        for q_dict in q_list:
+            qtype = q_dict["question_type"]
+            q_cls = question_mapper.get(qtype)
+            question: Question = q_cls(**q_dict)
+
+            if isinstance(question, (SingleSelectQuestion, ImageSelectQuestion)):
+                assert len(question.options) > 0, f"No options defined for {question.qid}"
+                opt_ids = [opt.id for opt in question.options]
+                assert len(set(opt_ids)) == len(opt_ids), f"Duplicate option id in {question.qid}"
+            elif isinstance(question, (MultiSelectQuestion, ImageMultiSelectQuestion)):
+                assert len(question.options) > 0, f"No options defined for {question.qid}"
+                opt_ids = [opt.id for opt in question.options]
+                assert len(set(opt_ids)) == len(opt_ids), f"Duplicate option id in {question.qid}"
+
+
+def test_oldcarts_state_values_valid():
+    """Ensure oldcarts_state extracted from qid is one of allowed states."""
+    rules = load_rules()
+    valid_states = {"o", "l", "d", "c", "a", "r", "t", "s", "as"}
+    for symptom, q_list in rules["oldcarts"].items():
+        for q_dict in q_list:
+            qtype = q_dict["question_type"]
+            q_cls = question_mapper.get(qtype)
+            question: Question = q_cls(**q_dict)
+            assert question.is_oldcarts is True, f"{question.qid} should be oldcarts"
+            assert question.oldcarts_state in valid_states, f"{question.qid} has invalid oldcarts state {question.oldcarts_state}"

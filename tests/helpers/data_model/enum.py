@@ -13,7 +13,8 @@ class QuestionType(str, Enum):
     NUMBER_RANGE = "number_range"
     SINGLE_SELECT = "single_select"
     MULTI_SELECT = "multi_select"
-    IMAGE_SELECT = "image_single_select"
+    IMAGE_SINGLE_SELECT = "image_single_select"
+    IMAGE_MULTI_SELECT = "image_multi_select"
     # auto
     GENDER = "gender_filter"
     AGE_FILTER = "age_filter"
