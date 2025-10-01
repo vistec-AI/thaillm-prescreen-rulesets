@@ -4,7 +4,6 @@ stages:
 variables:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PIP_NO_CACHE_DIR: "1"
-  HF_TOKEN: $HF_TOKEN
 
 # Use a recent Python image; uv is installed via pipx for speed where available
 image: python:3.13-slim
@@ -22,7 +21,7 @@ pytest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   script:
-    - echo "hf token-- $HF_TOKEN"
+    # - echo "hf token-- $HF_TOKEN"
     - uv run pytest -q --junitxml=junit.xml
   artifacts:
     when: always
