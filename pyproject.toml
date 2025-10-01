@@ -9,4 +9,21 @@ dependencies = [
     "pydantic>=2.11.7",
     "pytest>=8.4.1",
     "python-dotenv>=1.1.1",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.6",
+    "PyYAML>=6.0.2",
+    "huggingface_hub>=0.25.2",
 ]
+
+[project.scripts]
+prescreenviz = "visualizer.server:cli"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+visualizer = ["static/*"]
