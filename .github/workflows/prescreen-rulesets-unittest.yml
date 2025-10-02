@@ -1,0 +1,50 @@
+name: Prescreen Rulesets Unittest
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_NO_CACHE_DIR: "1"
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Show Python version
+        run: python --version
+
+      - name: Create virtual environment
+        run: uv venv
+
+      - name: Install project (editable)
+        run: uv pip install -e .
+
+      - name: Run tests
+        run: uv run pytest -q --junitxml=junit.xml
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit
+          path: junit.xml
+          retention-days: 7
+
+
+
