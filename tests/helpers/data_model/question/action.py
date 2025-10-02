@@ -15,10 +15,10 @@ class OPDAction(BaseModel):
 class TerminateAction(BaseModel):
     action: Literal["terminate"] = "terminate"
     reason: Optional[str] = None
-    metadata: Dict[Literal["department"], str]
+    metadata: Dict[Literal["department"], List[str]]
 
     @property
-    def department(self) -> Optional[str]:
+    def department(self) -> Optional[List[str]]:
         return self.metadata["department"]
 
 Action = Annotated[Union[GotoAction, OPDAction, TerminateAction], Field(discriminator="action")]

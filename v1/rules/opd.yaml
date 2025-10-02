@@ -8,7 +8,8 @@ Headache:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: gte_15
     label: '>=15'
     action:
@@ -27,7 +28,8 @@ Headache:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - when:
     - qid: hea_o_003
       op: eq
@@ -35,7 +37,8 @@ Headache:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - when:
     - qid: hea_as_001
       op: contains_any
@@ -50,7 +53,8 @@ Headache:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   default:
     action: goto
     qid:
@@ -71,7 +75,8 @@ Headache:
     then:
       action: terminate
       metadata:
-        department: Ophthalmology
+        department:
+          - Ophthalmology
   default:
     action: goto
     qid:
@@ -89,7 +94,8 @@ Headache:
     then:
       action: terminate
       metadata:
-        department: Otorhinolaryngology
+        department:
+          - Otorhinolaryngology
   - when:
     - qid: hea_as_001
       op: contains_any
@@ -99,7 +105,8 @@ Headache:
     then:
       action: terminate
       metadata:
-        department: Otorhinolaryngology
+        department:
+          - Otorhinolaryngology
   default:
     action: goto
     qid:
@@ -118,7 +125,8 @@ Headache:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -134,7 +142,8 @@ Headache:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - when:
     - qid: hea_o_002
       op: eq
@@ -157,11 +166,13 @@ Headache:
     then:
       action: terminate
       metadata:
-        department: Psychiatry
+        department:
+          - Psychiatry
   default:
     action: terminate
     metadata:
-      department: Internal Medicine
+      department:
+        - Internal Medicine
 Dizziness:
 - qid: diz_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -172,7 +183,8 @@ Dizziness:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: gte_15
     label: '>=15'
     action:
@@ -221,7 +233,8 @@ Dizziness:
     then:
       action: terminate
       metadata:
-        department: Otorhinolaryngology
+        department:
+          - Otorhinolaryngology
   default:
     action: goto
     qid:
@@ -267,7 +280,8 @@ Dizziness:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   default:
     action: goto
     qid:
@@ -287,7 +301,8 @@ Dizziness:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   default:
     action: goto
     qid:
@@ -307,11 +322,13 @@ Dizziness:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   default:
     action: terminate
     metadata:
-      department: Internal Medicine
+      department:
+        - Internal Medicine
 Pain in Joint:
 - qid: pai_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -322,7 +339,8 @@ Pain in Joint:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: ge15
     label: '>=15'
     action:
@@ -340,7 +358,8 @@ Pain in Joint:
     then:
       action: terminate
       metadata:
-        department: Orthopedics and Physical Therapy
+        department:
+          - Orthopedics and Physical Therapy
   - when:
     - qid: pai_o_004
       op: eq
@@ -383,11 +402,13 @@ Pain in Joint:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: terminate
     metadata:
-      department: Orthopedics and Physical Therapy
+      department:
+        - Orthopedics and Physical Therapy
 - qid: pai_opd_005
   question: มีอาการข้อติดขัดตอนเช้า (ตื่นนอนแล้วขยับข้อยาก) นานเกิน 30 นาทีหรือไม่?
     มีไข้ ผื่น หรืออาการผิดปกติอื่นๆ ร่วมด้วยหรือไม่?
@@ -402,7 +423,8 @@ Pain in Joint:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -416,7 +438,8 @@ Pain in Joint:
     action:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - id: ไม_ใช
     label: ไม่ใช่
     action:
@@ -432,13 +455,15 @@ Pain in Joint:
     action:
       action: terminate
       metadata:
-        department: Orthopedics and Physical Therapy
+        department:
+          - Orthopedics and Physical Therapy
   - id: '50'
     label: <=50
     action:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
 Muscle Pain:
 - qid: mus_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -449,7 +474,8 @@ Muscle Pain:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: ge15
     label: '>=15'
     action:
@@ -467,7 +493,8 @@ Muscle Pain:
     then:
       action: terminate
       metadata:
-        department: Orthopedics and Physical Therapy
+        department:
+          - Orthopedics and Physical Therapy
   - when:
     - qid: mus_as_002
       op: eq
@@ -475,7 +502,8 @@ Muscle Pain:
     then:
       action: terminate
       metadata:
-        department: Orthopedics and Physical Therapy
+        department:
+          - Orthopedics and Physical Therapy
   default:
     action: goto
     qid:
@@ -493,7 +521,8 @@ Muscle Pain:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -517,7 +546,8 @@ Muscle Pain:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
 - qid: mus_opd_005
   question: ปวดกล้ามเนื้อเฉพาะที่เล็กน้อยหรือไม่?
   question_type: conditional
@@ -529,7 +559,8 @@ Muscle Pain:
     then:
       action: terminate
       metadata:
-        department: Self-care / Observation
+        department:
+          - Self-care / Observation
   - when:
     - qid: mus_s_001
       op: eq
@@ -537,7 +568,8 @@ Muscle Pain:
     then:
       action: terminate
       metadata:
-        department: Orthopedics and Physical Therapy
+        department:
+          - Orthopedics and Physical Therapy
 Fever:
 - qid: fev_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -548,7 +580,8 @@ Fever:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: gte_15
     label: '>=15'
     action:
@@ -566,7 +599,8 @@ Fever:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - when:
     - qid: fev_as_001
       op: contains_any
@@ -575,7 +609,8 @@ Fever:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   default:
     action: goto
     qid:
@@ -606,7 +641,8 @@ Fever:
     action:
       action: terminate
       metadata:
-        department: Obstetrics and Gynecology
+        department:
+          - Obstetrics and Gynecology
   - id: ไม่ใช่
     label: ไม่ใช่
     action:
@@ -635,7 +671,8 @@ Fever:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   default:
     action: goto
     qid:
@@ -649,7 +686,8 @@ Fever:
     action:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - id: ไม่
     label: ไม่มีอาการดังกล่าว
     action:
@@ -669,7 +707,8 @@ Fever:
     then:
       action: terminate
       metadata:
-        department: Ophthalmology
+        department:
+          - Ophthalmology
   default:
     action: goto
     qid:
@@ -688,7 +727,8 @@ Fever:
     then:
       action: terminate
       metadata:
-        department: Otorhinolaryngology
+        department:
+          - Otorhinolaryngology
   default:
     action: goto
     qid:
@@ -712,11 +752,13 @@ Fever:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: terminate
     metadata:
-      department: Self-care / Observation
+      department:
+        - Self-care / Observation
 Cough:
 - qid: cou_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -727,7 +769,8 @@ Cough:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: gte_15
     label: '>=15'
     action:
@@ -748,7 +791,8 @@ Cough:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -764,7 +808,8 @@ Cough:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - when:
     - qid: cou_c_001-01
       op: eq
@@ -772,7 +817,8 @@ Cough:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - when:
     - qid: cou_c_001-01
       op: eq
@@ -780,7 +826,8 @@ Cough:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -799,7 +846,8 @@ Cough:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - when:
     - qid: cou_d_001
       op: eq
@@ -807,7 +855,8 @@ Cough:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -826,11 +875,13 @@ Cough:
     then:
       action: terminate
       metadata:
-        department: Otorhinolaryngology
+        department:
+          - Otorhinolaryngology
   default:
     action: terminate
     metadata:
-      department: Internal Medicine
+      department:
+        - Internal Medicine
 Sore Throat:
 - qid: sor_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -841,7 +892,8 @@ Sore Throat:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: gte_15
     label: '>=15'
     action:
@@ -862,7 +914,8 @@ Sore Throat:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -880,7 +933,8 @@ Sore Throat:
     then:
       action: terminate
       metadata:
-        department: Otorhinolaryngology
+        department:
+          - Otorhinolaryngology
   default:
     action: goto
     qid:
@@ -897,11 +951,13 @@ Sore Throat:
     then:
       action: terminate
       metadata:
-        department: Otorhinolaryngology
+        department:
+          - Otorhinolaryngology
   default:
     action: terminate
     metadata:
-      department: Internal Medicine
+      department:
+        - Internal Medicine
 Stomachache:
 - qid: sto_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -912,7 +968,8 @@ Stomachache:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: ge_15
     label: '>=15'
     action:
@@ -944,7 +1001,8 @@ Stomachache:
     action:
       action: terminate
       metadata:
-        department: Obstetrics and Gynecology
+        department:
+          - Obstetrics and Gynecology
   - id: ไม่
     label: ไม่
     action:
@@ -963,7 +1021,8 @@ Stomachache:
     then:
       action: terminate
       metadata:
-        department: Obstetrics and Gynecology
+        department:
+          - Obstetrics and Gynecology
   default:
     action: goto
     qid:
@@ -980,7 +1039,8 @@ Stomachache:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - when:
     - qid: sto_o_003
       op: eq
@@ -988,7 +1048,8 @@ Stomachache:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - when:
     - qid: sto_as_001
       op: contains_any
@@ -998,7 +1059,8 @@ Stomachache:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   default:
     action: goto
     qid:
@@ -1016,7 +1078,8 @@ Stomachache:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - when:
     - qid: sto_l_001
       op: contains_any
@@ -1029,7 +1092,8 @@ Stomachache:
   default:
     action: terminate
     metadata:
-      department: Internal Medicine
+      department:
+        - Internal Medicine
 - qid: sto_opd_006
   question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
   question_type: conditional
@@ -1044,11 +1108,12 @@ Stomachache:
     then:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   default:
-    action: terminate
-    metadata:
-      department: Internal Medicine
+    action: goto
+    qid:
+      - sto_opd_006-2
 - qid: sto_opd_006-2
   question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
   question_type: conditional
@@ -1063,11 +1128,13 @@ Stomachache:
     then:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   default:
     action: terminate
     metadata:
-      department: Internal Medicine
+      department:
+        - Internal Medicine
 Constipation:
 - qid: con_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -1078,7 +1145,8 @@ Constipation:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: _15
     label: '>=15'
     action:
@@ -1118,13 +1186,15 @@ Constipation:
     action:
       action: terminate
       metadata:
-        department: Self-care / Observation
+        department:
+          - Self-care / Observation
   - id: ge50
     label: '>=15'
     action:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
 - qid: con_opd_003
   question: มีอาการปวดท้องรุนแรง อืดแน่นท้องมาก ไม่ผายลม หรืออาเจียนร่วมด้วยหรือไม่?
   question_type: conditional
@@ -1140,7 +1210,8 @@ Constipation:
     then:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   default:
     action: goto
     qid:
@@ -1156,7 +1227,8 @@ Constipation:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - when:
     - qid: con_as_001
       op: contains_any
@@ -1173,7 +1245,8 @@ Constipation:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
 - qid: con_opd_005
   question: อาการปวดท้องรุนแรงแค่ไหน?
   question_type: number_range
@@ -1196,7 +1269,8 @@ Constipation:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - when:
     - qid: con_opd_005
       op: lt
@@ -1204,7 +1278,8 @@ Constipation:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
 Diarrhea:
 - qid: dia_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -1215,7 +1290,8 @@ Diarrhea:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: gte_15
     label: '>=15'
     action:
@@ -1239,7 +1315,8 @@ Diarrhea:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   default:
     action: goto
     qid:
@@ -1255,7 +1332,8 @@ Diarrhea:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - when:
     - qid: dia_c_001
       op: eq
@@ -1263,7 +1341,8 @@ Diarrhea:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - when:
     - qid: dia_c_001
       op: eq
@@ -1286,11 +1365,13 @@ Diarrhea:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: terminate
     metadata:
-      department: Self-care / Observation
+      department:
+        - Self-care / Observation
 Dysuria:
 - qid: dys_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -1301,7 +1382,8 @@ Dysuria:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: gte_15
     label: '>=15'
     action:
@@ -1333,7 +1415,8 @@ Dysuria:
     action:
       action: terminate
       metadata:
-        department: Obstetrics and Gynecology
+        department:
+          - Obstetrics and Gynecology
   - id: mai_mee
     label: ไม่มี
     action:
@@ -1353,7 +1436,8 @@ Dysuria:
     then:
       action: terminate
       metadata:
-        department: Obstetrics and Gynecology
+        department:
+          - Obstetrics and Gynecology
   default:
     action: goto
     qid:
@@ -1367,13 +1451,15 @@ Dysuria:
     action:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - id: puad_untha
     label: ปวดอัณฑะ
     action:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   - id: mai_mee
     label: ไม่มี
     action:
@@ -1402,7 +1488,8 @@ Dysuria:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -1416,7 +1503,8 @@ Dysuria:
     action:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - id: mai_chai
     label: ไม่ใช่
     action:
@@ -1434,7 +1522,8 @@ Dysuria:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - when:
     - qid: dys_c_001
       op: eq
@@ -1442,7 +1531,8 @@ Dysuria:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -1456,7 +1546,8 @@ Dysuria:
     action:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   - id: gte_50
     label: '>=50'
     action:
@@ -1478,7 +1569,8 @@ Dysuria:
     action:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
 - qid: dys_opd_007-2
   question: กลั้นปัสสาวะไม่ได้หรือไม่?
   question_type: conditional
@@ -1490,7 +1582,8 @@ Dysuria:
     then:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   default:
     action: goto
     qid:
@@ -1504,13 +1597,15 @@ Dysuria:
     action:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   - id: mai_chai
     label: ไม่ใช่
     action:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
 Vaginal Discharge:
 - qid: vag_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -1521,13 +1616,15 @@ Vaginal Discharge:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: gte_15
     label: '>=15'
     action:
       action: terminate
       metadata:
-        department: Obstetrics and Gynecology
+        department:
+          - Obstetrics and Gynecology
 Skin Rash/Lesion:
 - qid: rash_opd_001
   question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
@@ -1538,7 +1635,8 @@ Skin Rash/Lesion:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: greater_than_or_equal_to_15
     label: '>=15'
     action:
@@ -1557,7 +1655,8 @@ Skin Rash/Lesion:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - when:
     - qid: rash_as_001
       op: contains_any
@@ -1569,7 +1668,8 @@ Skin Rash/Lesion:
     then:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   default:
     action: goto
     qid:
@@ -1586,11 +1686,13 @@ Skin Rash/Lesion:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: terminate
     metadata:
-      department: Dermatology
+      department:
+        - Dermatology
 Wound:
 - qid: wou_opd_001
   question: บาดแผลเกิดจากอะไร? และเกิดเหตุภายใน 24 ชม. แรก?
@@ -1617,7 +1719,8 @@ Wound:
     action:
       action: terminate
       metadata:
-        department: Emergency Medicine
+        department:
+          - Emergency Medicine
   - id: ไม่ใช่
     label: ไม่ใช่
     action:
@@ -1667,7 +1770,8 @@ Wound:
     then:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   - when:
     - qid: wou_c_002
       op: eq
@@ -1675,7 +1779,8 @@ Wound:
     then:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   default:
     action: goto
     qid:
@@ -1689,7 +1794,8 @@ Wound:
     action:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   - id: ไม่มี
     label: ไม่มี
     action:
@@ -1709,7 +1815,8 @@ Wound:
     then:
       action: terminate
       metadata:
-        department: Internal Medicine
+        department:
+          - Internal Medicine
   default:
     action: goto
     qid:
@@ -1723,7 +1830,8 @@ Wound:
     action:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
   - id: บริเวณอื่น (ผิวหนังทั่วไป)
     label: บริเวณอื่น (ผิวหนังทั่วไป)
     action:
@@ -1739,13 +1847,15 @@ Wound:
     action:
       action: terminate
       metadata:
-        department: Pediatrics
+        department:
+          - Pediatrics
   - id: gte_15
     label: '>=15'
     action:
       action: terminate
       metadata:
-        department: Surgery
+        department:
+          - Surgery
 Eye Disorder:
 - qid: eye_opd_001
   question: ท่านมีอาการในหัวข้ออื่นเด่นกว่าอาการทางตาหรือไม่?
@@ -1754,7 +1864,8 @@ Eye Disorder:
   default:
     action: terminate
     metadata:
-      department: Ophthalmology
+      department:
+        - Ophthalmology
 Ear Disorder:
 - qid: ear_opd_001
   question: ท่านมีอาการในหัวข้ออื่นเด่นกว่าอาการทางหูหรือไม่?
@@ -1763,4 +1874,5 @@ Ear Disorder:
   default:
     action: terminate
     metadata:
-      department: Otorhinolaryngology
+      department:
+        - Otorhinolaryngology

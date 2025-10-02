@@ -134,7 +134,8 @@
       async function loadGraph() {
         const s = symptomSel.value; const m = modeSel.value;
         if (!s) return;
-        const { data } = await axios.get(`/api/graph/${encodeURIComponent(s)}?mode=${encodeURIComponent(m)}`);
+        // Use query form to avoid issues with slashes in symptom names
+        const { data } = await axios.get(`/api/graph`, { params: { symptom: s, mode: m } });
         lastGraphData = data;
         const elements = [
           ...data.nodes.map(n => ({ data: n.data, group: 'nodes' })),
@@ -204,7 +205,11 @@
             let actionStr = '';
             if (a.action === 'goto') { actionStr = `→ ${escapeHtml((a.qid||[]).join(', '))}`; }
             else if (a.action === 'opd') { actionStr = `→ OPD`; }
-            else if (a.action === 'terminate') { actionStr = `↯ ${escapeHtml(a.metadata?.department || '')}`; }
+            else if (a.action === 'terminate') {
+              const dept = a.metadata?.department;
+              const deptList = Array.isArray(dept) ? dept : (dept ? [dept] : []);
+              actionStr = `↯ ${escapeHtml(deptList.join(', '))}`;
+            }
             return `<li>${lbl} <small>${actionStr}</small></li>`;
           }).join('') + '</ul>';
         }
@@ -215,14 +220,22 @@
             const a = r.then || {};
             let thenStr = '';
             if (a.action === 'goto') { thenStr = `goto → ${escapeHtml((a.qid||[]).join(', '))}`; }
-            else if (a.action === 'terminate') { thenStr = `terminate ↯ ${escapeHtml(a.metadata?.department || '')}`; }
+            else if (a.action === 'terminate') {
+              const dept = a.metadata?.department;
+              const deptList = Array.isArray(dept) ? dept : (dept ? [dept] : []);
+              thenStr = `terminate ↯ ${escapeHtml(deptList.join(', '))}`;
+            }
             return `<li><div><b>When</b>: ${cond || '(none)'}</div><div><b>Then</b>: ${thenStr}</div></li>`;
           }).join('') + '</ol>';
           if (d.default) {
             const a = d.default;
             let thenStr = '';
             if (a.action === 'goto') { thenStr = `goto → ${escapeHtml((a.qid||[]).join(', '))}`; }
-            else if (a.action === 'terminate') { thenStr = `terminate ↯ ${escapeHtml(a.metadata?.department || '')}`; }
+            else if (a.action === 'terminate') {
+              const dept = a.metadata?.department;
+              const deptList = Array.isArray(dept) ? dept : (dept ? [dept] : []);
+              thenStr = `terminate ↯ ${escapeHtml(deptList.join(', '))}`;
+            }
             html += `<div><b>Default</b>: ${thenStr}</div>`;
           }
         }

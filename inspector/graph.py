@@ -101,18 +101,22 @@ def build_opd_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str, Any
                     for tgt in act.get("qid", []):
                         edges.append({"data": {"source": qid, "target": tgt, "label": opt.get("label", opt.get("id", ""))}})
                 elif act.get("action") == "terminate":
-                    dept = act.get("metadata", {}).get("department", "")
-                    edges.append({"data": {"source": qid, "target": f"{qid}_TERM_{dept}", "label": dept}})
-                    nodes.append({"data": {"id": f"{qid}_TERM_{dept}", "label": dept, "type": "terminate"}})
+                    depts = act.get("metadata", {}).get("department", [])
+                    depts_list = depts if isinstance(depts, list) else ([depts] if depts else [])
+                    for dept in depts_list:
+                        edges.append({"data": {"source": qid, "target": f"{qid}_TERM_{dept}", "label": dept}})
+                        nodes.append({"data": {"id": f"{qid}_TERM_{dept}", "label": dept, "type": "terminate"}})
         elif qt in ["number_range"]:
             act = q.get("on_submit", {})
             if act.get("action") == "goto":
                 for tgt in act.get("qid", []):
                     edges.append({"data": {"source": qid, "target": tgt, "label": "goto"}})
             elif act.get("action") == "terminate":
-                dept = act.get("metadata", {}).get("department", "")
-                edges.append({"data": {"source": qid, "target": f"{qid}_TERM_{dept}", "label": dept}})
-                nodes.append({"data": {"id": f"{qid}_TERM_{dept}", "label": dept, "type": "terminate"}})
+                depts = act.get("metadata", {}).get("department", [])
+                depts_list = depts if isinstance(depts, list) else ([depts] if depts else [])
+                for dept in depts_list:
+                    edges.append({"data": {"source": qid, "target": f"{qid}_TERM_{dept}", "label": dept}})
+                    nodes.append({"data": {"id": f"{qid}_TERM_{dept}", "label": dept, "type": "terminate"}})
         elif qt == "conditional":
             for rule in q.get("rules", []):
                 act = rule.get("then", {})
@@ -121,20 +125,24 @@ def build_opd_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str, Any
                     for tgt in act.get("qid", []):
                         edges.append({"data": {"source": qid, "target": tgt, "label": cond or "goto"}})
                 elif act.get("action") == "terminate":
-                    dept = act.get("metadata", {}).get("department", "")
-                    term_id = f"{qid}_TERM_{dept}"
-                    edges.append({"data": {"source": qid, "target": term_id, "label": cond or dept}})
-                    nodes.append({"data": {"id": term_id, "label": dept, "type": "terminate"}})
+                    depts = act.get("metadata", {}).get("department", [])
+                    depts_list = depts if isinstance(depts, list) else ([depts] if depts else [])
+                    for dept in depts_list:
+                        term_id = f"{qid}_TERM_{dept}"
+                        edges.append({"data": {"source": qid, "target": term_id, "label": cond or dept}})
+                        nodes.append({"data": {"id": term_id, "label": dept, "type": "terminate"}})
             if q.get("default"):
                 act = q["default"]
                 if act.get("action") == "goto":
                     for tgt in act.get("qid", []):
                         edges.append({"data": {"source": qid, "target": tgt, "label": "default"}})
                 elif act.get("action") == "terminate":
-                    dept = act.get("metadata", {}).get("department", "")
-                    term_id = f"{qid}_TERM_{dept}"
-                    edges.append({"data": {"source": qid, "target": term_id, "label": "default"}})
-                    nodes.append({"data": {"id": term_id, "label": dept, "type": "terminate"}})
+                    depts = act.get("metadata", {}).get("department", [])
+                    depts_list = depts if isinstance(depts, list) else ([depts] if depts else [])
+                    for dept in depts_list:
+                        term_id = f"{qid}_TERM_{dept}"
+                        edges.append({"data": {"source": qid, "target": term_id, "label": "default"}})
+                        nodes.append({"data": {"id": term_id, "label": dept, "type": "terminate"}})
 
     return {"nodes": nodes, "edges": edges}
 

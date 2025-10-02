@@ -69,7 +69,8 @@ def test_opd_schema_and_parsing():
                 assert len(set(opt_labels)) == len(opt_labels), f"Duplicate option labels in {question.qid}"
                 for opt in question.options:
                     if opt.action.action == "terminate":
-                        assert opt.action.department in _departments, f"Unknown department {opt.action.department} in {question.qid}"
+                        for dept in opt.action.department:
+                            assert dept in _departments, f"Unknown department {dept} in {question.qid}"
                     elif opt.action.action == "goto":
                         assert len(opt.action.qid) > 0, f"Empty goto in {question.qid}"
                     else:
@@ -94,7 +95,8 @@ def test_opd_schema_and_parsing():
                         assert pred.op in _allowed_ops, f"Unknown op {pred.op} in {question.qid}"
                     # then action
                     if rule.then.action == "terminate":
-                        assert rule.then.department in _departments, f"Unknown department {rule.then.department} in {question.qid}"
+                        for dept in rule.then.department:
+                            assert dept in _departments, f"Unknown department {dept} in {question.qid}"
                     elif rule.then.action == "goto":
                         assert len(rule.then.qid) > 0, f"Empty goto in rule of {question.qid}"
                     else:
@@ -102,7 +104,8 @@ def test_opd_schema_and_parsing():
                 # default action
                 if question.default is not None:
                     if question.default.action == "terminate":
-                        assert question.default.department in _departments, f"Unknown department {question.default.department} in {question.qid}"
+                        for dept in question.default.department:
+                            assert dept in _departments, f"Unknown department {dept} in {question.qid}"
                     elif question.default.action == "goto":
                         assert len(question.default.qid) > 0, f"Empty default goto in {question.qid}"
                     else:

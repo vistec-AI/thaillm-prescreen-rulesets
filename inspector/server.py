@@ -8,7 +8,7 @@ import shlex
 import logging
 import os
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
@@ -252,20 +252,28 @@ def create_app() -> FastAPI:
         raise HTTPException(status_code=404, detail=f"QID '{req.qid}' not found under symptom '{req.symptom}' in selected source")
         
 
-    @app.get("/api/graph/{symptom}")
-    def get_graph(symptom: str, mode: str = "combined") -> Dict[str, Any]:
+    def _compute_graph(symptom: str, mode: str) -> Dict[str, Any]:
         rules = load_rules_local()
         oldcarts = rules["oldcarts"].get(symptom)
         opd = rules["opd"].get(symptom)
         if oldcarts is None and opd is None:
             raise HTTPException(status_code=404, detail=f"Unknown symptom {symptom}")
-
         if mode == "oldcarts":
             return build_oldcarts_graph(symptom, oldcarts or [])
         elif mode == "opd":
             return build_opd_graph(symptom, opd or [])
         else:
             return build_combined_graph(symptom, oldcarts or [], opd or [])
+
+    # Backward-compatible path form, now capturing slashes too
+    @app.get("/api/graph/{symptom:path}")
+    def get_graph_path(symptom: str, mode: str = "combined") -> Dict[str, Any]:
+        return _compute_graph(symptom, mode)
+
+    # Preferred query form avoids any path encoding issues
+    @app.get("/api/graph")
+    def get_graph_q(symptom: str = Query(...), mode: str = "combined") -> Dict[str, Any]:
+        return _compute_graph(symptom, mode)
 
     return app
 
