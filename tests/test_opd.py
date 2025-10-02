@@ -37,6 +37,53 @@ def _collect_qids_per_symptom(rules, section: str, symptom: str) -> Set[str]:
     return {q["qid"] for q in rules[section].get(symptom, [])}
 
 
+def _get_opd_question(symptom_tree: List[dict], qid: str) -> Question:
+    for q_dict in symptom_tree:
+        if q_dict["qid"] == qid:
+            q_cls = question_mapper[q_dict["question_type"]]
+            return q_cls(**q_dict)
+    raise ValueError(f"Cannot find OPD qid {qid}")
+
+
+def _opd_goto_targets(question: Question) -> Set[str]:
+    targets: Set[str] = set()
+    if isinstance(question, (AgeFilterQuestion, GenderQuestion, SingleSelectQuestion)):
+        for opt in question.options:
+            if opt.action.action == "goto":
+                targets.update(opt.action.qid)
+    elif isinstance(question, NumberRangeQuestion):
+        if question.on_submit.action == "goto":
+            targets.update(question.on_submit.qid)
+    elif isinstance(question, ConditionalQuestion):
+        for rule in question.rules:
+            if rule.then.action == "goto":
+                targets.update(rule.then.qid)
+        if question.default is not None and question.default.action == "goto":
+            targets.update(question.default.qid)
+    return targets
+
+
+def _traverse_opd_reachable(symptom_tree: List[dict]) -> Set[str]:
+    if len(symptom_tree) == 0:
+        return set()
+    # start from the first node in the list
+    root_q_dict = symptom_tree[0]
+    q_cls = question_mapper[root_q_dict["question_type"]]
+    root: Question = q_cls(**root_q_dict)
+
+    visited: Set[str] = {root.qid}
+    stack: List[str] = [root.qid]
+
+    while stack:
+        current_qid = stack.pop()
+        current_q = _get_opd_question(symptom_tree, current_qid)
+        for nxt in _opd_goto_targets(current_q):
+            if nxt not in visited:
+                visited.add(nxt)
+                stack.append(nxt)
+    return visited
+
+
 def test_opd_schema_and_parsing():
     """Validate OPD schema, parsing, qid format, and per-type constraints."""
     rules = load_rules()
@@ -150,6 +197,18 @@ def test_opd_goto_targets_exist_within_opd():
 
             for tgt in targets:
                 assert tgt in opd_qids, f"In {symptom}, goto target {tgt} from {question.qid} does not exist in OPD"
+
+
+def test_opd_all_questions_reachable_from_entry():
+    """Ensure there are no unreachable OPD questions (except the first node which has no incoming edge by design)."""
+    rules = load_rules()
+    for symptom, q_list in rules["opd"].items():
+        if len(q_list) == 0:
+            continue
+        all_qids = {q["qid"] for q in q_list}
+        reachable = _traverse_opd_reachable(q_list)
+        unreachable = all_qids - reachable
+        assert len(unreachable) == 0, f"In OPD {symptom}, unreachable qids: {sorted(unreachable)}"
 
 
 def test_opd_predicates_reference_existing_oldcarts_or_opd_qids():
