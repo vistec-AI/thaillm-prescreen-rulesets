@@ -257,7 +257,7 @@ Dizziness:
     qid:
     - diz_opd_004-2
 - qid: diz_opd_004-1
-  question: อากาสปวดศีรษะร่วมด้วยกับเวียนหัว มีระดับความปวดเท่าไร ต่อสุด (ไม่ปวด)
+  question: อาการปวดศีรษะร่วมด้วยกับเวียนหัว มีระดับความปวดเท่าไร ต่อสุด (ไม่ปวด)
     0 คะแนน สูงสุด 10 คะแนน
   question_type: number_range
   min_value: 0
@@ -514,15 +514,23 @@ Muscle Pain:
   rules:
   - when:
     - qid: mus_as_001
-      op: contains_any
-      value:
-      - ไข้
-      - อ่อนเพลีย
+      op: is_answered
     then:
       action: terminate
       metadata:
         department:
           - Internal Medicine
+  - when:
+    - qid: mus_as_002
+      op: not_contains_any
+      value:
+        - "-"
+        - ไม่มี
+    then:
+        action: terminate
+        metadata:
+          department:
+            - Internal Medicine
   default:
     action: goto
     qid:
@@ -631,7 +639,7 @@ Fever:
   default:
     action: goto
     qid:
-    - fev_opd_004
+    - fev_opd_005
 - qid: fev_opd_003-1
   question: มีประวัติกำลังตั้งครรภ์หรือไม่?
   question_type: single_select
@@ -1680,14 +1688,23 @@ Skin Rash/Lesion:
   rules:
   - when:
     - qid: rash_as_001
-      op: contains_any
-      value:
-      - ไข้
+      op: is_answered
     then:
       action: terminate
       metadata:
         department:
           - Internal Medicine
+  - when:
+    - qid: rash_as_002
+      op: not_contains_any
+      value:
+        - "-"
+        - "ไม่มี"
+  then:
+    action: terminate
+    metadata:
+      department:
+        - Internal Medicine
   default:
     action: terminate
     metadata:
