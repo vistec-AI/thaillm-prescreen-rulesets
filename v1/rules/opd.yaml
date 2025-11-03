@@ -514,23 +514,19 @@ Muscle Pain:
   rules:
   - when:
     - qid: mus_as_001
-      op: is_answered
+      op: contains_any
+      value:
+        - ชา
+        - ขับถ่ายปัสสาวะหรืออุจจาระผิดปกติ
+        - น้ำหนักลดผิดปกติ
+        - ไข้
+        - อ่อนเพลีย
+        - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
     then:
       action: terminate
       metadata:
         department:
           - Internal Medicine
-  - when:
-    - qid: mus_as_002
-      op: not_contains_any
-      value:
-        - "-"
-        - ไม่มี
-    then:
-        action: terminate
-        metadata:
-          department:
-            - Internal Medicine
   default:
     action: goto
     qid:
@@ -1688,23 +1684,28 @@ Skin Rash/Lesion:
   rules:
   - when:
     - qid: rash_as_001
-      op: is_answered
+      op: contains_any
+      value:
+        - ไข้
+        - หายใจลำบาก
+        - ปากบวม
+        - หน้าบวม
+        - ปวดศีรษะ
+        - ปวดเมื่อย
+        - ไอ
+        - อ่อนเพลีย
+        - น้ำมูก
+        - คัดจมูก
+        - แสบคันตา
+        - ปัสสาวะผิดปกติ
+        - ขาบวม
+        - น้ำหนักลด
+        - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
     then:
       action: terminate
       metadata:
         department:
           - Internal Medicine
-  - when:
-    - qid: rash_as_002
-      op: not_contains_any
-      value:
-        - "-"
-        - "ไม่มี"
-  then:
-    action: terminate
-    metadata:
-      department:
-        - Internal Medicine
   default:
     action: terminate
     metadata:

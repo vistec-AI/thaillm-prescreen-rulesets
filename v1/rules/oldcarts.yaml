@@ -758,12 +758,31 @@ Muscle Pain:
     label: ไข้
   - id: อ่อนเพลีย
     label: อ่อนเพลีย
+  - id: มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
+    label: มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
   next:
     action: goto
     qid:
-    - mus_as_002
+    - mus_as_001-2
+- qid: mus_as_001-2
+  question: มีอาการอื่นนอกจากที่กล่าวไว้หรือไม่
+  question_type: conditional
+  rules:
+  - when:
+    - qid: mus_as_001
+      op: contains
+      value:
+        - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
+    then:
+      action: goto
+      qid:
+      - mus_as_002
+  default:
+    action: goto
+    qid:
+      - mus_as_003
 - qid: mus_as_002
-  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question: อาการอื่นๆ ที่มีอาการอย่างไร
   question_type: free_text
   on_submit:
     action: goto
@@ -2195,12 +2214,31 @@ Skin Rash/Lesion:
     label: ขาบวม
   - id: น้ำหนักลด
     label: น้ำหนักลด
+  - id: มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
+    label: มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
   next:
     action: goto
     qid:
-    - rash_as_002
+    - rash_as_001-2
+- qid: rash_as_001-2
+  question: มีอาการอื่นนอกจากที่กล่าวไว้หรือไม่
+  question_type: conditional
+  rules:
+  - when:
+    - qid: rash_as_001
+      op: contains
+      value:
+        - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
+    then:
+      action: goto
+      qid:
+      - rash_as_002
+  default:
+    action: goto
+    qid:
+      - rash_as_003
 - qid: rash_as_002
-  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question: อาการอื่นๆ ที่มีอาการอย่างไร
   question_type: free_text
   on_submit:
     action: goto
