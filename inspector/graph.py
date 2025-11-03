@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple
 def build_oldcarts_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str, Any]:
     nodes = []
     edges = []
+    qid_set = {q.get("qid") for q in q_list if isinstance(q, dict)}
 
     # add nodes with metadata for drill-down
     for q_dict in q_list:
@@ -29,6 +30,10 @@ def build_oldcarts_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str
             img = q_dict.get("image")
             if img:
                 data["image"] = f"/assets/{img}"
+        if q_dict["question_type"] == "conditional":
+            data["rules"] = q_dict.get("rules", [])
+            if q_dict.get("default") is not None:
+                data["default"] = q_dict.get("default")
         nodes.append({"data": data})
 
     # add edges based on actions
@@ -57,6 +62,28 @@ def build_oldcarts_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str
                         edges.append({"data": {"source": qid, "target": tgt, "label": opt.get("label", opt.get("id", ""))}})
                 elif act.get("action") == "opd":
                     edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": opt.get("label", opt.get("id", ""))}})
+        elif qtype == "conditional":
+            for rule in q_dict.get("rules", []):
+                act = rule.get("then", {})
+                cond = "; ".join([f"{w.get('qid')} {w.get('op')} {w.get('value')}" for w in rule.get("when", [])])
+                # Forward edges from conditional to its outcomes
+                if act.get("action") == "goto":
+                    for tgt in act.get("qid", []):
+                        edges.append({"data": {"source": qid, "target": tgt, "label": cond or "goto"}})
+                elif act.get("action") == "opd":
+                    edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": cond or "opd"}})
+                # Predicate reference edges (to visualize dependency and keep graph connected)
+                for w in rule.get("when", []) or []:
+                    src = w.get("qid")
+                    if src in qid_set:
+                        edges.append({"data": {"source": src, "target": qid, "label": "when"}})
+            if q_dict.get("default"):
+                act = q_dict["default"]
+                if act.get("action") == "goto":
+                    for tgt in act.get("qid", []):
+                        edges.append({"data": {"source": qid, "target": tgt, "label": "default"}})
+                elif act.get("action") == "opd":
+                    edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": "default"}})
 
     # add virtual OPD node
     nodes.append({"data": {"id": f"{symptom}_OPD", "label": "OPD", "type": "opd"}})
