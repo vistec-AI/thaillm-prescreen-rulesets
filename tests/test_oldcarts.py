@@ -152,6 +152,34 @@ def recursive_traverse(
                 qid_pools=qid_pools
             ))
         return qid_pools
+    elif question.question_type == "conditional":
+        possible_paths = set()
+        # collect all goto targets from rules
+        for rule in question.rules:
+            action = rule.then
+            if action.action == "goto":
+                for q in action.qid:
+                    possible_paths.add(q)
+        # include default goto if present
+        if getattr(question, "default", None) is not None:
+            default_action = question.default
+            if default_action.action == "goto":
+                for q in default_action.qid:
+                    possible_paths.add(q)
+
+        # fallback
+        if len(possible_paths) == 0:
+            return qid_pools
+
+        for next_qid in possible_paths:
+            # recursive
+            qid_pools.add(next_qid)
+            qid_pools.union(recursive_traverse(
+                symptom_tree=symptom_tree,
+                question=get_question(symptom_tree, next_qid),
+                qid_pools=qid_pools
+            ))
+        return qid_pools
     else:
         raise ValueError(f"Oldcarts shouldn't have question type {question.question_type}")
 
