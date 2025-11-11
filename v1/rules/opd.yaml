@@ -275,7 +275,7 @@ Dizziness:
   rules:
   - when:
     - qid: diz_opd_004-1
-      op: gt
+      op: ge
       value: 7
     then:
       action: terminate
