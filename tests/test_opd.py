@@ -1,5 +1,7 @@
 from typing import List, Optional, Set
 
+from pydantic import ValidationError
+
 from helpers.loader import load_rules, load_constants
 from helpers.data_model.question import question_mapper, Question
 from helpers.data_model.question import (
@@ -37,11 +39,140 @@ def _collect_qids_per_symptom(rules, section: str, symptom: str) -> Set[str]:
     return {q["qid"] for q in rules[section].get(symptom, [])}
 
 
+def _get_question_from_trees(qid: str, opd_list: List[dict], oldcarts_list: List[dict]) -> Optional[Question]:
+    """Get a question by qid from either OPD or oldcarts trees."""
+    for q_dict in opd_list:
+        if q_dict["qid"] == qid:
+            q_cls = question_mapper[q_dict["question_type"]]
+            try:
+                return q_cls(**q_dict)
+            except ValidationError as e:
+                print(f"Failed to parse\n\n{q_dict}")
+                raise e
+            
+    for q_dict in oldcarts_list:
+        if q_dict["qid"] == qid:
+            q_cls = question_mapper[q_dict["question_type"]]
+            try:
+                return q_cls(**q_dict)
+            except ValidationError as e:
+                print(f"Failed to parse\n\n{q_dict}")
+                raise e
+    return None
+
+
+def _number_range_predicates_cover_all(preds: list) -> bool:
+    """
+    Check if numeric predicates cover all possible values.
+    
+    Common patterns that cover all cases:
+    - ge(X) and lt(X) - covers >=X and <X
+    - gt(X) and le(X) - covers >X and <=X
+    - ge(X) and le(Y) where X > Y is impossible, so just check complementary ops
+    """
+    ops = {pred.op for pred in preds}
+    values_by_op = {}
+    for pred in preds:
+        if pred.op not in values_by_op:
+            values_by_op[pred.op] = set()
+        values_by_op[pred.op].add(pred.value)
+    
+    # Check for complementary patterns
+    # Pattern 1: ge(X) and lt(X) - covers all
+    if "ge" in ops and "lt" in ops:
+        ge_values = values_by_op.get("ge", set())
+        lt_values = values_by_op.get("lt", set())
+        # If any ge value equals any lt value, it's a complete partition
+        if ge_values & lt_values:
+            return True
+    
+    # Pattern 2: gt(X) and le(X) - covers all
+    if "gt" in ops and "le" in ops:
+        gt_values = values_by_op.get("gt", set())
+        le_values = values_by_op.get("le", set())
+        if gt_values & le_values:
+            return True
+    
+    # Pattern 3: ge(X) and lt(Y) where Y > X covers [X, Y), need another rule for rest
+    # Pattern 4: Multiple ranges that together cover min to max
+    # These are complex to verify, skip for now
+    
+    return False
+
+
+def _conditional_needs_default(cond_q: ConditionalQuestion, opd_list: List[dict], oldcarts_list: List[dict]) -> bool:
+    """
+    Check if a conditional question needs a default action.
+    
+    Rules:
+    - For single_select/image_single_select: need default if NOT all options are covered by 'eq' predicates
+    - For multi_select/image_multi_select: does NOT require default (combinations are too complex to enumerate)
+    - For number_range: need default unless predicates form a complete partition (e.g., >=X and <X)
+    - If rules reference both types, check single_select coverage first
+    - Other types (free_text, etc.) require default since they can't be enumerated
+    """
+    if len(cond_q.rules) == 0:
+        return True  # No rules means we need a default
+    
+    # Collect all predicates from all rules
+    all_predicates = []
+    for rule in cond_q.rules:
+        all_predicates.extend(rule.when)
+    
+    # Group predicates by referenced qid
+    predicates_by_qid: dict = {}
+    for pred in all_predicates:
+        if pred.qid not in predicates_by_qid:
+            predicates_by_qid[pred.qid] = []
+        predicates_by_qid[pred.qid].append(pred)
+    
+    # Check each referenced question
+    for ref_qid, preds in predicates_by_qid.items():
+        ref_q = _get_question_from_trees(ref_qid, opd_list, oldcarts_list)
+        if ref_q is None:
+            return True  # Can't find referenced question, need default
+        
+        # Single-select style questions: check if all options are covered
+        if isinstance(ref_q, (SingleSelectQuestion, ImageSelectQuestion)):
+            # Collect values checked with 'eq' operator for this question
+            eq_values = {pred.value for pred in preds if pred.op == "eq"}
+            option_ids = {opt.id for opt in ref_q.options}
+            option_labels = {opt.label for opt in ref_q.options}
+            
+            # Check if all option ids OR all option labels are covered
+            all_ids_covered = option_ids <= eq_values
+            all_labels_covered = option_labels <= eq_values
+            
+            if not (all_ids_covered or all_labels_covered):
+                return True  # Not all options covered, need default
+        
+        elif isinstance(ref_q, (MultiSelectQuestion, ImageMultiSelectQuestion)):
+            # Multi-select doesn't require default - continue checking other questions
+            pass
+        
+        elif isinstance(ref_q, NumberRangeQuestion):
+            # Number range: check if predicates form a complete partition
+            if not _number_range_predicates_cover_all(preds):
+                return True  # Not a complete partition, need default
+        
+        else:
+            # Other types (free_text, age_filter, gender_filter, etc.)
+            # These can't be fully enumerated or have complex semantics, need default
+            return True
+    
+    # All conditions are covered
+    return False
+
+
 def _get_opd_question(symptom_tree: List[dict], qid: str) -> Question:
     for q_dict in symptom_tree:
         if q_dict["qid"] == qid:
             q_cls = question_mapper[q_dict["question_type"]]
-            return q_cls(**q_dict)
+            try:
+                return q_cls(**q_dict)
+            except ValidationError as e:
+                print(f"Failed to parse\n\n{q_dict}")
+                raise e
     raise ValueError(f"Cannot find OPD qid {qid}")
 
 
@@ -69,8 +200,12 @@ def _traverse_opd_reachable(symptom_tree: List[dict]) -> Set[str]:
     # start from the first node in the list
     root_q_dict = symptom_tree[0]
     q_cls = question_mapper[root_q_dict["question_type"]]
-    root: Question = q_cls(**root_q_dict)
-
+    try:
+        root: Question = q_cls(**root_q_dict)
+    except ValidationError as e:
+        print(f"Failed to parse\n\n{root_q_dict}")
+        raise e
+    
     visited: Set[str] = {root.qid}
     stack: List[str] = [root.qid]
 
@@ -131,9 +266,11 @@ def test_opd_schema_and_parsing():
                 else:
                     raise AssertionError(f"Unknown action {question.on_submit.action} in {question.qid}")
             elif isinstance(question, ConditionalQuestion):
-                # rules can be empty, but default should exist in that case
-                if len(question.rules) == 0:
-                    assert question.default is not None, f"Conditional {question.qid} has no rules and no default"
+                # check if default action is needed based on rule coverage
+                oldcarts_list = rules["oldcarts"].get(symptom, [])
+                needs_default = _conditional_needs_default(question, q_list, oldcarts_list)
+                if needs_default:
+                    assert question.default is not None, f"Conditional {question.qid} has no default action (rules don't cover all cases)"
                 # validate rules
                 for rule in question.rules:
                     # when predicates
@@ -178,7 +315,12 @@ def test_opd_goto_targets_exist_within_opd():
         opd_qids = _collect_qids_per_symptom(rules, "opd", symptom)
         for q_dict in q_list:
             q_cls = question_mapper[q_dict["question_type"]]
-            question: Question = q_cls(**q_dict)
+            try:
+                question: Question = q_cls(**q_dict)
+            except ValidationError as e:
+                print(f"Failed to parse\n\n{q_dict}")
+                raise e
+            
 
             targets: List[str] = []
             if isinstance(question, (AgeFilterQuestion, GenderQuestion, SingleSelectQuestion)):
@@ -223,7 +365,12 @@ def test_opd_predicates_reference_existing_oldcarts_or_opd_qids():
             if q_dict["question_type"] != "conditional":
                 continue
             q_cls = question_mapper["conditional"]
-            question: ConditionalQuestion = q_cls(**q_dict)
+            try:
+                question: ConditionalQuestion = q_cls(**q_dict)
+            except ValidationError as e:
+                print(f"Failed to parse\n\n{q_dict}")
+                raise e
+            
             for rule in question.rules:
                 for pred in rule.when:
                     assert pred.qid in known_qids, f"Predicate {pred.qid} in {question.qid} not found in OPD or oldcarts for {symptom}"
@@ -237,7 +384,11 @@ def test_opd_conditional_predicate_semantics():
         oldcarts_map = {}
         for qd in rules["oldcarts"].get(symptom, []):
             q_cls = question_mapper[qd["question_type"]]
-            oldcarts_map[qd["qid"]] = q_cls(**qd)
+            try:
+                oldcarts_map[qd["qid"]] = q_cls(**qd)
+            except ValidationError as e:
+                print(f"Failed to parse\n\n{qd}")
+                raise e
 
         opd_map = {}
         for qd in opd_list:
@@ -249,7 +400,12 @@ def test_opd_conditional_predicate_semantics():
             if qd["question_type"] != "conditional":
                 continue
             q_cls = question_mapper["conditional"]
-            cond_q: ConditionalQuestion = q_cls(**qd)
+
+            try:
+                cond_q: ConditionalQuestion = q_cls(**qd)
+            except ValidationError as e:
+                print(f"Failed to parse\n\n{qd}")
+                raise e
 
             for rule in cond_q.rules:
                 for pred in rule.when:
