@@ -1351,6 +1351,10 @@ Diarrhea:
       action: goto
       qid:
       - dia_opd_004
+  default:
+    action: goto
+    qid:
+    - dia_opd_004
 - qid: dia_opd_004
   question: มีไข้ ปวดท้องรุนแรง หรืออาเจียนร่วมด้วยหรือไม่?
   question_type: conditional

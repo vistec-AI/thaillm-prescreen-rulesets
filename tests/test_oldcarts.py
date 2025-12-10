@@ -10,12 +10,119 @@ from helpers.data_model.question import (
     MultiSelectQuestion,
     ImageSelectQuestion,
     ImageMultiSelectQuestion,
+    ConditionalQuestion,
 )
 from helpers.utils import find_repo_root
 from pathlib import Path
 
 
 constant = load_constants()
+
+
+def _get_question_from_tree(qid: str, q_list: List[dict]) -> Optional[Question]:
+    """Get a question by qid from a question list."""
+    for q_dict in q_list:
+        if q_dict["qid"] == qid:
+            q_cls = question_mapper[q_dict["question_type"]]
+            return q_cls(**q_dict)
+    return None
+
+
+def _number_range_predicates_cover_all(preds: list) -> bool:
+    """
+    Check if numeric predicates cover all possible values.
+    
+    Common patterns that cover all cases:
+    - ge(X) and lt(X) - covers >=X and <X
+    - gt(X) and le(X) - covers >X and <=X
+    """
+    ops = {pred.op for pred in preds}
+    values_by_op = {}
+    for pred in preds:
+        if pred.op not in values_by_op:
+            values_by_op[pred.op] = set()
+        values_by_op[pred.op].add(pred.value)
+    
+    # Check for complementary patterns
+    # Pattern 1: ge(X) and lt(X) - covers all
+    if "ge" in ops and "lt" in ops:
+        ge_values = values_by_op.get("ge", set())
+        lt_values = values_by_op.get("lt", set())
+        if ge_values & lt_values:
+            return True
+    
+    # Pattern 2: gt(X) and le(X) - covers all
+    if "gt" in ops and "le" in ops:
+        gt_values = values_by_op.get("gt", set())
+        le_values = values_by_op.get("le", set())
+        if gt_values & le_values:
+            return True
+    
+    return False
+
+
+def _conditional_needs_default(cond_q: ConditionalQuestion, q_list: List[dict]) -> bool:
+    """
+    Check if a conditional question needs a default action.
+    
+    Rules:
+    - For single_select/image_single_select: need default if NOT all options are covered by 'eq' predicates
+    - For multi_select/image_multi_select: does NOT require default (combinations are too complex to enumerate)
+    - For number_range: need default unless predicates form a complete partition (e.g., >=X and <X)
+    - If rules reference both types, check single_select coverage first
+    - Other types (free_text, etc.) require default since they can't be enumerated
+    """
+    if len(cond_q.rules) == 0:
+        return True  # No rules means we need a default
+    
+    # Collect all predicates from all rules
+    all_predicates = []
+    for rule in cond_q.rules:
+        all_predicates.extend(rule.when)
+    
+    # Group predicates by referenced qid
+    predicates_by_qid: dict = {}
+    for pred in all_predicates:
+        if pred.qid not in predicates_by_qid:
+            predicates_by_qid[pred.qid] = []
+        predicates_by_qid[pred.qid].append(pred)
+    
+    # Check each referenced question
+    for ref_qid, preds in predicates_by_qid.items():
+        ref_q = _get_question_from_tree(ref_qid, q_list)
+        if ref_q is None:
+            return True  # Can't find referenced question, need default
+        
+        # Single-select style questions: check if all options are covered
+        if isinstance(ref_q, (SingleSelectQuestion, ImageSelectQuestion)):
+            # Collect values checked with 'eq' operator for this question
+            eq_values = {pred.value for pred in preds if pred.op == "eq"}
+            option_ids = {opt.id for opt in ref_q.options}
+            option_labels = {opt.label for opt in ref_q.options}
+            
+            # Check if all option ids OR all option labels are covered
+            all_ids_covered = option_ids <= eq_values
+            all_labels_covered = option_labels <= eq_values
+            
+            if not (all_ids_covered or all_labels_covered):
+                return True  # Not all options covered, need default
+        
+        elif isinstance(ref_q, (MultiSelectQuestion, ImageMultiSelectQuestion)):
+            # Multi-select doesn't require default - continue checking other questions
+            pass
+        
+        elif isinstance(ref_q, NumberRangeQuestion):
+            # Number range: check if predicates form a complete partition
+            if not _number_range_predicates_cover_all(preds):
+                return True  # Not a complete partition, need default
+        
+        else:
+            # Other types (free_text, age_filter, gender_filter, etc.)
+            # These can't be fully enumerated or have complex semantics, need default
+            return True
+    
+    # All conditions are covered
+    return False
 
 
 def test_load_rules():
@@ -87,6 +194,29 @@ def test_oldcarts_schema():
                         for goto_q in action.qid:
                             assert len(goto_q.split("_")) == 3, \
                                 f"goto action from {parsed_question.qid}, qid {goto_q} does not follow `<symptom_id>_<oldcarts_id>_<qid>` format"
+            elif isinstance(parsed_question, ConditionalQuestion):
+                # check if default action is needed based on rule coverage
+                needs_default = _conditional_needs_default(parsed_question, rules["oldcarts"][symptom])
+                if needs_default:
+                    assert parsed_question.default is not None, f"Conditional {parsed_question.qid} has no default action (rules don't cover all cases)"
+                
+                # if default exists, oldcarts must have no terminate action
+                if parsed_question.default is not None:
+                    assert parsed_question.default.action != "terminate", "oldcarts question can't have terminate"
+                    # update has_opd state from default
+                    if parsed_question.default.action == "opd":
+                        has_opd = True
+                
+                # validate rules
+                for rule in parsed_question.rules:
+                    assert rule.then.action != "terminate", "oldcarts question can't have terminate"
+                    if rule.then.action == "opd":
+                        has_opd = True
+                    elif rule.then.action == "goto":
+                        assert len(rule.then.qid) > 0, f"Rule action from {parsed_question.qid} has no next state"
+                        for goto_q in rule.then.qid:
+                            assert len(goto_q.split("_")) == 3, \
+                                f"goto action from {parsed_question.qid}, qid {goto_q} does not follow `<symptom_id>_<oldcarts_id>_<qid>` format"
 
         # oldcards must have at least 1 opd
         assert has_opd, f"Symptom {symptom} must have at least one OPD action"
@@ -152,6 +282,34 @@ def recursive_traverse(
                 qid_pools=qid_pools
             ))
         return qid_pools
+    elif question.question_type == "conditional":
+        possible_paths = set()
+        
+        # collect paths from rules
+        for rule in question.rules:
+            action = rule.then
+            if action.action != "opd":
+                next_qid = action.qid[0]
+                possible_paths.add(next_qid)
+        
+        # collect path from default (which should always exist)
+        if question.default is not None and question.default.action != "opd":
+            next_qid = question.default.qid[0]
+            possible_paths.add(next_qid)
+        
+        # fallback
+        if len(possible_paths) == 0:
+            return qid_pools
+        
+        for next_qid in possible_paths:
+            # recursive
+            qid_pools.add(next_qid)
+            qid_pools.union(recursive_traverse(
+                symptom_tree=symptom_tree,
+                question=get_question(symptom_tree, next_qid),
+                qid_pools=qid_pools
+            ))
+        return qid_pools
     else:
         raise ValueError(f"Oldcarts shouldn't have question type {question.question_type}")
 
@@ -206,6 +364,14 @@ def test_oldcarts_all_goto_targets_exist_and_nonempty():
                     if opt.action.action == "goto":
                         assert len(opt.action.qid) > 0, f"Option action goto empty list at {question.qid}"
                         goto_targets.extend(opt.action.qid)
+            elif isinstance(question, ConditionalQuestion):
+                for rule in question.rules:
+                    if rule.then.action == "goto":
+                        assert len(rule.then.qid) > 0, f"Rule action goto empty list at {question.qid}"
+                        goto_targets.extend(rule.then.qid)
+                if question.default is not None and question.default.action == "goto":
+                    assert len(question.default.qid) > 0, f"Default action goto empty list at {question.qid}"
+                    goto_targets.extend(question.default.qid)
 
             # verify targets exist
             for tgt in goto_targets:
