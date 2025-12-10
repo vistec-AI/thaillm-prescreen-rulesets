@@ -257,7 +257,7 @@ Dizziness:
     qid:
     - diz_opd_004-2
 - qid: diz_opd_004-1
-  question: อากาสปวดศีรษะร่วมด้วยกับเวียนหัว มีระดับความปวดเท่าไร ต่อสุด (ไม่ปวด)
+  question: อาการปวดศีรษะร่วมด้วยกับเวียนหัว มีระดับความปวดเท่าไร ต่อสุด (ไม่ปวด)
     0 คะแนน สูงสุด 10 คะแนน
   question_type: number_range
   min_value: 0
@@ -275,7 +275,7 @@ Dizziness:
   rules:
   - when:
     - qid: diz_opd_004-1
-      op: gt
+      op: ge
       value: 7
     then:
       action: terminate
@@ -516,8 +516,12 @@ Muscle Pain:
     - qid: mus_as_001
       op: contains_any
       value:
-      - ไข้
-      - อ่อนเพลีย
+        - ชา
+        - ขับถ่ายปัสสาวะหรืออุจจาระผิดปกติ
+        - น้ำหนักลดผิดปกติ
+        - ไข้
+        - อ่อนเพลีย
+        - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
     then:
       action: terminate
       metadata:
@@ -631,7 +635,7 @@ Fever:
   default:
     action: goto
     qid:
-    - fev_opd_004
+    - fev_opd_005
 - qid: fev_opd_003-1
   question: มีประวัติกำลังตั้งครรภ์หรือไม่?
   question_type: single_select
@@ -1686,7 +1690,21 @@ Skin Rash/Lesion:
     - qid: rash_as_001
       op: contains_any
       value:
-      - ไข้
+        - ไข้
+        - หายใจลำบาก
+        - ปากบวม
+        - หน้าบวม
+        - ปวดศีรษะ
+        - ปวดเมื่อย
+        - ไอ
+        - อ่อนเพลีย
+        - น้ำมูก
+        - คัดจมูก
+        - แสบคันตา
+        - ปัสสาวะผิดปกติ
+        - ขาบวม
+        - น้ำหนักลด
+        - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
     then:
       action: terminate
       metadata:

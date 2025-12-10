@@ -10,6 +10,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
 - id: d002
   original_value: Abdominal wall defects (omphalocele, gastroschisis)
   disease_name: Abdominal wall defects
@@ -22,6 +25,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Surgery
 - id: d003
   original_value: Abnormal curvature of the spine
   disease_name: Abnormal curvature of the spine
@@ -33,6 +39,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Rehabilitation
 - id: d004
   original_value: Abnormal uterine or vaginal bleeding
   disease_name: Abnormal uterine or vaginal bleeding
@@ -45,6 +54,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Internal Medicine
+  - Emergency Medicine
 - id: d005
   original_value: Abortion
   disease_name: Abortion
@@ -56,6 +69,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d006
   original_value: Abscess (at skin)
   disease_name: Skin abscess
@@ -67,6 +83,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
+  - Emergency Medicine
 - id: d007
   original_value: Acne
   disease_name: Acne
@@ -79,6 +99,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d008
   original_value: Acquired coagulation disorder (Vitamin K deficiency, liver disease,
     warfarin and heparin overdose)
@@ -91,6 +113,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d009
   original_value: Acquired platelet disorders (e.g., acquired platelet dysfunction
     with eosinophilia)
@@ -104,6 +129,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d010
   original_value: Acromegaly, gigantism, dwarfism
   disease_name: Acromegaly, Gigantism, Dwarfism
@@ -118,6 +146,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Surgery
 - id: d011
   original_value: Acute abdomen
   disease_name: Acute abdomen
@@ -130,6 +162,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d012
   original_value: Acute appendicitis
   disease_name: Acute appendicitis
@@ -143,6 +179,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Emergency Medicine
 - id: d013
   original_value: Acute corneal abrasion and ulcer
   disease_name: Acute corneal abrasion and ulcer
@@ -155,6 +194,8 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d014
   original_value: Acute coronary syndrome
   disease_name: Acute coronary syndrome
@@ -167,6 +208,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Surgery
 - id: d015
   original_value: Acute cystitis
   disease_name: Acute cystitis
@@ -179,6 +224,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d016
   original_value: Acute glaucoma
   disease_name: Acute angle-closure glaucoma
@@ -190,6 +238,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
+  - Emergency Medicine
 - id: d017
   original_value: Acute glomerulonephritis
   disease_name: Acute glomerulonephritis
@@ -204,6 +255,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d018
   original_value: Acute hemolytic crisis
   disease_name: Acute hemolytic crisis
@@ -216,6 +270,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d019
   original_value: Acute increased intracranial pressure
   disease_name: Acute increased intracranial pressure
@@ -228,6 +285,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d020
   original_value: Acute ischemic stroke and transient ischemic attack
   disease_name: Acute ischemic stroke and Transient Ischemic Attack
@@ -243,6 +304,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Rehabilitation
+  - Surgery
 - id: d021
   original_value: Acute kidney injury
   disease_name: Acute kidney injury
@@ -258,6 +324,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
+  - Surgery
 - id: d022
   original_value: Acute limb ischemia
   disease_name: Acute limb ischemia
@@ -271,6 +342,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
 - id: d023
   original_value: Acute otitis externa
   disease_name: Acute otitis externa
@@ -286,6 +360,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Dermatology
+  - Pediatrics
 - id: d024
   original_value: Acute otitis media, myringitis
   disease_name: Acute otitis media and Myringitis
@@ -300,6 +378,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Pediatrics
 - id: d025
   original_value: Acute pancreatitis
   disease_name: Acute pancreatitis
@@ -314,6 +395,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Surgery
 - id: d026
   original_value: 'Acute poisoning: drugs, food, chemicals, substances'
   disease_name: Acute poisoning
@@ -329,6 +414,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Forensic Medicine
 - id: d027
   original_value: Acute post-streptococcal glomerulonephritis
   disease_name: Acute post-streptococcal glomerulonephritis
@@ -343,6 +432,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
 - id: d028
   original_value: Acute psychosis and delirium
   disease_name: Acute psychosis and Delirium
@@ -361,6 +453,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Emergency Medicine
+  - Internal Medicine
 - id: d029
   original_value: Acute pulmonary embolism
   disease_name: Acute pulmonary embolism
@@ -376,6 +472,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Surgery
 - id: d030
   original_value: Acute pyelonephritis
   disease_name: Acute pyelonephritis
@@ -389,6 +489,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
 - id: d031
   original_value: Acute respiratory distress syndrome
   disease_name: Acute respiratory distress syndrome
@@ -402,6 +506,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d032
   original_value: Acute respiratory failure
   disease_name: Acute respiratory failure
@@ -416,6 +523,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d033
   original_value: Acute rheumatic fever
   disease_name: Acute rheumatic fever
@@ -429,6 +540,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
 - id: d034
   original_value: Acute urinary retention
   disease_name: Acute urinary retention
@@ -441,6 +555,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Surgery
 - id: d035
   original_value: Acute viral hepatitis
   disease_name: Acute viral hepatitis
@@ -455,6 +573,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d036
   original_value: Addison’s disease
   disease_name: Addison's disease
@@ -470,6 +591,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d037
   original_value: Adenotonsillar hypertrophy
   disease_name: Adenotonsillar hypertrophy
@@ -483,6 +607,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
 - id: d038
   original_value: Agranulocytosis, febrile neutropenia
   disease_name: Agranulocytosis and Febrile neutropenia
@@ -499,6 +625,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d039
   original_value: Airway obstruction
   disease_name: Airway obstruction
@@ -512,6 +641,11 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Otorhinolaryngology
+  - Surgery
+  - Pediatrics
 - id: d040
   original_value: Alcohol withdrawal syndrome
   disease_name: Alcohol withdrawal syndrome
@@ -525,6 +659,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Internal Medicine
+  - Emergency Medicine
 - id: d041
   original_value: Alcoholic liver disease
   disease_name: Alcoholic liver disease
@@ -539,6 +677,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d042
   original_value: Allergic Purpura (Henoch-Schdnlein purpura)
   disease_name: Henoch-Schönlein purpura
@@ -554,6 +695,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Dermatology
+  - Internal Medicine
+  - Emergency Medicine
 - id: d043
   original_value: Alopecia
   disease_name: Alopecia
@@ -567,6 +713,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Internal Medicine
+  - Pediatrics
 - id: d044
   original_value: Alopecia areata
   disease_name: Alopecia areata
@@ -580,6 +730,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d045
   original_value: Alzheimer’s disease
   disease_name: Alzheimer's disease
@@ -593,6 +745,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Internal Medicine
 - id: d046
   original_value: Ambiguous genitalia
   disease_name: Ambiguous genitalia
@@ -606,6 +761,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Obstetrics and Gynecology
+  - Surgery
 - id: d047
   original_value: Amyotrophic lateral sclerosis
   disease_name: Amyotrophic lateral sclerosis
@@ -621,6 +780,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
+  - Internal Medicine
 - id: d048
   original_value: Anal fissure
   disease_name: Anal fissure
@@ -633,6 +796,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Pediatrics
 - id: d049
   original_value: Animal bites and stings
   disease_name: Animal bites and stings
@@ -646,6 +813,11 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Dermatology
+  - Surgery
+  - Pediatrics
 - id: d050
   original_value: Anoxic spell
   disease_name: Anoxic spell
@@ -660,6 +832,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Pediatrics
+  - Internal Medicine
 - id: d051
   original_value: Antepartum hemorrhage (e.g., placenta previa, placental abruption)
   disease_name: Antepartum hemorrhage
@@ -673,6 +849,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d052
   original_value: Anuria/oliguria/polyuria
   disease_name: Anuria, Oliguria, Polyuria
@@ -687,6 +866,11 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
+  - Surgery
 - id: d053
   original_value: Aortic aneurysm and dissection
   disease_name: Aortic aneurysm and Aortic dissection
@@ -701,6 +885,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Emergency Medicine
+  - Internal Medicine
 - id: d054
   original_value: Aplastic anemia
   disease_name: Aplastic anemia
@@ -715,6 +903,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d055
   original_value: Arthropod-borne viral infections (e.g., dengue virus disease, chikungunya
     virus disease, zika virus disease)
@@ -729,6 +920,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
+  - Obstetrics and Gynecology
 - id: d056
   original_value: Asphyxia of the newborn
   disease_name: Perinatal asphyxia
@@ -743,6 +939,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Emergency Medicine
 - id: d057
   original_value: Asthma
   disease_name: Asthma
@@ -757,8 +956,12 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
 - id: d058
-  original_value: Asthma exacerbation, Acute exacerbation of CORD
+  original_value: Asthma exacerbation, Acute exacerbation of COPD
   disease_name: Asthma exacerbation and Acute exacerbation of COPD
   name_th: อาการโรคหืดกำเริบ และ อาการโรคปอดอุดกั้นเรื้อรังกำเริบเฉียบพลัน
   description: An asthma exacerbation ('asthma attack') is an episode where asthma
@@ -772,6 +975,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d059
   original_value: Atelectasis
   disease_name: Atelectasis
@@ -787,6 +994,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
+  - Surgery
 - id: d060
   original_value: Atrial myxoma
   disease_name: Atrial myxoma
@@ -802,6 +1014,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d061
   original_value: Attention deficit hyperactivity disorder
   disease_name: Attention deficit hyperactivity disorder
@@ -817,6 +1032,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Pediatrics
 - id: d062
   original_value: Autoimmune hemolytic anemia
   disease_name: Autoimmune hemolytic anemia
@@ -832,6 +1050,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d063
   original_value: Autosomal dominant polycystic kidney disease
   disease_name: Autosomal dominant polycystic kidney disease
@@ -847,6 +1068,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Pediatrics
 - id: d064
   original_value: Bartholinitis & abscess, Bartholin cyst
   disease_name: Bartholin's cyst and abscess
@@ -861,6 +1086,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d065
   original_value: Basal cell carcinoma
   disease_name: Basal cell carcinoma
@@ -875,6 +1102,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
+  - Internal Medicine
 - id: d066
   original_value: Behavioral and emotional problems in childhood and adolescence (e.g.,
     enuresis, nail biting, thumb sucking, separation anxiety, nightmare, night terror,
@@ -891,6 +1122,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Psychiatry
+  - Surgery
 - id: d067
   original_value: Behavioral syndromes associated with physiological dysfunction and
     physical factors (e.g., eating disorder, sleep disorder, sexual dysfunction, post-partum
@@ -908,6 +1143,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Internal Medicine
+  - Obstetrics and Gynecology
 - id: d068
   original_value: Benign and malignant neoplasm of esophagus, stomach, colon, pancreas
   disease_name: Neoplasms of esophagus, stomach, colon, pancreas
@@ -922,6 +1161,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
 - id: d069
   original_value: Benign and malignant neoplasm of hepatobiliary system (hepatic adenoma/hemangioma,
     hepatocellular carcinoma, cholangiocarcinoma)
@@ -937,6 +1179,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d070
   original_value: Benign and malignant neoplasm of oral cavity, tissue larynx, nasopharynx,
     eyes, esophagus, stomach, colon, liver and biliary tract, pancreas, lungs, bone
@@ -957,6 +1202,15 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Ophthalmology
+  - Dermatology
+  - Surgery
+  - Orthopedics and Physical Therapy
+  - Obstetrics and Gynecology
+  - Otorhinolaryngology
+  - Internal Medicine
 - id: d071
   original_value: Benign neoplasm of bone (osteochondroma, giant cell tumor of bone)
   disease_name: Benign neoplasm of bone
@@ -970,6 +1224,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
 - id: d072
   original_value: Benign neoplasm of endocrine system (pituitary adenoma, thyroid
     goiter and nodule, parathyroid adenoma, adrenal gland tumor, pheochromocytoma
@@ -987,6 +1244,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Otorhinolaryngology
 - id: d073
   original_value: Benign neoplasm of reproductive system (leiomyoma, fibroadenoma)
   disease_name: Benign neoplasm of reproductive system
@@ -999,6 +1260,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Surgery
 - id: d074
   original_value: Benign neoplasm of respiratory system (nasal polyp, hamartoma)
   disease_name: Benign neoplasm of respiratory system
@@ -1012,6 +1276,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Surgery
 - id: d075
   original_value: Benign neoplasm of skin and subcutaneous tissue
   disease_name: Benign neoplasm of skin and subcutaneous tissue
@@ -1024,6 +1291,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
+  - Internal Medicine
 - id: d076
   original_value: Benign neoplasm of urinary system (renal angiomyolipoma)
   disease_name: Benign neoplasm of urinary system
@@ -1036,6 +1307,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d077
   original_value: Benign neoplasms of the nervous system (schwannoma, meningioma,
     pituitary tumor)
@@ -1051,6 +1325,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
 - id: d078
   original_value: Bipolar and related disorders
   disease_name: Bipolar and related disorders
@@ -1065,6 +1342,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
 - id: d079
   original_value: Birth trauma
   disease_name: Birth trauma
@@ -1080,6 +1359,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Emergency Medicine
+  - Surgery
 - id: d080
   original_value: Bites and stings
   disease_name: Bites and stings
@@ -1093,6 +1376,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Dermatology
 - id: d081
   original_value: Botulism
   disease_name: Botulism
@@ -1109,6 +1395,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d082
   original_value: Breast infection associated with childbirth
   disease_name: Mastitis
@@ -1123,6 +1412,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d083
   original_value: Bullous dermatoses (e.g. pemphigus, pemphigoid)
   disease_name: Bullous dermatoses
@@ -1137,6 +1428,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d084
   original_value: Burns
   disease_name: Burns
@@ -1152,6 +1445,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Dermatology
+  - Surgery
+  - Pediatrics
 - id: d085
   original_value: Cardiac arrhythmias (atrial fibrillation, supraventricular tachycardia,
     premature ventricular contraction, premature atrial contraction, ventricular tachycardia,
@@ -1170,6 +1468,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
 - id: d086
   original_value: Cardiac tamponade
   disease_name: Cardiac tamponade
@@ -1185,6 +1487,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d087
   original_value: Cardiopulmonary arrest
   disease_name: Cardiopulmonary arrest
@@ -1199,6 +1505,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d088
   original_value: Cataract
   disease_name: Cataract
@@ -1215,6 +1525,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d089
   original_value: Cellulitis
   disease_name: Cellulitis
@@ -1230,6 +1542,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d090
   original_value: Cerebral palsy
   disease_name: Cerebral palsy
@@ -1245,6 +1562,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
+  - Surgery
 - id: d091
   original_value: Cerebrovascular diseases (e.g., intracerebral hemorrhage, cerebral
     infarction, subarachnoid hemorrhage)
@@ -1259,6 +1581,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Surgery
 - id: d092
   original_value: Cervical polyp
   disease_name: Cervical polyp
@@ -1273,6 +1599,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d093
   original_value: Cervicitis
   disease_name: Cervicitis
@@ -1287,6 +1615,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d094
   original_value: Chest injury
   disease_name: Chest injury
@@ -1301,6 +1631,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Orthopedics and Physical Therapy
 - id: d095
   original_value: Cholelithiasis, cholecystitis, cholangitis
   disease_name: Cholelithiasis, Cholecystitis, Cholangitis
@@ -1315,6 +1649,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
 - id: d096
   original_value: Chorio-amnionitis
   disease_name: Chorioamnionitis
@@ -1330,6 +1667,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d097
   original_value: Chromosomal abnormalities (e.g., Trisomy 21, trisomy18, trisomy13,
     turner syndrome, Klinefelter)
@@ -1346,6 +1685,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Obstetrics and Gynecology
+  - Internal Medicine
 - id: d098
   original_value: Chronic diarrhea
   disease_name: Chronic diarrhea
@@ -1361,6 +1704,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d099
   original_value: Chronic glomerulonephritis
   disease_name: Chronic glomerulonephritis
@@ -1376,6 +1722,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d100
   original_value: Chronic kidney disease
   disease_name: Chronic kidney disease
@@ -1393,6 +1742,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Surgery
 - id: d101
   original_value: Chronic obstructive lung disease
   disease_name: Chronic obstructive pulmonary disease
@@ -1409,6 +1762,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Rehabilitation
 - id: d102
   original_value: Chronic otitis media
   disease_name: Chronic otitis media
@@ -1424,6 +1781,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Pediatrics
 - id: d103
   original_value: Chronic viral hepatitis
   disease_name: Chronic viral hepatitis
@@ -1439,6 +1799,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d104
   original_value: Cirrhosis
   disease_name: Cirrhosis
@@ -1455,6 +1817,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d105
   original_value: Coma
   disease_name: Coma
@@ -1470,6 +1834,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d106
   original_value: Common congenital anomalies (e.g., cleft lip and cleft palate, neural
     tube defects e.g., encephalocele, meningocele)
@@ -1485,6 +1853,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Surgery
+  - Otorhinolaryngology
 - id: d107
   original_value: Compartment syndrome
   disease_name: Compartment syndrome
@@ -1501,6 +1873,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Emergency Medicine
 - id: d108
   original_value: Conductive and sensorineural hearing losses
   disease_name: Conductive and Sensorineural hearing loss
@@ -1517,6 +1893,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
 - id: d109
   original_value: Congenital adrenal hyperplasia
   disease_name: Congenital adrenal hyperplasia
@@ -1533,6 +1911,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
+  - Obstetrics and Gynecology
 - id: d110
   original_value: Congenital and acquired platelet disorders
   disease_name: Congenital and acquired platelet disorders
@@ -1547,6 +1929,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
 - id: d111
   original_value: Congenital gastrointestinal malformation (esophageal atresia, duodenal/jejunal
     atresia, anorectal atresia/malformation, intestinal malrotation, Hirschsprung
@@ -1563,6 +1948,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Surgery
+  - Emergency Medicine
 - id: d112
   original_value: Congenital hepatobiliary malformation (biliary atresia, choledochal
     cyst)
@@ -1578,6 +1967,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Surgery
 - id: d113
   original_value: Congenital malformations of heart (e.g., atrial septal defect, ventricular
     septal defect, patent ductus arteriosus, pulmonic stenosis, aortic stenosis, tetralogy
@@ -1596,6 +1988,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Surgery
 - id: d114
   original_value: Conjunctivitis
   disease_name: Conjunctivitis
@@ -1611,6 +2006,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
+  - Pediatrics
 - id: d115
   original_value: Convulsion, status epilepticus
   disease_name: Convulsion and Status epilepticus
@@ -1624,6 +2022,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d116
   original_value: Corn
   disease_name: Corn
@@ -1636,6 +2038,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d117
   original_value: Corrosions, heat stroke, electrical injury
   disease_name: Corrosions, Heat stroke, Electrical injury
@@ -1652,6 +2056,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d118
   original_value: Costochondritis
   disease_name: Costochondritis
@@ -1666,6 +2074,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Internal Medicine
 - id: d119
   original_value: Crystal arthropathy (gout, pseudogout)
   disease_name: Crystal arthropathy
@@ -1681,6 +2092,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Orthopedics and Physical Therapy
 - id: d120
   original_value: Cushing syndrome
   disease_name: Cushing syndrome
@@ -1696,6 +2110,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d121
   original_value: Cutaneous larva migrans
   disease_name: Cutaneous larva migrans
@@ -1710,6 +2127,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d122
   original_value: Cutaneous lupus erythematosus
   disease_name: Cutaneous lupus erythematosus
@@ -1726,6 +2145,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d123
   original_value: Cyst (at skin)
   disease_name: Skin cyst
@@ -1740,6 +2161,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
 - id: d124
   original_value: Cystitis, urethritis
   disease_name: Cystitis and Urethritis
@@ -1754,6 +2178,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d125
   original_value: Cytomegaloviral disease
   disease_name: Cytomegalovirus disease
@@ -1770,6 +2197,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Ophthalmology
+  - Emergency Medicine
 - id: d126
   original_value: Dacryostenosis, dacryocystitis
   disease_name: Dacryostenosis and Dacryocystitis
@@ -1786,6 +2218,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
+  - Pediatrics
 - id: d127
   original_value: Dead fetus in utero
   disease_name: Intrauterine fetal death
@@ -1801,6 +2236,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d128
   original_value: Deep vein thrombosis
   disease_name: Deep vein thrombosis
@@ -1816,6 +2254,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d129
   original_value: Degenerative diseases of the spine
   disease_name: Degenerative spine disease
@@ -1831,6 +2272,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Rehabilitation
 - id: d130
   original_value: Depressive disorders, panic disorder, generalized anxiety disorder
     and adjustment disorder
@@ -1848,6 +2293,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Emergency Medicine
 - id: d131
   original_value: Dermatitis and eczema
   disease_name: Dermatitis
@@ -1864,6 +2312,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d132
   original_value: Diabetes insipidus
   disease_name: Diabetes insipidus
@@ -1879,6 +2329,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d133
   original_value: Diabetes mellitus
   disease_name: Diabetes mellitus
@@ -1896,6 +2349,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Ophthalmology
+  - Surgery
 - id: d134
   original_value: Diphtheria
   disease_name: Diphtheria
@@ -1910,6 +2368,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
+  - Emergency Medicine
+  - Otorhinolaryngology
 - id: d135
   original_value: Diseases of peripheral veins (thrombophlebitis, varicose veins of
     lower extremities)
@@ -1925,6 +2388,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d136
   original_value: Dislocations
   disease_name: Dislocation
@@ -1940,6 +2406,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Emergency Medicine
 - id: d137
   original_value: Disorders of breast and lactation associated with childbirth
   disease_name: Disorders of breast and lactation associated with childbirth
@@ -1953,6 +2422,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d138
   original_value: Disorders of fluid, electrolytes, and acid-base balance (e.g., acidosis,
     alkalosis, hyponatremia, hypernatremia, hypokalemia, hyperkalemia, hypocalcemia,
@@ -1971,6 +2442,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
 - id: d139
   original_value: Disorders of lipoprotein metabolism and lipidemia
   disease_name: Disorders of lipoprotein metabolism
@@ -1986,6 +2461,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d140
   original_value: Disorders of ocular muscles, refraction & accommodation (e.g., strabismus,
     amblyopia, myopia, presbyopia, hypermetropia, astigmatism)
@@ -2004,6 +2481,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d141
   original_value: Disorders of refraction and accommodation (myopia, presbyopia, hypermetropia,
     astigmatism)
@@ -2020,6 +2499,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d142
   original_value: Disorders of vestibular function and vertiginous syndrome (Meniere
     syndrome, vestibular neuritis, benign positional paroxysmal vertigo)
@@ -2036,6 +2517,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
 - id: d143
   original_value: Disseminated intravascular coagulation
   disease_name: Disseminated intravascular coagulation
@@ -2049,6 +2532,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d144
   original_value: Drug-induced extrapyramidal symptoms
   disease_name: Drug-induced extrapyramidal symptoms
@@ -2064,6 +2550,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Emergency Medicine
+  - Internal Medicine
 - id: d145
   original_value: Drug-induced hemolytic anemia
   disease_name: Drug-induced hemolytic anemia
@@ -2078,6 +2568,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d146
   original_value: Drugs, medicaments, and biological substances causing adverse effects
     in therapeutic use
@@ -2093,6 +2586,16 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Dermatology
+  - Pediatrics
+  - Psychiatry
+  - Ophthalmology
+  - Otorhinolaryngology
+  - Obstetrics and Gynecology
+  - Rehabilitation
 - id: d147
   original_value: Dry eye syndrome
   disease_name: Dry eye syndrome
@@ -2108,6 +2611,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d148
   original_value: Dyshidrosis, miliaria
   disease_name: Dyshidrosis and Miliaria
@@ -2122,6 +2627,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Pediatrics
 - id: d149
   original_value: Ectopic pregnancy
   disease_name: Ectopic pregnancy
@@ -2137,6 +2645,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d150
   original_value: Eczema, dermatitis
   disease_name: Eczema
@@ -2150,6 +2661,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Pediatrics
 - id: d151
   original_value: Emerging infectious diseases (e.g., COVID19)
   disease_name: Emerging infectious diseases
@@ -2165,6 +2679,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d152
   original_value: Empyema thoracis
   disease_name: Empyema thoracis
@@ -2179,6 +2697,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d153
   original_value: Encephalitis and myelitis
   disease_name: Encephalitis and Myelitis
@@ -2195,6 +2716,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d154
   original_value: Endometriosis
   disease_name: Endometriosis
@@ -2209,6 +2734,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Surgery
 - id: d155
   original_value: Environmental-pollution-related conditions
   disease_name: Environmental pollution-related conditions
@@ -2223,6 +2751,15 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Dermatology
+  - Ophthalmology
+  - Otorhinolaryngology
+  - Emergency Medicine
+  - Rehabilitation
+  - Obstetrics and Gynecology
 - id: d156
   original_value: Epiglottitis
   disease_name: Epiglottitis
@@ -2240,6 +2777,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Emergency Medicine
+  - Pediatrics
 - id: d157
   original_value: Erectile dysfunction
   disease_name: Erectile dysfunction
@@ -2254,6 +2795,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Psychiatry
+  - Surgery
 - id: d158
   original_value: Erythema multiforme, erythema nodosum
   disease_name: Erythema multiforme
@@ -2270,6 +2815,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Internal Medicine
 - id: d159
   original_value: Esophageal varices
   disease_name: Esophageal varices
@@ -2285,6 +2833,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Surgery
 - id: d160
   original_value: Esophagitis, gastro-esophageal reflux
   disease_name: Esophagitis and Gastroesophageal reflux disease
@@ -2300,6 +2852,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Surgery
 - id: d161
   original_value: Exposure to forces of nature (e.g., natural heat or cold, sunlight,
     victim of lightning, victim of earthquake, victim of flood)
@@ -2315,6 +2871,12 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Surgery
+  - Orthopedics and Physical Therapy
+  - Dermatology
 - id: d162
   original_value: Eye injury
   disease_name: Eye injury
@@ -2330,6 +2892,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
+  - Emergency Medicine
 - id: d163
   original_value: Facial nerve paralysis (Bell's palsy)
   disease_name: Facial nerve paralysis
@@ -2346,6 +2911,13 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Internal Medicine
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
+  - Emergency Medicine
+  - Ophthalmology
 - id: d164
   original_value: Falls
   disease_name: Falls
@@ -2361,6 +2933,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Orthopedics and Physical Therapy
+  - Internal Medicine
 - id: d165
   original_value: Feeding problems of newborn
   disease_name: Feeding problems of newborn
@@ -2376,6 +2952,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
 - id: d166
   original_value: Fetal distress
   disease_name: Fetal distress
@@ -2390,6 +2968,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d167
   original_value: Fibromyalgia
   disease_name: Fibromyalgia
@@ -2404,6 +2985,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
 - id: d168
   original_value: Filariasis
   disease_name: Filariasis
@@ -2419,6 +3004,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Dermatology
 - id: d169
   original_value: Fistula in ano
   disease_name: Anal fistula
@@ -2433,6 +3021,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
 - id: d170
   original_value: Fistula involving female genital tracts
   disease_name: Female genital tract fistula
@@ -2448,6 +3038,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Surgery
 - id: d171
   original_value: Foreign body
   disease_name: Foreign body
@@ -2463,6 +3056,13 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Otorhinolaryngology
+  - Ophthalmology
+  - Pediatrics
+  - Internal Medicine
 - id: d172
   original_value: Foreign body aspiration
   disease_name: Foreign body aspiration
@@ -2478,6 +3078,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Otorhinolaryngology
+  - Pediatrics
+  - Surgery
 - id: d173
   original_value: Foreign body on external eye
   disease_name: Ocular foreign body
@@ -2492,6 +3097,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
+  - Emergency Medicine
 - id: d174
   original_value: Foreign body through orifices
   disease_name: Foreign body in orifice
@@ -2506,6 +3114,12 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Otorhinolaryngology
+  - Surgery
+  - Pediatrics
+  - Internal Medicine
 - id: d175
   original_value: Fractures (extremities)
   disease_name: Extremity fracture
@@ -2522,6 +3136,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Emergency Medicine
 - id: d176
   original_value: Functional gastrointestinal disorders (e.g., functional dyspepsia,
     functional digestive disorder in children, irritable bowel syndrome, functional
@@ -2541,6 +3159,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d177
   original_value: G-6-PD deficiency
   disease_name: Glucose-6-phosphate dehydrogenase deficiency
@@ -2557,6 +3178,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
 - id: d178
   original_value: Gas gangrene
   disease_name: Gas gangrene
@@ -2574,6 +3199,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d179
   original_value: Gastrointestinal and hepatobiliary parasites (e.g., ascariasis,
     hookworm infestation, enterobiasis, trichuriasis, strongyloidiasis, taeniasis,
@@ -2593,6 +3222,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d180
   original_value: Gastrointestinal hemorrhage
   disease_name: Gastrointestinal hemorrhage
@@ -2610,6 +3242,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Surgery
 - id: d181
   original_value: Gastrointestinal infection and food-borne intoxication
   disease_name: Gastrointestinal infections and Foodborne intoxication
@@ -2626,6 +3262,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
 - id: d182
   original_value: Gastrointestinal obstruction
   disease_name: Gastrointestinal obstruction
@@ -2642,6 +3282,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
+  - Emergency Medicine
 - id: d183
   original_value: Germ cell tumor
   disease_name: Germ cell tumor
@@ -2657,6 +3301,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
+  - Pediatrics
+  - Obstetrics and Gynecology
 - id: d184
   original_value: Glaucoma
   disease_name: Glaucoma
@@ -2672,6 +3321,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d185
   original_value: Goiter
   disease_name: Goiter
@@ -2688,6 +3339,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d186
   original_value: Guillain-Barre syndrome
   disease_name: Guillain-Barré syndrome
@@ -2704,6 +3357,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Rehabilitation
+  - Internal Medicine
 - id: d187
   original_value: Healthcare related adverse events, harm or injuries
   disease_name: Healthcare-associated adverse events
@@ -2719,6 +3376,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Forensic Medicine
+  - Emergency Medicine
+  - Rehabilitation
 - id: d188
   original_value: Heart failure
   disease_name: Heart failure
@@ -2735,6 +3396,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d189
   original_value: Hemangioma
   disease_name: Hemangioma
@@ -2751,6 +3415,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Dermatology
+  - Surgery
 - id: d190
   original_value: Hemoglobinopathies (e.g., hemoglobin E, hemoglobin S)
   disease_name: Hemoglobinopathies
@@ -2767,6 +3435,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
 - id: d191
   original_value: Hemophilia
   disease_name: Hemophilia
@@ -2783,6 +3454,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Orthopedics and Physical Therapy
+  - Emergency Medicine
 - id: d192
   original_value: Hemorrhoids
   disease_name: Hemorrhoids
@@ -2798,6 +3474,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
 - id: d193
   original_value: Hemothorax
   disease_name: Hemothorax
@@ -2814,6 +3493,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d194
   original_value: Hepatic failure
   disease_name: Hepatic failure
@@ -2831,6 +3514,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d195
   original_value: Hereditary coagulation disorders (e.g., von Willebrand disease)
   disease_name: Hereditary coagulation disorders
@@ -2847,6 +3533,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d196
   original_value: Hereditary red blood cell membrane defect (hereditary spherocytosis,
     elliptocytosis, ovalocytosis)
@@ -2864,6 +3553,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d197
   original_value: Hernia (inguinal, umbilical, incisional)
   disease_name: Hernia
@@ -2881,6 +3573,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
 - id: d198
   original_value: Herpes simplex infection
   disease_name: Herpes simplex virus infection
@@ -2898,6 +3592,13 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Pediatrics
+  - Obstetrics and Gynecology
+  - Ophthalmology
+  - Internal Medicine
+  - Emergency Medicine
 - id: d199
   original_value: Hordeolum and chalazion
   disease_name: Hordeolum and Chalazion
@@ -2912,6 +3613,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d200
   original_value: Human immunodeficiency virus disease (HIV disease)
   disease_name: Human immunodeficiency virus
@@ -2930,6 +3633,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Obstetrics and Gynecology
 - id: d201
   original_value: Hydatidiform mole
   disease_name: Hydatidiform mole
@@ -2947,6 +3654,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d202
   original_value: Hydrocele of testis
   disease_name: Hydrocele
@@ -2963,6 +3672,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Pediatrics
 - id: d203
   original_value: Hydrocephalus
   disease_name: Hydrocephalus
@@ -2980,6 +3692,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Surgery
+  - Internal Medicine
 - id: d204
   original_value: Hyperemesis gravidarum
   disease_name: Hyperemesis gravidarum
@@ -2994,6 +3710,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Internal Medicine
 - id: d205
   original_value: Hyperglycemic crisis
   disease_name: Hyperglycemic crisis
@@ -3009,6 +3728,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d206
   original_value: Hyperkalemia, severe hypokalemia
   disease_name: Hyperkalemia and Severe hypokalemia
@@ -3025,6 +3748,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d207
   original_value: Hyperplasia of prostate
   disease_name: Benign prostatic hyperplasia
@@ -3040,6 +3766,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
 - id: d208
   original_value: Hypertension
   disease_name: Hypertension
@@ -3057,6 +3786,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d209
   original_value: Hypertensive disorder in pregnancy
   disease_name: Hypertensive disorders of pregnancy
@@ -3073,6 +3805,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d210
   original_value: Hyperventilation syndrome
   disease_name: Hyperventilation syndrome
@@ -3088,6 +3822,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Psychiatry
 - id: d211
   original_value: Hypoglycemia
   disease_name: Hypoglycemia
@@ -3104,6 +3842,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Emergency Medicine
+  - Internal Medicine
 - id: d212
   original_value: Hypogonadism
   disease_name: Hypogonadism
@@ -3122,6 +3864,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Obstetrics and Gynecology
+  - Pediatrics
 - id: d213
   original_value: Hypospadias
   disease_name: Hypospadias
@@ -3137,6 +3883,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Surgery
 - id: d214
   original_value: Hypothyroidism
   disease_name: Hypothyroidism
@@ -3154,6 +3903,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d215
   original_value: Immune deficiency states e.g., neutropenia, asplenia/splenic dysfunctions,
     post- chemotherapy
@@ -3171,6 +3922,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d216
   original_value: Immune hemolytic anemia (autoimmune hemolytic anemia, drug-induced
     anemia)
@@ -3187,6 +3941,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d217
   original_value: Immune thrombocytopenia
   disease_name: Immune thrombocytopenia
@@ -3203,6 +3960,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d218
   original_value: Impacted cerumen
   disease_name: Impacted cerumen
@@ -3219,6 +3979,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
 - id: d219
   original_value: Imperforate hymen
   disease_name: Imperforate hymen
@@ -3235,6 +3997,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Obstetrics and Gynecology
 - id: d220
   original_value: Impetigo
   disease_name: Impetigo
@@ -3251,6 +4016,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Pediatrics
+  - Emergency Medicine
+  - Internal Medicine
 - id: d221
   original_value: Incompatible blood transfusion
   disease_name: Hemolytic transfusion reaction
@@ -3266,6 +4036,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d222
   original_value: Increased intracranial pressure and brain herniation syndromes
   disease_name: Increased intracranial pressure and Brain herniation
@@ -3285,6 +4058,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
 - id: d223
   original_value: Infectious mononucleosis
   disease_name: Infectious mononucleosis
@@ -3302,6 +4078,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d224
   original_value: Infective arthritis
   disease_name: Infective arthritis
@@ -3319,6 +4098,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Internal Medicine
+  - Emergency Medicine
 - id: d225
   original_value: Infective endocarditis
   disease_name: Infective endocarditis
@@ -3338,6 +4121,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Surgery
+  - Pediatrics
 - id: d226
   original_value: Infestations by ectoparasites - pediculosis, phthiriasis, scabies
   disease_name: Ectoparasitic infestations
@@ -3353,6 +4141,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Pediatrics
 - id: d227
   original_value: Influenza
   disease_name: Influenza
@@ -3372,6 +4163,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
 - id: d228
   original_value: Intention self-harm e.g., crashing of motor vehicle, hanging and
     suffocation, handgun discharge, corrosive agent ingestion
@@ -3389,6 +4184,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d229
   original_value: Interstitial nephritis
   disease_name: Interstitial nephritis
@@ -3405,6 +4205,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d230
   original_value: Intervertebral disc disorders
   disease_name: Intervertebral disc disorders
@@ -3420,6 +4223,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Rehabilitation
 - id: d231
   original_value: Intestinal diverticular diseases
   disease_name: Intestinal diverticular disease
@@ -3435,6 +4242,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d232
   original_value: Intestinal parasitic infestation (e.g., ascariasis, hookworm infestation,
     enterobiasis, trichuriasis, strongyloidiasis, taeniasis, capillariasis)
@@ -3453,6 +4263,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d233
   original_value: Intracerebral and subarachnoid hemorrhage (e.g., hypertension, aneurysm,
     vascular malformation)
@@ -3471,6 +4284,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d234
   original_value: Intracranial abscess
   disease_name: Intracranial abscess
@@ -3488,6 +4305,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d235
   original_value: Intrauterine and perinatal infections (rubella, gonococcal infection,
     tetanus neonatorum, chlamydial infection, HIV, hepatitis)
@@ -3507,6 +4328,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Obstetrics and Gynecology
+  - Internal Medicine
 - id: d236
   original_value: Iodine deficiency
   disease_name: Iodine deficiency disorders
@@ -3522,6 +4347,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d237
   original_value: Ischemic heart diseases (e.g., angina pectoris, myocardial infarction,
     chronic coronary syndrome)
@@ -3540,6 +4368,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Surgery
 - id: d238
   original_value: Juvenile arthritis
   disease_name: Juvenile idiopathic arthritis
@@ -3556,6 +4388,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Orthopedics and Physical Therapy
+  - Rehabilitation
 - id: d239
   original_value: Keloid, hypertrophic scar
   disease_name: Keloid and Hypertrophic scar
@@ -3572,6 +4408,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
 - id: d240
   original_value: Keratitis
   disease_name: Keratitis
@@ -3588,6 +4427,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d241
   original_value: Laryngomalacia
   disease_name: Laryngomalacia
@@ -3605,6 +4446,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Otorhinolaryngology
 - id: d242
   original_value: Leprosy
   disease_name: Leprosy
@@ -3621,6 +4465,12 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Rehabilitation
+  - Ophthalmology
+  - Otorhinolaryngology
+  - Internal Medicine
 - id: d243
   original_value: Leptospirosis
   disease_name: Leptospirosis
@@ -3637,6 +4487,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
 - id: d244
   original_value: Leukemias
   disease_name: Leukemia
@@ -3654,6 +4508,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d245
   original_value: Life-threatening and serious injury, accident and related conditions
     including electrical injury, burns, inhalation, traumatic brain injury, acute
@@ -3671,6 +4528,11 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Orthopedics and Physical Therapy
+  - Internal Medicine
 - id: d246
   original_value: Lipoma
   disease_name: Lipoma
@@ -3685,6 +4547,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Dermatology
 - id: d247
   original_value: Liver abscess
   disease_name: Liver abscess
@@ -3701,6 +4566,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d248
   original_value: Low risk pregnancy
   disease_name: Low-risk pregnancy
@@ -3716,6 +4584,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d249
   original_value: Lower respiratory tract infections (bronchitis, bronchiolitis, pneumonia,
     lung abscess, bronchiectasis)
@@ -3734,6 +4604,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
 - id: d250
   original_value: Lung parasitic infestation (e.g., paragonimiasis)
   disease_name: Pulmonary parasitic infestation
@@ -3750,6 +4624,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d251
   original_value: Lymphadenitis
   disease_name: Lymphadenitis
@@ -3766,6 +4643,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Otorhinolaryngology
 - id: d252
   original_value: Lymphomas
   disease_name: Lymphoma
@@ -3782,6 +4663,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d253
   original_value: Malaria
   disease_name: Malaria
@@ -3800,6 +4684,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d254
   original_value: Malignant hypertension
   disease_name: Malignant hypertension
@@ -3814,6 +4701,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d255
   original_value: Malignant melanoma
   disease_name: Malignant melanoma
@@ -3831,6 +4721,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
+  - Internal Medicine
 - id: d256
   original_value: Malignant neoplasm of bone (metastatic tumors, osteosarcoma, chondrosarcoma,
     Ewing sarcoma)
@@ -3848,6 +4742,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Pediatrics
+  - Internal Medicine
 - id: d257
   original_value: Malignant neoplasm of endocrine system (thyroid cancer)
   disease_name: Malignant neoplasm of endocrine system
@@ -3862,6 +4761,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Otorhinolaryngology
 - id: d258
   original_value: Malignant neoplasm of reproductive system (prostate cancer, breast
     cancer, cervical cancer, endometrial cancer, ovarian cancer and choriocarcinoma)
@@ -3879,6 +4782,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Surgery
+  - Internal Medicine
 - id: d259
   original_value: 'Malignant neoplasm of respiratory system (nasopharyngeal cancer,
     lung cancer: adenocarcinoma, small cell carcinoma, squamous cell carcinoma, metastatic
@@ -3895,6 +4802,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Otorhinolaryngology
+  - Rehabilitation
 - id: d260
   original_value: Malignant neoplasm of skin and subcutaneous tissue
   disease_name: Malignant neoplasm of skin and subcutaneous tissue
@@ -3908,6 +4820,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
+  - Internal Medicine
 - id: d261
   original_value: Malignant neoplasm of urinary system (renal cell carcinoma, transitional
     cell carcinoma, Wilms tumor)
@@ -3921,6 +4837,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
+  - Pediatrics
 - id: d262
   original_value: Malignant neoplasms of the nervous system (glioblastoma, lymphoma,
     metastatic tumor)
@@ -3936,6 +4856,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
+  - Pediatrics
 - id: d263
   original_value: Malposition & representation of the fetus
   disease_name: Fetal malposition and malpresentation
@@ -3952,6 +4876,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d264
   original_value: Maltreatment syndromes (e.g., physical, sexual, psychological maltreatment
     of children, adults, elders)
@@ -3969,6 +4895,12 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Forensic Medicine
+  - Emergency Medicine
+  - Pediatrics
+  - Rehabilitation
 - id: d265
   original_value: Mastoiditis, cholesteatoma
   disease_name: Mastoiditis and Cholesteatoma
@@ -3986,6 +4918,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Surgery
 - id: d266
   original_value: Medical devices associated with adverse incidents in diagnostic
     and therapeutic use
@@ -4001,6 +4936,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d267
   original_value: Melasma
   disease_name: Melasma
@@ -4016,6 +4955,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d268
   original_value: Melioidosis
   disease_name: Melioidosis
@@ -4032,6 +4973,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Surgery
 - id: d269
   original_value: Meningitis (bacterial, viral, tuberculous, cryptococcal, eosinophilic)
   disease_name: Meningitis
@@ -4049,6 +4994,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d270
   original_value: Meningococcal disease
   disease_name: Meningococcal disease
@@ -4065,6 +5014,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d271
   original_value: Menopausal syndrome
   disease_name: Menopause
@@ -4080,6 +5033,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Internal Medicine
 - id: d272
   original_value: Menstrual disorders
   disease_name: Menstrual disorders
@@ -4095,6 +5051,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d273
   original_value: Mental and behavioral disorders due to alcohol, drugs, and substances
   disease_name: Substance-related and addictive disorders
@@ -4111,6 +5069,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Rehabilitation
+  - Emergency Medicine
 - id: d274
   original_value: Metabolic and nutritional encephalopathies (e.g., hepatic encephalopathy,
     Wernicke encephalopathy)
@@ -4128,6 +5090,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
 - id: d275
   original_value: Metabolic syndrome
   disease_name: Metabolic syndrome
@@ -4143,6 +5109,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d276
   original_value: Migraine
   disease_name: Migraine
@@ -4159,6 +5128,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d277
   original_value: Mild muscle and tendon injuries (strains and sprains grade 1)
   disease_name: Mild muscle strains and ligament sprains
@@ -4174,6 +5146,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Rehabilitation
+  - Emergency Medicine
 - id: d278
   original_value: Missed abortion
   disease_name: Missed abortion
@@ -4189,6 +5165,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d279
   original_value: Multiple gestation
   disease_name: Multiple gestation
@@ -4206,6 +5184,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d280
   original_value: Multiple myeloma
   disease_name: Multiple myeloma
@@ -4223,6 +5203,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d281
   original_value: Mumps
   disease_name: Mumps
@@ -4240,6 +5223,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
 - id: d282
   original_value: Myasthenia gravis
   disease_name: Myasthenia gravis
@@ -4257,6 +5243,12 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Ophthalmology
+  - Emergency Medicine
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
 - id: d283
   original_value: 'Mycoses: candidiasis (superficial), dermatophytosis pityriasis
     versicolor'
@@ -4274,6 +5266,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d284
   original_value: Myelitis (viral, immune-mediated)
   disease_name: Myelitis
@@ -4290,6 +5284,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
 - id: d285
   original_value: Myeloproliferative neoplasm
   disease_name: Myeloproliferative neoplasm
@@ -4307,6 +5306,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d286
   original_value: Myocarditis
   disease_name: Myocarditis
@@ -4323,6 +5325,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
 - id: d287
   original_value: Myopathy (e.g., inflammatory myopathy, metabolic myopathy)
   disease_name: Myopathy
@@ -4340,6 +5346,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
 - id: d288
   original_value: Nasal polyp
   disease_name: Nasal polyp
@@ -4356,6 +5366,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
 - id: d289
   original_value: Near-drowning
   disease_name: Drowning
@@ -4371,6 +5383,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Pediatrics
+  - Internal Medicine
 - id: d290
   original_value: Necrotizing fasciitis
   disease_name: Necrotizing fasciitis
@@ -4387,6 +5403,11 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
+  - Dermatology
 - id: d291
   original_value: Neonatal jaundice
   disease_name: Neonatal jaundice
@@ -4405,6 +5426,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Emergency Medicine
 - id: d292
   original_value: Nephrotic syndrome
   disease_name: Nephrotic syndrome
@@ -4422,6 +5446,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
 - id: d293
   original_value: Neural tube defect
   disease_name: Neural tube defects
@@ -4439,6 +5466,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Obstetrics and Gynecology
+  - Surgery
 - id: d294
   original_value: Neurocognitive disorders (e.g., dementia, brain damage, systemic
     diseases, alcohol & substance induced, organic amnestic syndrome)
@@ -4459,6 +5490,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Rehabilitation
+  - Internal Medicine
+  - Emergency Medicine
 - id: d295
   original_value: Neurodevelopmental disorders (attention deficit hyperactivity disorder,
     autism spectrum disorder, specific learning disorder, tic disorders, communication
@@ -4480,6 +5516,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Pediatrics
 - id: d296
   original_value: Neurofibromatosis
   disease_name: Neurofibromatosis
@@ -4497,6 +5536,13 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
+  - Orthopedics and Physical Therapy
+  - Ophthalmology
+  - Pediatrics
+  - Internal Medicine
 - id: d297
   original_value: Neurotoxic effects of contact with venomous animals
   disease_name: Neurotoxic effects of venomous animal contact
@@ -4513,6 +5559,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d298
   original_value: Non-immune hemolytic anemia (e.g., paroxysmal nocturnal hemoglobinuria,
     microangiopathic hemolytic anemia)
@@ -4530,6 +5579,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d299
   original_value: Normal delivery
   disease_name: Normal vaginal delivery
@@ -4545,6 +5597,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d300
   original_value: Normal pressure hydrocephalus
   disease_name: Normal pressure hydrocephalus
@@ -4562,6 +5616,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
+  - Internal Medicine
 - id: d301
   original_value: Nutritional deficiency anemias (e.g., iron, folate, B12)
   disease_name: Nutritional deficiency anemias
@@ -4577,6 +5636,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Obstetrics and Gynecology
 - id: d302
   original_value: Obesity
   disease_name: Obesity
@@ -4594,6 +5657,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d303
   original_value: Obstructed labor
   disease_name: Obstructed labor
@@ -4609,6 +5675,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d304
   original_value: Obstructive & reflux uropathy
   disease_name: Obstructive uropathy and Reflux uropathy
@@ -4626,6 +5695,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
+  - Pediatrics
 - id: d305
   original_value: Obstructive sleep apnea
   disease_name: Obstructive sleep apnea
@@ -4644,6 +5717,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Internal Medicine
 - id: d306
   original_value: Occupational lung diseases
   disease_name: Occupational lung diseases
@@ -4660,6 +5736,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d307
   original_value: Opportunistic infections in immunocompromised host (e.g., isosporosis,
     microsporidiosis, cryptosporidiosis)
@@ -4680,6 +5758,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d308
   original_value: Oral inflammation / ulcer (e.g., aphthous ulcer, stomatitis, glossitis,
     thrush)
@@ -4697,6 +5778,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Otorhinolaryngology
+  - Internal Medicine
 - id: d309
   original_value: Orchitis and epididymitis
   disease_name: Orchitis and Epididymitis
@@ -4714,6 +5799,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d310
   original_value: Osteoarthritis
   disease_name: Osteoarthritis
@@ -4730,6 +5818,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Rehabilitation
 - id: d311
   original_value: Osteogenesis imperfecta
   disease_name: Osteogenesis imperfecta
@@ -4746,6 +5837,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Pediatrics
+  - Rehabilitation
+  - Surgery
 - id: d312
   original_value: Osteomyelitis
   disease_name: Osteomyelitis
@@ -4763,6 +5859,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Pediatrics
+  - Internal Medicine
 - id: d313
   original_value: Osteonecrosis
   disease_name: Osteonecrosis
@@ -4780,6 +5881,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Rehabilitation
 - id: d314
   original_value: Osteoporosis
   disease_name: Osteoporosis
@@ -4798,6 +5903,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Orthopedics and Physical Therapy
 - id: d315
   original_value: Other anxiety disorders (e.g., phobia, social anxiety disorder),
     obsessive-compulsive disorder
@@ -4816,6 +5924,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
 - id: d316
   original_value: Other congenital anomalies (e.g., Hydrocephalus, pre-auricular sinus,
     Hirschsprung disease, omphalocele, gastroschisis)
@@ -4832,6 +5942,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Surgery
 - id: d317
   original_value: Other hormonal disorders (e.g., Addison disease, pituitary gland
     disorders, diabetes insipidus, parathyroid gland disorders, hypogonadism)
@@ -4850,6 +5963,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d318
   original_value: Panic attack
   disease_name: Panic attack
@@ -4866,6 +5981,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Emergency Medicine
 - id: d319
   original_value: Panic disorder and generalized anxiety disorder
   disease_name: Panic disorder and Generalized anxiety disorder
@@ -4882,6 +6000,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Emergency Medicine
 - id: d320
   original_value: Papulosquamous disorders (e.g. psoriasis, pityriasis rosea, lichen
     planus)
@@ -4899,6 +6020,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d321
   original_value: Parathyroid gland disorders
   disease_name: Parathyroid gland disorders
@@ -4915,6 +6038,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d322
   original_value: Parkinsonism
   disease_name: Parkinsonism
@@ -4931,6 +6057,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Rehabilitation
 - id: d323
   original_value: Parkinson's disease
   disease_name: Parkinson's disease
@@ -4947,6 +6076,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
 - id: d324
   original_value: Pelvic inflammatory disease (endometritis, salpingitis, oophoritis,
     tubo-ovarian abscess)
@@ -4965,6 +6098,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d325
   original_value: Pelvic organ prolapses (e.g., cystocele, rectocele, prolapsed uterus)
   disease_name: Pelvic organ prolapse
@@ -4983,6 +6118,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Surgery
 - id: d326
   original_value: Peptic ulcer, gastritis
   disease_name: Peptic ulcer disease and Gastritis
@@ -5000,6 +6138,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d327
   original_value: Perforation of tympanic membrane
   disease_name: Perforated tympanic membrane
@@ -5017,6 +6158,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
 - id: d328
   original_value: Perianal abscess
   disease_name: Perianal abscess
@@ -5032,6 +6175,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Emergency Medicine
 - id: d329
   original_value: Pericarditis, myocarditis
   disease_name: Pericarditis and Myocarditis
@@ -5048,6 +6194,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
 - id: d330
   original_value: Perichondritis of the pinna
   disease_name: Perichondritis
@@ -5065,6 +6215,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Dermatology
 - id: d331
   original_value: Periodic paralysis
   disease_name: Periodic paralysis
@@ -5083,6 +6236,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Rehabilitation
 - id: d332
   original_value: Peripheral arterial occlusive disease
   disease_name: Peripheral artery disease
@@ -5100,6 +6257,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Emergency Medicine
 - id: d333
   original_value: Peripheral nerve entrapment (e.g., carpal tunnel syndrome, cubital
     tunnel syndrome)
@@ -5118,6 +6279,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
 - id: d334
   original_value: Peritonitis
   disease_name: Peritonitis
@@ -5137,6 +6301,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
 - id: d335
   original_value: Peritonsillar abscess and other deep neck infections
   disease_name: Peritonsillar abscess and Deep neck space infections
@@ -5156,6 +6323,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Otorhinolaryngology
+  - Surgery
 - id: d336
   original_value: Personality disorder and related traits (e.g., aggressive, antisocial,
     borderline personality disorder, compulsive, hysterical, obsessive compulsive,
@@ -5180,6 +6351,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
 - id: d337
   original_value: Pertussis
   disease_name: Pertussis
@@ -5196,6 +6369,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
+  - Emergency Medicine
 - id: d338
   original_value: Phimosis / Paraphimosis
   disease_name: Phimosis and Paraphimosis
@@ -5212,6 +6389,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Pediatrics
 - id: d339
   original_value: Pinguecula
   disease_name: Pinguecula
@@ -5228,6 +6408,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d340
   original_value: Pleural effusion
   disease_name: Pleural effusion
@@ -5246,6 +6428,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d341
   original_value: Pleuritis/pleural effusion
   disease_name: Pleurisy and Pleural effusion
@@ -5261,6 +6446,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d342
   original_value: Pneumocystosis in HIV patients
   disease_name: Pneumocystis pneumonia in HIV patients
@@ -5278,6 +6466,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d343
   original_value: Pneumothorax
   disease_name: Pneumothorax
@@ -5297,6 +6488,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
 - id: d344
   original_value: Poisoning & intoxication by biohazards, radio¬ hazards, drugs, substances,
     toxins, herbs and medicinal plants e.g., cannabis, kratom
@@ -5314,6 +6509,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Psychiatry
+  - Forensic Medicine
 - id: d345
   original_value: Poliomyelitis
   disease_name: Poliomyelitis
@@ -5332,6 +6532,12 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
+  - Emergency Medicine
+  - Internal Medicine
 - id: d346
   original_value: Polymyositis, dermatomyositis
   disease_name: Polymyositis
@@ -5349,6 +6555,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Dermatology
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
 - id: d347
   original_value: Polyneuropathies
   disease_name: Polyneuropathy
@@ -5367,6 +6578,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Rehabilitation
+  - Orthopedics and Physical Therapy
 - id: d348
   original_value: Postpartum hemorrhage
   disease_name: Postpartum hemorrhage
@@ -5383,6 +6598,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d349
   original_value: Postterm infant
   disease_name: Post-term infant
@@ -5400,6 +6618,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
 - id: d350
   original_value: Pregnancy with medical complications
   disease_name: High-risk pregnancy
@@ -5415,6 +6635,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Internal Medicine
 - id: d351
   original_value: Premature (pre-labor) rupture of membranes
   disease_name: Premature rupture of membranes
@@ -5431,6 +6654,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d352
   original_value: Prematurity, low birth weight, pre-term infant
   disease_name: Preterm birth, Prematurity, Low birth weight
@@ -5448,6 +6673,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Obstetrics and Gynecology
 - id: d353
   original_value: Primary aldosteronism
   disease_name: Primary aldosteronism
@@ -5464,6 +6692,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d354
   original_value: Problems related to life-style e.g., tobacco and e-cigarette/ vaping
     product use, alcohol and biological substance use, lack of physical exercise)
@@ -5480,6 +6711,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Internal Medicine
 - id: d355
   original_value: Prolactinoma
   disease_name: Prolactinoma
@@ -5498,6 +6732,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d356
   original_value: Prolapsed umbilical cord
   disease_name: Umbilical cord prolapse
@@ -5513,6 +6750,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d357
   original_value: Prolonged labor
   disease_name: Prolonged labor
@@ -5530,6 +6770,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d358
   original_value: Prolonged pregnancy
   disease_name: Prolonged pregnancy
@@ -5546,6 +6788,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d359
   original_value: Protein-energy malnutrition
   disease_name: Protein-energy malnutrition
@@ -5563,6 +6807,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
 - id: d360
   original_value: Pterygium
   disease_name: Pterygium
@@ -5581,6 +6828,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d361
   original_value: Puerperal infection
   disease_name: Puerperal infection
@@ -5598,6 +6847,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d362
   original_value: Pulmonary edema
   disease_name: Pulmonary edema
@@ -5615,6 +6866,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d363
   original_value: Pulmonary embolism
   disease_name: Pulmonary embolism
@@ -5633,6 +6887,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d364
   original_value: Pyelonephritis
   disease_name: Pyelonephritis
@@ -5649,6 +6906,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d365
   original_value: Pyomyositis
   disease_name: Pyomyositis
@@ -5666,6 +6926,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Orthopedics and Physical Therapy
+  - Emergency Medicine
 - id: d366
   original_value: Rabies
   disease_name: Rabies
@@ -5687,6 +6952,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d367
   original_value: Rape
   disease_name: Rape
@@ -5702,6 +6970,12 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Psychiatry
+  - Forensic Medicine
+  - Obstetrics and Gynecology
+  - Pediatrics
 - id: d368
   original_value: Renal artery stenosis
   disease_name: Renal artery stenosis
@@ -5721,6 +6995,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d369
   original_value: Renal tubular acidosis
   disease_name: Renal tubular acidosis
@@ -5740,6 +7017,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d370
   original_value: Respiratory distress in newborn (e.g., respiratory distress syndrome,
     meconium aspiration syndrome)
@@ -5759,6 +7039,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Emergency Medicine
 - id: d371
   original_value: Respiratory failure (hypoventilation, hyperventilation, disorders
     of gas exchange, ventilation-perfusion imbalance)
@@ -5780,6 +7063,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d372
   original_value: Retinopathy
   disease_name: Retinopathy
@@ -5797,6 +7084,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
+  - Surgery
 - id: d373
   original_value: Reye syndrome
   disease_name: Reye syndrome
@@ -5814,6 +7104,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
 - id: d374
   original_value: Rheumatoid arthritis
   disease_name: Rheumatoid arthritis
@@ -5833,6 +7126,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Orthopedics and Physical Therapy
+  - Rehabilitation
 - id: d375
   original_value: Ruptured and threatening ruptured dissecting aneurysm
   disease_name: Ruptured aortic aneurysm
@@ -5849,6 +7146,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
 - id: d376
   original_value: Scar
   disease_name: Scar
@@ -5865,6 +7165,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
 - id: d377
   original_value: Schizophrenia
   disease_name: Schizophrenia
@@ -5883,6 +7186,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Emergency Medicine
 - id: d378
   original_value: Scleroderma
   disease_name: Scleroderma
@@ -5903,6 +7209,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Internal Medicine
+  - Orthopedics and Physical Therapy
+  - Rehabilitation
 - id: d379
   original_value: Sebaceous cyst
   disease_name: Epidermoid cyst
@@ -5919,6 +7230,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
+  - Otorhinolaryngology
 - id: d380
   original_value: Seizures
   disease_name: Seizure
@@ -5936,6 +7251,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d381
   original_value: Seizures and epilepsy
   disease_name: Seizures and Epilepsy
@@ -5952,6 +7271,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Emergency Medicine
+  - Internal Medicine
 - id: d382
   original_value: Sepsis
   disease_name: Sepsis
@@ -5971,6 +7294,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d383
   original_value: Septic abortion
   disease_name: Septic abortion
@@ -5987,6 +7314,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
+  - Surgery
 - id: d384
   original_value: Serious or massive bleeding e.g., gastrointestinal bleeding, intracranial
     bleeding, intraperitoneal/intraabdominal bleeding, hemothorax, hyphema, antepartum
@@ -6005,6 +7336,13 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Internal Medicine
+  - Obstetrics and Gynecology
+  - Ophthalmology
+  - Pediatrics
 - id: d385
   original_value: Severe muscle and tendon injuries
   disease_name: Severe muscle strains and tendon ruptures
@@ -6021,6 +7359,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Emergency Medicine
 - id: d386
   original_value: Severe pre-eclampsia, eclampsia
   disease_name: Severe preeclampsia and Eclampsia
@@ -6038,6 +7380,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d387
   original_value: 'Sexually transmitted infections: syphilis, gonococcal infection,
     STIs due to chlamydia, chancroid, trichomoniasis, anogenital herpes simplex, human
@@ -6058,6 +7403,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Dermatology
+  - Internal Medicine
 - id: d388
   original_value: Sheehan syndrome
   disease_name: Sheehan's syndrome
@@ -6075,6 +7424,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Internal Medicine
 - id: d389
   original_value: Shock; hypovolemic, anaphylactic, septic, cardiogenic
   disease_name: Shock
@@ -6094,6 +7446,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Pediatrics
 - id: d390
   original_value: Shoulder dystocia
   disease_name: Shoulder dystocia
@@ -6111,6 +7467,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d391
   original_value: Slow fetal growth and fetal malnutrition
   disease_name: Fetal growth restriction
@@ -6128,6 +7487,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Pediatrics
 - id: d392
   original_value: Soft-tissue rheumatism (e.g., tendinitis, tenosynovitis, bursitis,
     fasciitis, myofascial pain syndrome)
@@ -6146,6 +7508,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Rehabilitation
+  - Internal Medicine
 - id: d393
   original_value: Somatic symptom disorder
   disease_name: Somatic symptom disorder
@@ -6163,6 +7529,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Internal Medicine
 - id: d394
   original_value: Spinal cord compression
   disease_name: Spinal cord compression
@@ -6181,6 +7550,11 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Rehabilitation
+  - Emergency Medicine
 - id: d395
   original_value: Spinal cord injury and spinal cord compression
   disease_name: Spinal cord injury and Spinal cord compression
@@ -6197,6 +7571,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Rehabilitation
+  - Emergency Medicine
 - id: d396
   original_value: Spinal cord, plexus and peripheral nerve injury
   disease_name: Spinal cord, Plexus, and Peripheral nerve injury
@@ -6213,6 +7592,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Surgery
+  - Emergency Medicine
 - id: d397
   original_value: Spondyloarthropathies (e.g., ankylosing spondylitis, reactive arthritis)
   disease_name: Spondyloarthritis
@@ -6231,6 +7614,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Internal Medicine
+  - Rehabilitation
 - id: d398
   original_value: Spondylolisthesis
   disease_name: Spondylolisthesis
@@ -6247,6 +7634,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Orthopedics and Physical Therapy
+  - Rehabilitation
+  - Surgery
 - id: d399
   original_value: Squamous cell carcinoma
   disease_name: Squamous cell carcinoma
@@ -6263,6 +7654,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Surgery
+  - Internal Medicine
 - id: d400
   original_value: Staphylococcal scaled skin syndrome
   disease_name: Staphylococcal scalded skin syndrome
@@ -6280,6 +7675,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Pediatrics
+  - Internal Medicine
 - id: d401
   original_value: Steven-Johnson’s syndrome, toxic epidermal necrolysis
   disease_name: Stevens-Johnson syndrome
@@ -6297,6 +7696,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Emergency Medicine
+  - Internal Medicine
 - id: d402
   original_value: Stress incontinence
   disease_name: Stress urinary incontinence
@@ -6314,6 +7717,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Rehabilitation
+  - Surgery
+  - Internal Medicine
 - id: d403
   original_value: Stroke
   disease_name: Stroke
@@ -6332,6 +7740,11 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Rehabilitation
+  - Surgery
 - id: d404
   original_value: Suicide attempt, suicidal ideation, self-inflicted harm
   disease_name: Suicidal ideation, Suicide attempt, Self-harm
@@ -6348,6 +7761,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Emergency Medicine
 - id: d405
   original_value: Superior vena cava obstruction
   disease_name: Superior vena cava syndrome
@@ -6365,6 +7781,10 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Emergency Medicine
 - id: d406
   original_value: Syncope
   disease_name: Syncope
@@ -6380,6 +7800,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
 - id: d407
   original_value: Syndrome of inappropriate antidiuretic hormone secretion (SIADH)
   disease_name: Syndrome of inappropriate antidiuretic hormone secretion
@@ -6397,6 +7820,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d408
   original_value: Systemic lupus erythematosus
   disease_name: Systemic lupus erythematosus
@@ -6414,6 +7839,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Dermatology
+  - Orthopedics and Physical Therapy
 - id: d409
   original_value: Systemic mycoses (e.g., candidiasis, cryptococcosis, aspergillosis,
     penicillosis, mucormycosis)
@@ -6432,6 +7861,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d410
   original_value: Tension headache
   disease_name: Tension-type headache
@@ -6448,6 +7880,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d411
   original_value: Tension pneumothorax
   disease_name: Tension pneumothorax
@@ -6466,6 +7900,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
 - id: d412
   original_value: Tetanus
   disease_name: Tetanus
@@ -6484,6 +7921,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Surgery
 - id: d413
   original_value: Thalassemia
   disease_name: Thalassemia
@@ -6504,6 +7945,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d414
   original_value: Threatened uterine rupture
   disease_name: Threatened uterine rupture
@@ -6521,6 +7965,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d415
   original_value: Thymoma
   disease_name: Thymoma
@@ -6539,6 +7986,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Internal Medicine
 - id: d416
   original_value: Thyroglossal duct cyst
   disease_name: Thyroglossal duct cyst
@@ -6556,6 +8006,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Pediatrics
+  - Surgery
 - id: d417
   original_value: Thyroid crisis or storm
   disease_name: Thyroid storm
@@ -6575,6 +8029,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics
 - id: d418
   original_value: Thyroiditis
   disease_name: Thyroiditis
@@ -6593,6 +8051,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d419
   original_value: Thyrotoxicosis
   disease_name: Thyrotoxicosis
@@ -6611,6 +8071,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Emergency Medicine
 - id: d420
   original_value: Tissue parasitic diseases (e.g., trichinosis, cysticercosis, gnathostomiasis,
     angiostrongyliasis, filariasis, toxoplasmosis, opisthorchiasis, paragonimiasis,
@@ -6634,6 +8098,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
 - id: d421
   original_value: Tongue tie
   disease_name: Ankyloglossia
@@ -6651,6 +8119,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Otorhinolaryngology
+  - Surgery
 - id: d422
   original_value: Torsion of testis
   disease_name: Testicular torsion
@@ -6668,6 +8140,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Pediatrics
 - id: d423
   original_value: Toxic effects of contact with venomous animals
   disease_name: Toxic effects of venomous animal contact
@@ -6685,6 +8161,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Internal Medicine
+  - Dermatology
 - id: d424
   original_value: Toxic encephalopathy (opioid, cannabis, amphetamine, cocaine, benzodiazepine)
   disease_name: Toxic encephalopathy
@@ -6703,6 +8183,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Psychiatry
+  - Internal Medicine
 - id: d425
   original_value: Tracheostomy malfunction
   disease_name: Tracheostomy malfunction
@@ -6720,6 +8204,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Otorhinolaryngology
+  - Surgery
 - id: d426
   original_value: Transitory metabolic disorders (e.g., hypoglycemia, hypocalcemia,
     hypothermia, dehydration)
@@ -6736,6 +8224,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Emergency Medicine
+  - Internal Medicine
 - id: d427
   original_value: Transport accidents
   disease_name: Transport accidents
@@ -6750,6 +8242,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Orthopedics and Physical Therapy
 - id: d428
   original_value: Trauma to birth canal during delivery Breast infection associated
     with childbirth
@@ -6766,6 +8262,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
 - id: d429
   original_value: Traumatic brain injury (e.g., cerebral concussion/contusion, intracranial
     hemorrhage)
@@ -6784,6 +8282,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Rehabilitation
+  - Psychiatry
 - id: d430
   original_value: Trigeminal neuralgia
   disease_name: Trigeminal neuralgia
@@ -6801,6 +8304,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d431
   original_value: Tuberculosis
   disease_name: Tuberculosis
@@ -6820,6 +8326,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
 - id: d432
   original_value: Tuberous sclerosis
   disease_name: Tuberous sclerosis complex
@@ -6838,6 +8347,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Ophthalmology
+  - Internal Medicine
+  - Dermatology
 - id: d433
   original_value: Typhoid and paratyphoid fever
   disease_name: Typhoid fever and Paratyphoid fever
@@ -6856,6 +8370,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
 - id: d434
   original_value: Ulcers (at skin)
   disease_name: Skin ulcer
@@ -6872,6 +8390,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d435
   original_value: Umbilical cord complications (e.g., prolapsed umbilical cord, vasa
     previa)
@@ -6889,6 +8409,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Emergency Medicine
 - id: d436
   original_value: Undescended testis
   disease_name: Cryptorchidism
@@ -6905,6 +8428,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Surgery
 - id: d437
   original_value: Upper respiratory tract infections (e.g., rhinosinusitis, pharyngitis,
     tonsillitis, epiglottitis, Laryngotracheobronchitis (croup)
@@ -6922,6 +8448,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
 - id: d438
   original_value: Urethritis
   disease_name: Urethritis
@@ -6937,6 +8468,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Obstetrics and Gynecology
+  - Surgery
 - id: d439
   original_value: Urolithiasis
   disease_name: Urolithiasis
@@ -6953,6 +8489,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
+  - Emergency Medicine
 - id: d440
   original_value: Urticaria
   disease_name: Urticaria
@@ -6968,6 +8508,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d441
   original_value: Uveitis
   disease_name: Uveitis
@@ -6985,6 +8527,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Ophthalmology
 - id: d442
   original_value: Valvular heart diseases
   disease_name: Valvular heart disease
@@ -7002,6 +8546,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Surgery
 - id: d443
   original_value: Varicella zoster virus infections (chicken pox, zoster)
   disease_name: Varicella-zoster virus
@@ -7017,6 +8564,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Dermatology
+  - Internal Medicine
 - id: d444
   original_value: Vascular disturbance of testis
   disease_name: Vascular disturbance of the testis
@@ -7032,6 +8583,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Surgery
+  - Emergency Medicine
 - id: d445
   original_value: Vasculitis syndrome (e.g., Kawasaki disease, polyarthritis nodosa,
     drug induced)
@@ -7048,6 +8602,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Dermatology
 - id: d446
   original_value: Vasomotor and allergic rhinitis
   disease_name: Vasomotor rhinitis and Allergic rhinitis
@@ -7062,6 +8620,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Otorhinolaryngology
+  - Internal Medicine
 - id: d447
   original_value: Violence e.g., acute psychosis, delirium, aggression
   disease_name: Violence associated with acute psychiatric/medical conditions
@@ -7075,6 +8636,9 @@
   available_severity:
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Psychiatry
+  - Emergency Medicine
 - id: d448
   original_value: Viral exanthemata (e.g., measles, rubella, erythema infectiosum,
     roseola infantum, hand foot mouth diseases)
@@ -7090,6 +8654,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Pediatrics
+  - Internal Medicine
 - id: d449
   original_value: Viral hepatitis
   disease_name: Viral hepatitis
@@ -7103,6 +8670,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Pediatrics
+  - Emergency Medicine
+  - Surgery
 - id: d450
   original_value: Vitamin deficiency (A, B, C, D, E, K)
   disease_name: Vitamin deficiency
@@ -7116,6 +8688,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
 - id: d451
   original_value: Vitamin toxicities
   disease_name: Vitamin toxicity
@@ -7130,6 +8704,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
 - id: d452
   original_value: Vitiligo
   disease_name: Vitiligo
@@ -7143,6 +8720,8 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
 - id: d453
   original_value: Vulvovaginitis
   disease_name: Vulvovaginitis
@@ -7155,6 +8734,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Obstetrics and Gynecology
+  - Pediatrics
 - id: d454
   original_value: Wart (verrucae)
   disease_name: Wart
@@ -7166,6 +8748,9 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Dermatology
+  - Internal Medicine
 - id: d455
   original_value: Work-related conditions (e.g., Pneumoconiosis)
   disease_name: Work-related conditions
@@ -7178,6 +8763,10 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Orthopedics and Physical Therapy
 - id: d456
   original_value: Wound
   disease_name: Wound
@@ -7190,6 +8779,11 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Emergency Medicine
+  - Surgery
+  - Dermatology
+  - Orthopedics and Physical Therapy
 - id: d457
   original_value: Zoonotic diseases (e.g., brucellosis, plague, anthrax, Nipah virus
     infection)
@@ -7203,3 +8797,7 @@
   - Observe at Home
   - Visit Hospital / Clinic
   - Emergency
+  departments:
+  - Internal Medicine
+  - Emergency Medicine
+  - Pediatrics

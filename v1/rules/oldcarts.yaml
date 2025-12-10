@@ -179,6 +179,13 @@ Headache:
   - id: มี_ปัญหาด้านการนอนหลับ
     label: มีปัญหาด้านการนอนหลับ
   next:
+    action: goto
+    qid:
+    - hea_as_002
+- qid: hea_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
     action: opd
 Dizziness:
 - qid: diz_o_001
@@ -356,6 +363,13 @@ Dizziness:
   - id: เหนื่อยง่าย
     label: เหนื่อยง่าย
   next:
+    action: goto
+    qid:
+    - diz_as_002
+- qid: diz_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
     action: opd
 Pain in Joint:
 - qid: pai_o_001
@@ -526,6 +540,13 @@ Pain in Joint:
     qid:
     - pai_as_002
 - qid: pai_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - pai_as_003
+- qid: pai_as_003
   question: มีการใช้งานข้อที่ปวดบ่อยหรือไม่?
   question_type: single_select
   options:
@@ -737,11 +758,37 @@ Muscle Pain:
     label: ไข้
   - id: อ่อนเพลีย
     label: อ่อนเพลีย
+  - id: มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
+    label: มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
   next:
     action: goto
     qid:
-    - mus_as_002
+    - mus_as_001-2
+- qid: mus_as_001-2
+  question: มีอาการอื่นนอกจากที่กล่าวไว้หรือไม่
+  question_type: conditional
+  rules:
+  - when:
+    - qid: mus_as_001
+      op: contains
+      value:
+        - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
+    then:
+      action: goto
+      qid:
+      - mus_as_002
+  default:
+    action: goto
+    qid:
+      - mus_as_003
 - qid: mus_as_002
+  question: อาการอื่นๆ ที่มีอาการอย่างไร
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - mus_as_003
+- qid: mus_as_003
   question: มีการใช้งานกล้ามเนื้อที่เจ็บส่วนนั้นบ่อยหรือไม่?
   question_type: single_select
   options:
@@ -869,6 +916,13 @@ Fever:
     qid:
     - fev_as_002
 - qid: fev_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - fev_as_003
+- qid: fev_as_003
   question: มีประวัติส่วนตัวตามข้อใดต่อไปนี้
   question_type: multi_select
   options:
@@ -1107,6 +1161,13 @@ Cough:
   - id: มีอะไรติดคอ
     label: มีอะไรติดคอ
   next:
+    action: goto
+    qid:
+    - cou_as_002
+- qid: cou_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
     action: opd
 Sore Throat:
 - qid: sor_o_001
@@ -1183,8 +1244,8 @@ Sore Throat:
     label: เรอเปรี้ยว
   - id: แสบร้อนกลางอก
     label: แสบร้อนกลางอก
-  - id: ผื่นผิวหนังตำแหน่งอื่น
-    label: ผื่นผิวหนังตำแหน่งอื่น
+  - id: ผื่นผิวหนังผิดปกติตำแหน่งอื่น
+    label: ผื่นผิวหนังผิดปกติตำแหน่งอื่น
   - id: เบื่ออาหาร
     label: เบื่ออาหาร
   - id: น้ำหนักลดผิดปกติ
@@ -1193,8 +1254,15 @@ Sore Throat:
     action: goto
     qid:
     - sor_as_002
-    - sor_as_003
 - qid: sor_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - sor_as_003
+    - sor_as_004
+- qid: sor_as_003
   question: กินอะไรที่ผิดปกติ หรือทานอาหารที่เป็นสารเคมีหรือไม่?
   question_type: single_select
   options:
@@ -1203,14 +1271,14 @@ Sore Throat:
     action:
       action: goto
       qid:
-      - sor_as_003
+      - sor_as_004
   - id: ไม่มี
     label: ไม่มี
     action:
       action: goto
       qid:
-      - sor_as_003
-- qid: sor_as_003
+      - sor_as_004
+- qid: sor_as_004
   question: มีการใช้เสียงที่มากเกินไปหรือไม่?
   question_type: single_select
   options:
@@ -1464,6 +1532,13 @@ Stomachache:
     qid:
     - sto_as_002
 - qid: sto_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - sto_as_003
+- qid: sto_as_003
   question: ประวัติส่วนตัวอื่นๆที่เกี่ยวข้อง เช่น การดื่มสุรา หรือประวัติเพศสัมพันธ์
   question_type: free_text
   on_submit:
@@ -1611,6 +1686,13 @@ Constipation:
   - id: ความเครียด
     label: ความเครียด
   next:
+    action: goto
+    qid:
+    - con_as_002
+- qid: con_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
     action: opd
 Diarrhea:
 - qid: dia_o_001
@@ -1733,6 +1815,13 @@ Diarrhea:
     qid:
     - dia_as_002
 - qid: dia_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - dia_as_003
+- qid: dia_as_003
   question: ประวัติส่วนตัวที่เกี่ยวข้อง เช่น มีคนใกล้ชิดอาการเหมือนกัน เดินทางไปแหล่งระบาด
     หรือประวัติเพศสัมพันธ์ที่อาจจะเกี่ยวข้อง?
   question_type: free_text
@@ -1877,6 +1966,13 @@ Dysuria:
     qid:
     - dys_as_002
 - qid: dys_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - dys_as_003
+- qid: dys_as_003
   question: ประวัติส่วนตัวที่อาจจะเกี่ยวข้อง เช่น ประวัติเพศสัมพันธ์
   question_type: free_text
   on_submit:
@@ -1961,6 +2057,13 @@ Vaginal Discharge:
     qid:
     - vag_as_002
 - qid: vag_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - vag_as_003
+- qid: vag_as_003
   question: ประวัติส่วนตัวที่อาจจะเกี่ยวข้อง เช่น ประวัติการมีเพศสัมพันธ์ ประวัติประจำเดือน
     การสวนล้างช่องคลอด การคุมกำเนิด
   question_type: free_text
@@ -2111,11 +2214,37 @@ Skin Rash/Lesion:
     label: ขาบวม
   - id: น้ำหนักลด
     label: น้ำหนักลด
+  - id: มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
+    label: มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
   next:
     action: goto
     qid:
-    - rash_as_002
+    - rash_as_001-2
+- qid: rash_as_001-2
+  question: มีอาการอื่นนอกจากที่กล่าวไว้หรือไม่
+  question_type: conditional
+  rules:
+  - when:
+    - qid: rash_as_001
+      op: contains
+      value:
+        - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
+    then:
+      action: goto
+      qid:
+      - rash_as_002
+  default:
+    action: goto
+    qid:
+      - rash_as_003
 - qid: rash_as_002
+  question: อาการอื่นๆ ที่มีอาการอย่างไร
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - rash_as_003
+- qid: rash_as_003
   question: ประวัติส่วนตัวที่อาจจะเกี่ยวข้อง เช่น งานอดิเรก การเลี้ยงสัตว์ ประวัติทางเพศสัมพันธ์
   question_type: free_text
   on_submit:
@@ -2310,6 +2439,13 @@ Wound:
   - id: กลิ่นผิดปกติ
     label: กลิ่นผิดปกติ
   next:
+    action: goto
+    qid:
+    - wou_as_002
+- qid: wou_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
     action: opd
 Eye Disorder:
 - qid: eye_o_001
@@ -2455,6 +2591,13 @@ Eye Disorder:
     qid:
     - eye_as_002
 - qid: eye_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - eye_as_003
+- qid: eye_as_003
   question: ประวัติส่วนตัวที่เกี่ยวข้อง เช่น การใส่คอนแทกเลนส์ การทำงาน สภาพแวดล้อม
     (ลม ฝุ่นแสง)
   question_type: free_text
@@ -2622,6 +2765,13 @@ Ear Disorder:
     qid:
     - ear_as_002
 - qid: ear_as_002
+  question: มีอาการอื่นนอกเหนือจากที่กล่าวมาหรือไม่? (ถ้าไม่มีให้ตอบว่า "ไม่มี" หรือ "-")
+  question_type: free_text
+  on_submit:
+    action: goto
+    qid:
+    - ear_as_003
+- qid: ear_as_003
   question: ประวัติส่วนตัวที่เกี่ยวข้อง เช่น การใช้สำลีหรืออุปกรณ์แคะหู อยู่ในสถานที่เสียงดัง
     หรือว่ายน้ำบ่อยหรือไม่
   question_type: free_text

@@ -24,6 +24,7 @@ _allowed_ops = {
     "eq",
     "ne",
     "contains",
+    "not_contains",
     "matches",
     "contains_any",
     "contains_all",
@@ -432,7 +433,7 @@ def test_opd_conditional_predicate_semantics():
 
                     # Multi-select style questions
                     elif isinstance(ref_q, (MultiSelectQuestion, ImageMultiSelectQuestion)):
-                        assert pred.op in {"contains", "contains_any", "contains_all"}, f"Invalid op {pred.op} for multi-select {ref_q.qid} in {cond_q.qid}"
+                        assert pred.op in {"contains", "not_contains", "contains_any", "contains_all"}, f"Invalid op {pred.op} for multi-select {ref_q.qid} in {cond_q.qid}"
                         valid = {*(opt.id for opt in ref_q.options), *(opt.label for opt in ref_q.options)}
                         if pred.op == "contains":
                             if isinstance(pred.value, list):
@@ -440,6 +441,13 @@ def test_opd_conditional_predicate_semantics():
                                 assert all(v in valid for v in pred.value), f"Some values {pred.value} not in options for {ref_q.qid} in {cond_q.qid}"
                             else:
                                 assert isinstance(pred.value, str), f"Value must be str or list for contains on {ref_q.qid} in {cond_q.qid}"
+                                assert pred.value in valid, f"Value {pred.value} not in options for {ref_q.qid} in {cond_q.qid}"
+                        elif pred.op == "not_contains":
+                            if isinstance(pred.value, list):
+                                assert len(pred.value) > 0, f"Empty list value for not_contains on {ref_q.qid} in {cond_q.qid}"
+                                assert all(v in valid for v in pred.value), f"Some values {pred.value} not in options for {ref_q.qid} in {cond_q.qid}"
+                            else:
+                                assert isinstance(pred.value, str), f"Value must be str or list for not_contains on {ref_q.qid} in {cond_q.qid}"
                                 assert pred.value in valid, f"Value {pred.value} not in options for {ref_q.qid} in {cond_q.qid}"
                         elif pred.op == "contains_any":
                             assert isinstance(pred.value, list) and len(pred.value) > 0, f"contains_any expects non-empty list on {ref_q.qid} in {cond_q.qid}"

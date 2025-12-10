@@ -96,7 +96,7 @@ class Predicate(BaseModel):
     qid: str
     field: Optional[str] = None
     op: Literal[
-        "eq","ne","contains","matches",
+        "eq","ne","contains","not_contains","matches",
         "contains_any","contains_all",
         "lt","le","gt","ge","between"
     ]
