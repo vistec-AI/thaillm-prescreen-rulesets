@@ -1,0 +1,731 @@
+# default = severity: ER, department: ER
+Headache:
+  - qid: emer_ped_hea001
+    text: มีปวดหัวเฉียบพลันทันที หรือ "ปวดหัวมากที่สุดในชีวิต"
+  - qid: emer_ped_hea002
+    text: มีปวดหัวเรื้อรังและแย่ลงๆ หรือปวดหัวถี่ๆ หรือรุนแรงมากขึ้นเรื่อยๆ ในช่วงที่ผ่านมา
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_hea003
+    text: มีปวดรุนแรงรอบกระบอกตา น้ำตาไหล ตาแดง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_hea004
+    text: มีอาการปวดหัวเกิดขึ้น หรือแย่ลงเมื่อไอ จาม หรือเบ่ง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_hea005
+    text: มีการเปลี่ยนแปลงระดับความรู้สึก เช่น สับสน มึนงง ซึมลง วูบ หมดสติ หรือเคยหมดสติ
+  - qid: emer_ped_hea006
+    text: มีอาการทางระบบประสาทร่วมด้วย เช่น ชักเกร็ง อ่อนแรงซีกใดซีกหนึ่ง แขน-ขาชา มองเห็นผิดปกติ (ลานสายตาแคบลง/มองเห็นภาพซ้อน) เดินเซ ทรงตัวผิดปกติ
+  - qid: emer_ped_hea007
+    text: มีคลื่นไส้ อาเจียนบ่อย โดยเฉพาะอาเจียนตอนเช้า หรือปวดศีรษะมากจนทำให้ตื่นนอน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_hea008
+    text: มีไข้สูงตั้งแต่ 38°C หรือมีอาการคอแข็ง หรือผื่นที่ไม่อธิบายได้ / หรือสงสัยเรื่องการติดเชื้อ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_hea009
+    text: มีปัสสาวะบ่อยผิดปกติ หรือกระหายน้ำมากผิดปกติ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_hea010
+    text: มีประวัติบาดเจ็บศีรษะภายใน 48 ชั่วโมง ข้างหัวมีรอยช้ำ บาดแผล หรือมีประวัติหมดสติ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_hea011
+    text: มีภาวะภูมิคุ้มกันต่ำ (รับเคมีบำบัด ปลูกถ่ายอวัยวะ ใช้ยาสเตียรอยด์เรื้อรัง) หรือมีประวัติผ่าตัดใส่ท่อระบายน้ำในโพรงสมอง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Dizziness:
+  - qid: emer_ped_diz001
+    text: มีอาการบ้านหมุน หรือรู้สึกโคลงเคลงทรงตัวไม่อยู่/เดินเซ หรือเป็นลม วูบ หรือหมดสติ
+  - qid: emer_ped_diz002
+    text: มีหน้ามืด รู้สึกวูบ ในท่านั่ง ท่านอน ขณะลุกขึ้นยืน หรือออกกำลังกาย
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_diz003
+    text: มีใจสั่น หรือหอบเหนื่อย หรือเจ็บหน้าอก
+  - qid: emer_ped_diz004
+    text: มีประวัติหมดสติ หรือชักเกร็ง หรือมีประวัติที่เคยต้องปั๊มหัวใจ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_diz005
+    text: มีอาการทางระบบประสาทหลังเป็นลม หรือวูบ เช่น แขนขาอ่อนแรง พูดไม่ชัด เดินเซ หรือเห็นภาพซ้อน
+  - qid: emer_ped_diz006
+    text: มีอาการเป็นลมเฉียบพลัน โดยไม่รู้สึกว่ามีอาการอื่นๆ นำมาก่อน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_diz007
+    text: สังเกตว่าผู้ป่วยมีอาการตากระตุกร่วมด้วย
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_diz008
+    text: มีปวดศีรษะรุนแรง หรือคลื่นไส้ อาเจียนเยอะ หรือการมองเห็นผิดปกติ
+Pain in Joint:
+  - qid: emer_ped_pai001
+    text: มีไข้สูงตั้งแต่ 38 °C ขึ้นไป โดยเฉพาะเมื่อมีข้อบวม ร้อน หรือแดง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_pai002
+    text: มีปวดข้อรุนแรงมาก หรือปวดจนไม่สามารถลงน้ำหนัก/เดินได้
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_pai003
+    text: มีข้อบวม แดง ร้อน หรือเคลื่อนไหวได้น้อย โดยเกิดขึ้นอย่างรวดเร็ว
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_pai004
+    text: มีปวดกระดูกร่วมด้วย
+  - qid: emer_ped_pai005
+    text: มีต่อมน้ำเหลืองโต ตับโต หรือม้ามโตโดยไม่ทราบสาเหตุ (ท้องโตไม่ทราบสาเหตุ)
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_pai006
+    text: มีอาการปวดเกิดขึ้นทันทีหลังจากได้รับบาดเจ็บ หรือกระแทก
+Muscle Pain: []
+Fever:
+  - qid: emer_ped_fev001
+    text: เป็นในเด็กอายุน้อยกว่า 1 ปี
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_fev002
+    text: มีซีด หรือปลายมือปลายเท้าเย็นหรือเขียว หรือ มีปากเขียว หรือชีพจรเบา หรือหัวใจเต้นเร็วผิดปกติ หรือช้ากว่าปกติ
+  - qid: emer_ped_fev003
+    text: มีหายใจเร็ว หายใจแผ่ว หรือหอบลึก หรือหายใจเฮือก หรือหยุดหายใจ
+  - qid: emer_ped_fev004
+    text: มีการโต้ตอบ หรือตอบสนองช้ากว่าปกติ หรือซึมลง ไม่รู้สึกตัว
+  - qid: emer_ped_fev005
+    text: มีพฤติกรรมเปลี่ยนแปลง หงุดหงิดง่าย หรือไม่กินอาหาร/ไม่ดูดนม
+  - qid: emer_ped_fev006
+    text: มีอาการระบบประสาทร่วมเช่น ปวดศีรษะรุนแรง หรือชักเกร็ง หรือตัวอ่อน หรือคอแข็ง
+  - qid: emer_ped_fev007
+    text: มีประวัติภูมิคุ้มกันบกพร่อง โรคประจำตัวเรื้อรัง หรือเคยตัดม้าม/ม้ามไม่ทำงาน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_fev008
+    text: มีประวัติการติดเชื้อในกระแสเลือด
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_fev009
+    text: มีไข้สูงติดต่อกันเป็นอย่างน้อย 5 วันแล้ว
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_fev010
+    text: มีอาการเบื่ออาหาร ปากแห้ง ร้องไห้ไม่มีน้ำตา หรือปัสสาวะออกน้อย
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_fev011
+    text: มีผื่นผิวหนังลักษณะเหมือนจุดเลือดออก
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Cough:
+  - qid: emer_ped_cou001
+    text: เป็นในเด็กอายุน้อยกว่า 1 ปี
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_cou002
+    text: มีไอเฉียบพลัน และรุนแรง หรือไอเรื้อรัง ≥ 1 เดือน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_cou003
+    text: มีประวัติเคยรักษาด้วยยาแล้ว อาการไอไม่ทุเลาลง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_cou004
+    text: มีไอเป็นเลือด (เสมหะมีเลือดปน)
+  - qid: emer_ped_cou005
+    text: มีหายใจลำบาก หรือหอบเหนื่อย หรือหยุดหายใจเป็นช่วงๆ
+  - qid: emer_ped_cou006
+    text: มีเสียงหายใจมีเสียงดัง หรือหวีดสูงขณะหายใจเข้า (เสียงวี้ด/หวีดสูง)
+  - qid: emer_ped_cou007
+    text: มีเหตุการณ์สำลัก/ติดคอ หรือสงสัยสิ่งแปลกปลอมเข้าทางเดินหายใจ
+  - qid: emer_ped_cou008
+    text: มีตัวเขียว ปากเขียว หรือซีดมากผิดปกติ หรือชึมลง
+Sore Throat:
+  - qid: emer_ped_sor001
+    text: มีการตอบสนองลดลง เด็กไม่ค่อยเล่นด้วย หรือซึมลง สับสน
+  - qid: emer_ped_sor002
+    text: มีปลายมือปลายเท้าเย็น ผิวซีด หรือเขียวคล้ำ หรือมีริมฝีปากสีเขียวคล้ำ
+  - qid: emer_ped_sor003
+    text: ไม่สามารถกลืนน้ำลาย หรือเจ็บคอจนกลืนไม่ได้ และมีน้ำลายไหลออกมา
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_sor004
+    text: มีหายใจเสียงดังครืดคราด หรือหายใจเสียงวี๊ดๆ
+  - qid: emer_ped_sor005
+    text: มีอาการหอบเหนื่อย หายใจเร็ว หรือหายใจลำบาก หรือหน้าอกบุ๋ม
+  - qid: emer_ped_sor006
+    text: มีโน้มตัวไปข้างหน้าเพื่อให้หายใจได้ง่ายขึ้น
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_sor007
+    text: มีช่วงที่หยุดหายใจไปชั่วขณะ โดยเฉพาะขณะนอนหลับ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_sor008
+    text: มีปวดหรือเจ็บคอรุนแรง หรือ คอแข็ง หันหน้าไม่ได้
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_sor009
+    text: มีอ้าปากไม่ค่อยได้ (ขากรรไกรเกร็ง)
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_sor010
+    text: มีก้อน หรือคอบวม แดง เป็นข้างเดียวชัดเจน หรือบวมทั้งสองข้างไม่เท่ากัน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Stomachache:
+  - qid: emer_ped_abd001
+    text: เป็นเด็กอายุน้อยกว่า 4 ปี
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd002
+    text: มีปวดท้องรุนแรงขึ้นเรื่อยๆ หรือปวดรุนแรงทันทีทันใด
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd003
+    text: มีตำแหน่งที่ปวดย้ายที่ หรือขยับตัวแล้วปวดมากขึ้น
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd004
+    text: ปวดท้องหลังประสบอุบัติเหตุ หรือถูกกระแทก
+  - qid: emer_ped_abd005
+    text: มีกล้ามเนื้อท้องเกร็งแข็ง เจ็บเมื่อขยับตัว และหากกดท้อง จะเจ็บสะดุ้ง
+  - qid: emer_ped_abd006
+    text: มีปวดท้องร้าวไปที่หลัง หรือปวดบริเวณบั้นเอว
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd007
+    text: มีอาเจียนรุนแรง หรืออาเจียนเรื้อรัง หรืออาเจียนมีสีเขียว (น้ำดี) ปน
+  - qid: emer_ped_abd008
+    text: มีอาเจียนเป็นเลือด หรือมีลิ่มเลือดปน
+  - qid: emer_ped_abd009
+    text: มีท้องเสียรุนแรง หรือท้องเสียเรื้อรัง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd010
+    text: มีถ่ายอุจจาระมีเลือดสดปน หรือถ่ายดำ (สีเหมือนยางมะตอย)
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd011
+    text: มีภาวะซีด อ่อนเพลียง่าย หรือมีภาวะตัวเหลือง ตาเหลือง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd012
+    text: มีท้องอืดมากผิดปกติ หรือคลำได้ก้อนในท้อง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd013
+    text: มีไข้สูง (โดยเฉพาะไข้สูง > 39.0°C)
+  - qid: emer_ped_abd014
+    text: ปัสสาวะแสบขัด หรือสีปัสสาวะเปลี่ยนไป (เช่น สีแดง สีเหลืองขุ่น)
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd015
+    text: ไม่มีปัสสาวะนานกว่า 8 ชั่วโมง
+  - qid: emer_ped_abd016
+    text: มีปวดท้องสัมพันธ์กับรอบเดือน หรือประจำเดือนมาผิดปกติ/ขาดหาย
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_abd017
+    text: มีปวดท้องร่วมกับปวดอัณฑะ บวม แดง หรือคลื่นไส้
+  - qid: emer_ped_abd018
+    text: มีคนในครอบครัวเป็นโรคแพ้กลูเตน หรือโรคแผลในกระเพาะอาหาร
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Constipation:
+  - qid: emer_ped_con001
+    text: มีประวัติไม่ถ่ายขี้เทา (อุจจาระครั้งแรกสีดำเหนียว) ภายใน 48 ชั่วโมงแรกหลังคลอด
+  - qid: emer_ped_con002
+    text: มีประวัติตัวเหลืองนานผิดปกติ ในช่วงแรกเกิด
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_con003
+    text: มีปวดท้องรุนแรง หรืออาการปวดท้องแย่ลง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_con004
+    text: มีท้องอืดมาก หรือหน้าท้องโป่งพองผิดปกติ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_con005
+    text: มีคลื่นไส้ หรืออาเจียนร่วมด้วย โดยเฉพาะอาเจียนมีสีเขียวหรือสีเหลืองปน
+  - qid: emer_ped_con006
+    text: มีเลือดปนออกมากับอุจจาระปริมาณมาก
+  - qid: emer_ped_con007
+    text: มีขาอ่อนแรง หรือการเดินผิดปกติ
+  - qid: emer_ped_con008
+    text: มีรูทวารดูผิดตำแหน่ง หรือดูไม่ปกติ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Diarrhea:
+  - qid: emer_ped_dia001
+    text: ตอนนี้ซึมมาก ปลุกไม่ค่อยตื่น หรือหมดแรงผิดปกติ
+  - qid: emer_ped_dia002
+    text: ปากแห้ง มือเท้าเย็น เหงื่อออก ตัวซีด/เขียวคล้ำ หรือร้องแล้วไม่มีน้ำตา
+  - qid: emer_ped_dia003
+    text: ปัสสาวะน้อยมากหรือไม่ปัสสาวะเลยใน 6–8 ชั่วโมง
+  - qid: emer_ped_dia004
+    text: หายใจหอบลึก หรือหายใจเร็วผิดปกติ
+  - qid: emer_ped_dia005
+    text: เวียนหัวหน้ามืดเวลาเปลี่ยนท่า/ยืน หรือเป็นลม
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dia006
+    text: ชีพจรเต้นเร็วมาก หรือจับชีพจรได้เบา
+  - qid: emer_ped_dia007
+    text: ถ่ายเป็นเลือด หรือถ่ายสีดำเหมือนยางมะตอย
+  - qid: emer_ped_dia008
+    text: อาเจียนหลายครั้ง กิน/ดื่มไม่ได้ หรือมีอาการปวดท้องรุนแรง/ต่อเนื่อง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dia009
+    text: มีไข้สูง หรือไข้ร่วมกับหนาวสั่น
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dia010
+    text: อายุเด็กน้อยกว่า 6 เดือน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dia011
+    text: วันนี้ถ่ายเหลวตั้งแต่ 10 ครั้งขึ้นไป
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dia012
+    text: ท้องเสียเป็นนานเกิน 14 วัน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dia013
+    text: น้ำหนักลด เบื่ออาหาร หรือโตช้ากว่าปกติ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Dysuria:
+  - qid: emer_ped_dys001
+    text: มีไข้สูงมาก (≥39°C) หรือหนาวสั่น
+  - qid: emer_ped_dys002
+    text: ซึมลง ปลุกยาก หรือดูไม่ค่อยรู้สึกตัว
+  - qid: emer_ped_dys003
+    text: อาเจียนมาก กิน/ดื่มไม่ได้ หรือปัสสาวะน้อยลง
+  - qid: emer_ped_dys004
+    text: ปัสสาวะไหลอ่อนมาก ต้องเบ่งนาน หรือสะดุดเป็นช่วง ๆ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dys005
+    text: ปัสสาวะเป็นเลือด หรือสีแดง/น้ำล้างเนื้อ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dys006
+    text: ปวดหลังสีข้าง/เจ็บเอวมาก หรือกดเจ็บบริเวณหลังตรงใกล้ๆ เอว
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dys007
+    text: หายใจเร็ว เหนื่อยมาก หรือดูอ่อนแรงผิดปกติ
+  - qid: emer_ped_dys008
+    text: มีบริเวณที่ปัสสาวะไหลแฉะเปียกชื้นตลอดเวลาแบบหยุดไม่ได้
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dys009
+    text: ปัสสาวะบ่อยมาก แสบมาก หรือมีพฤติกรรมย่อตัว/หนีบขาเพื่อหยุดฉี่
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dys010
+    text: มีประวัติค่าการทำงานไตสูง (ครีเอตินินสูง) หรือมีความดันโลหิตสูง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dys011
+    text: มีตกขาว/หนองจากช่องคลอดหรืออวัยวะเพศ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dys012
+    text: มีแผลที่อวัยวะเพศ หรือมีผื่นร่วมกับไข้
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dys013
+    text: สงสัยว่าตัวเองอาจตั้งครรภ์ หรือประจำเดือนขาด
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_dys014
+    text: มีประวัติเคยถูกบังคับมีเพศสัมพันธ์/ถูกทำร้ายทางเพศ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Vaginal Discharge:
+  - qid: emer_ped_vag001
+    text: มีเพศสัมพันธ์แบบในช่วง 3 เดือนที่ผ่านมา
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_vag002
+    text: มีตกขาว/หนองจากช่องคลอดหรืออวัยวะเพศ/มีอาการคันช่องคลอด
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_vag003
+    text: มีก้อนหรือต่อมน้ำเหลืองโตบริเวณเชิงกราน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_vag004
+    text: ปวดท้องน้อยมาก หรือปวดเชิงกรานรุนแรง
+  - qid: emer_ped_vag005
+    text: มีแผลที่อวัยวะเพศ หรือมีผื่นร่วมกับไข้
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_vag006
+    text: สงสัยว่าตัวเองอาจตั้งครรภ์ หรือประจำเดือนขาด
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_vag007
+    text: ตั้งครรภ์ และมีน้ำไหลเหมือนน้ำคร่ำ/ สงสัยน้ำเดิน หรือมีไข้ร่วมด้วย
+  - qid: emer_ped_vag008
+    text: มีเลือดออกร่วมทางช่องคลอด
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Skin Rash/Lesion:
+  - qid: emer_ped_rash001
+    text: มีไข้ตั้งแต่ 38°C ขึ้นไป หรือ “ตัวเย็นผิดปกติ” หรือมีอาการหนาวสั่นร่วม
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_rash002
+    text: ซึมลง ปลุกตื่นยาก ไม่ค่อยร้องไห้
+  - qid: emer_ped_rash003
+    text: มีบวมหน้า ริมฝีปาก ลิ้น หรือหายใจติดขัดร่วมกับผื่น
+  - qid: emer_ped_rash004
+    text: ดูดนม/กินได้น้อยลงมาก หรืออาเจียนบ่อย
+  - qid: emer_ped_rash005
+    text: หายใจหอบ เร็ว มีเสียงครืดคราด/หวีด หรือปากเขียวคล้ำ
+  - qid: emer_ped_rash006
+    text: ชัก เกร็ง หรือหมดสติ
+  - qid: emer_ped_rash007
+    text: ปัสสาวะน้อยลงมาก ปากแห้ง ร้องไม่มีน้ำตา
+  - qid: emer_ped_rash008
+    text: มีตุ่มหนองจำนวนมาก ผิวแดงร้อน เจ็บ หรือผิวลอกเหมือนถูกน้ำร้อน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_rash009
+    text: มีแผลลึก เนื้อตาย กลิ่นเหม็น
+  - qid: emer_ped_rash010
+    text: มีปาน/ก้อนแดงที่หน้าในแนว “เครา” และมีเสียงแหบ ไอ หรือหายใจลำบาก
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_rash011
+    text: มีปาน/ก้อนแดงรอบตา หนังตาบังตา ตาเข หรือมองตามได้น้อยลง
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_rash012
+    text: ผื่นลุกลามกระจายรวดเร็วภายใน 1 วัน หรือมีอาการเจ็บปวดมาก
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_rash013
+    text: ปวดศีรษะรุนแรง คอแข็งเกร็ง (ก้มคอลำบาก) และ/หรือคลื่นไส้ อาเจียน
+Wound:
+  - qid: emer_ped_wou001
+    text: เลือดพุ่ง/เลือดไหลไม่หยุด
+  - qid: emer_ped_wou002
+    text: แผลลึก/กว้าง เห็นกล้ามเนื้อ/เอ็น/กระดูก
+  - qid: emer_ped_wou003
+    text: แผลบริเวณใบหน้า ดวงตา หรือรอบดวงตา /ศีรษะ หรือสงสัยบาดเจ็บศีรษะร่วม หรือซึม/ชักร่วม
+  - qid: emer_ped_wou004
+    text: มีวัตถุปักคาแผล
+  - qid: emer_ped_wou005
+    text: สงสัยอวัยวะขาด/เกือบขาด / สงสัยว่ากระดูกหัก ลงน้ำหนักไม่ได้ บวมมาก
+  - qid: emer_ped_wou006
+    text: บาดแผลจากกระสุน/แทงลึก
+  - qid: emer_ped_wou007
+    text: "สัญญาณติดเชื้อรุนแรง: ไข้สูง + แผลแดงลามเร็ว/มีเส้นแดงพาด/หนอง"
+  - qid: emer_ped_wou008
+    text: แผลที่โดนกัดที่ทะลุผิวหนัง เช่น คน สุนัข แมว ฯลฯ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_wou009
+    text: แผลถูกของแหลมทิ่ม/ตะปู/วัตถุสกปรก
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_wou010
+    text: มีแผล/รอยช้ำบริเวณที่ไม่ใช้งานเพื่อขยับ เช่น ศีรษะ ท่อนแขน ท่อนขา
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_wou011
+    text: มีรอยแผลหลายชนิดรวมกัน เช่น รอยบาด รอยช้ำ หรือมีรอยแผลเก่าและใหม่
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_wou012
+    text: มีรอยฟกช้ำที่บริเวณใบหู หรือลำตัว หรือสะโพกหรือก้น
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_wou013
+    text: พบการผิดรูปของแขน หรือขา หรือกระดูกไหปลาร้า
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_wou014
+    text: พบรอยบุหรี่จี้ รอยตีของไม้
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_wou015
+    text: มีประวัติการใช้ความรุนแรงในครอบครัว
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_wou016
+    text: มีแผลบริเวณอวัยวะเพศ หรือมีตกขาวกลิ่นเหม็น
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Eye Disorder:
+  - qid: emer_ped_eye001
+    text: ปวดหัวรุนแรงและต่อเนื่อง
+  - qid: emer_ped_eye002
+    text: สูญเสียการมองเห็นอย่างฉับพลัน
+  - qid: emer_ped_eye003
+    text: มองเห็นภาพสีเพี้ยน หรือสูญเสียการมองเห็นสี หรือมองเห็นภาพซ้อน
+  - qid: emer_ped_eye004
+    text: ดวงตานูน หรือโป่งออกมา
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_eye005
+    text: หนังตาตกเฉียบพลัน / หนังตาทั้งสองข้างไม่เท่ากัน
+  - qid: emer_ped_eye006
+    text: สังเกตพบว่าในรูม่านตามีสีขาว หรือมีลักษณะวาวคล้ายตาเพชรหรือตาแมว
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_eye007
+    text: การเคลื่อนไหวของดวงตาเปลี่ยนแปลง / กระตุกอย่างฉับพลัน
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_eye008
+    text: ต้องบิดหรือหันศีรษะเพื่อให้มองเห็นชัด
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_eye009
+    text: ตาแดง เจ็บตา หรือแสงทำให้เจ็บตา มีน้ำตาไหลออกมาปริมาณมาก
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_eye010
+    text: บวมรอบดวงตาหรือเยื่อหุ้มตา
+  - qid: emer_ped_eye011
+    text: มีเลือดออกในดวงตา
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_eye012
+    text: กระจกตามัวหรือมีสีขุ่น ไม่ใสทั้งหมด
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_eye013
+    text: มองเห็นภาพลดลง หรือสูญเสียขอบเขตการมองเห็นภาพจากเดิม
+  - qid: emer_ped_eye014
+    text: มีประวัติบาดเจ็บดวงตาจากวัตถุมีคม หรือสารเคมีเข้าตา
+  - qid: emer_ped_eye015
+    text: มีตากระตุกผิดปกติ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Ear Disorder:
+  - qid: emer_ped_ear001
+    text: ดูซึมมากกว่าปกติ (เช่น อ่อนเพลียมาก ไม่เล่น ไม่ยอมกิน/ดื่ม)
+  - qid: emer_ped_ear002
+    text: ปวดหูรุนแรงมาก หรือปวดมากผิดปกติ/ ไม่ยอมให้แตะหู
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_ear003
+    text: ใบหูถูกดัน/เบนออกไปด้านหน้า หรือรูหูบวมตีบจากการบวมรอบๆ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_ear004
+    text: มีหนองไหลจากหูร่วมกับไข้สูง หรือมีกลิ่นเหม็นรุนแรงผิดปกติ
+    severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_ped_ear005
+    text: มีเลือดออกจากหู (โดยเฉพาะหลังอุบัติเหตุ/กระแทกศีรษะ)
+  - qid: emer_ped_ear006
+    text: มีของเหลวใสไหลจากหูหลังอุบัติเหตุ/กระแทกศีรษะ
+  - qid: emer_ped_ear007
+    text: เวียนศีรษะรุนแรง เดินเซมาก คลื่นไส้อาเจียน ซึม คอแข็ง หรือก้มคอไม่ได้ ร่วมกับอาการหู
+  - qid: emer_ped_ear008
+    text: ได้ยินลดลงแบบเฉียบพลัน หรือหูอื้อรุนแรงฉับพลัน
+  - qid: emer_ped_ear009
+    text: หน้าเบี้ยว หลับตาไม่สนิท มุมปากตก
+  - qid: emer_ped_ear010
+    text: สงสัยมีสิ่งแปลกปลอมอันตรายในหู (เช่น แมลง แบตเตอรี่กระดุม แม่เหล็ก ของมีคม) หรือพยายามเอาออกแล้วอาการแย่ลง/มีเลือด

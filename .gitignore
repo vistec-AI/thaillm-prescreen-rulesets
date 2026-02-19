@@ -17,3 +17,5 @@ notebooks
 .pytest_cache
 **/.DS_Store
 .cursor
+CLAUDE.md
+**/.claude

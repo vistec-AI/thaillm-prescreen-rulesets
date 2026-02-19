@@ -1,0 +1,339 @@
+# red/orange
+# red = department: ER, severity: ER
+# orange = department: ??, severity: >=Visit Hospital
+Headache:
+  - qid: emer_adult_hea001
+    text: ปวดรุนแรงที่สุดในชีวิต / ปวดแบบฟ้าผ่า / ระดับอาการปวดศีรษะ ≥ 7/10
+  - qid: emer_adult_hea002
+    text: ปวดศีรษะใหม่ที่รุนแรงมาก หลังออกแรง/ไอ/เบ่ง/มีเพศสัมพันธ์
+  - qid: emer_adult_hea003
+    text: ปวดศีรษะรุนแรงและฉับพลันภายในเวลาไม่กี่วินาที (Thunderclap headache)
+  - qid: emer_adult_hea004
+    text: อาการปวดศีรษะมากจนตื่น โดยเฉพาะช่วงเช้า หรือขณะนอนหลับ (Night pain)
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_hea005
+    text: ไข้ร่วมกับ คอแข็ง หรือปวดศีรษะรุนแรงร่วมกับไข้
+  - qid: emer_adult_hea006
+    text: มีผื่นร่วมกับไข้และปวดศีรษะรุนแรง
+  - qid: emer_adult_hea007
+    text: ภูมิคุ้มกันต่ำ/กินยากดภูมิ/มะเร็ง/HIV หรือเพิ่งติดเชื้อรุนแรงแล้วมีปวดศีรษะใหม่
+  - qid: emer_adult_hea008
+    text: ปวดศีรษะหลัง ศีรษะกระแทก/อุบัติเหตุ (โดยเฉพาะคลื่นไส้อาเจียนมากขึ้น/ปวดมากขึ้น)
+  - qid: emer_adult_hea009
+    text: กินยาละลายลิ่มเลือด/ยาต้านการแข็งตัวของเลือด แล้วปวดศีรษะรุนแรงใหม่
+  - qid: emer_adult_hea010
+    text: ตั้งครรภ์มากกว่า 20 สัปดาห์ หรือหลังคลอด ≤ 6 สัปดาห์ + ปวดศีรษะรุนแรง หรือ ตามัว/เห็นแสงวาบ/ปวดลิ้นปี่/บวมมาก หรือทราบว่าความดันสูง (≥140/90)
+  - qid: emer_adult_hea011
+    text: ปวดตารุนแรง ตาแดง + ปวดศีรษะ
+  - qid: emer_adult_hea012
+    text: เห็นแสงเป็นวงรุ้ง/ตามัวเฉียบพลัน + ปวดศีรษะ ± คลื่นไส้อาเจียน
+  - qid: emer_adult_hea013
+    text: อายุ > 50 ปี และ ปวดศีรษะรูปแบบใหม่ หรือรุนแรง/ถี่ขึ้นอย่างชัดเจนในช่วงสั้นๆ
+Dizziness:
+  - qid: emer_adult_diz001
+    text: เดินไม่ได้ ทรงตัวไม่ได้อย่างรุนแรง
+  - qid: emer_adult_diz002
+    text: เวียนศีรษะหลังเกิดอุบัติเหตุศีรษะ
+  - qid: emer_adult_diz003
+    text: กรณีเป็นเด็ก มีปัสสาวะน้อยมาก / ไม่ปัสสาวะ > 8 ชม. ร่วมกับอ่อนเพลียมาก
+Pain in Joint:
+  - qid: emer_adult_pai001
+    text: ปวดข้อรุนแรงทันที / ปวดจนขยับไม่ได้
+    min_severity:
+      id: sev002_5
+  - qid: emer_adult_pai002
+    text: มี ไข้ ร่วมกับข้อบวม แดง หรือร้อน
+    department:
+      - id: dept004
+    min_severity:
+      id: sev002_5
+  - qid: emer_adult_pai003
+    text: ไม่สามารถลงน้ำหนัก หรือใช้แขน/ขาข้างนั้นได้
+    department:
+      - id: dept007
+    min_severity:
+      id: sev002_5
+  - qid: emer_adult_pai004
+    text: มีอุบัติเหตุเกิดขึ้นก่อนปวดข้อ (ล้มแรง รถชน ข้อผิดรูป)
+    min_severity:
+      id: sev002_5
+Muscle Pain:
+  - qid: emer_adult_mus001
+    text: ปวดกล้ามเนื้อร่วมกับ เจ็บหน้าอก หรือ หายใจลำบาก
+  - qid: emer_adult_mus002
+    text: อ่อนแรงมากทันที ขยับแขนขาไม่ได้ หรือ กลั้นปัสสาวะ/อุจจาระไม่ได้
+  - qid: emer_adult_mus003
+    text: มีไข้สูง ซึมลง สับสน ร่วมกับปวดกล้ามเนื้อ
+  - qid: emer_adult_mus004
+    text: มีอุบัติเหตุรุนแรง เช่น รถชน ตกจากที่สูง แผลลึก หรือได้รับบาดเจ็บมาก เช่น มีแขนขาผิดรูป
+  - qid: emer_adult_mus005
+    text: ปวดรุนแรงมาก หรือ PS ≥ 7/10 และมีกล้ามเนื้อบวมเร็ว หรือปัสสาวะสีเข้มคล้ายโคล่า
+  - qid: emer_adult_mus006
+    text: เด็กไม่ยอมเดิน / ร้องไห้มากผิดปกติ
+Fever:
+  - qid: emer_adult_fev001
+    text: ซึมมาก/สับสน/เพ้อ/ตอบไม่รู้เรื่อง/วูบ/หมดสติ/ซีดตัวเย็น
+  - qid: emer_adult_fev002
+    text: หายใจลำบาก/เหนื่อยหอบ/เจ็บแน่นหน้าอก
+  - qid: emer_adult_fev003
+    text: ปวดศีรษะรุนแรงร่วมกับคอแข็ง
+  - qid: emer_adult_fev004
+    text: ชักครั้งแรก/ชักร่วมกับไข้ (โดยเฉพาะชักนาน/ชักซ้ำ)/กำลังชักเกร็ง
+  - qid: emer_adult_fev005
+    text: ปวดท้องรุนแรง หรือ PS ≥ 7/10 และปวดต่อเนื่อง
+  - qid: emer_adult_fev006
+    text: เด็กอายุน้อยกว่า 3 เดือนมีไข้
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_fev007
+    text: ภูมิคุ้มกันต่ำ/สงสัยเม็ดเลือดขาวต่ำ (เช่น เคมีบำบัด) และมีไข้
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_fev008
+    text: เดินทางกลับจากพื้นที่เสี่ยง (เช่น เขตมาลาเรีย/ไข้เลือดออก/โรคระบาด) ภายใน 1 เดือน หรือมีอาการป่วยหลังเดินทาง
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_fev009
+    text: ไม่ได้ฉีดวัคซีนตามเกณฑ์/ไม่ทราบสถานะวัคซีน (โดยเฉพาะเด็ก) ร่วมกับอาการไม่สบายมาก
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_fev010
+    text: ตั้งครรภ์/หลังคลอด < 6 สัปดาห์ และอาการแย่ลงเร็ว
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Cough:
+  - qid: emer_adult_cou001
+    text: หายใจลำบากมาก/หอบรุนแรง (พูดเป็นประโยคไม่ได้, เหนื่อยมาก)
+  - qid: emer_adult_cou002
+    text: ปาก/หน้าเขียวคล้ำ หรือผู้ป่วยบอกว่า “ขาดอากาศ”
+  - qid: emer_adult_cou003
+    text: ซึม สับสน เป็นลม หรือรู้สึกตัวเปลี่ยนไป
+  - qid: emer_adult_cou004
+    text: ไอเป็นเลือด/อาเจียนเป็นเลือด/มีเลือดปนเสมหะชัดเจน
+  - qid: emer_adult_cou005
+    text: เจ็บหน้าอก (เจ็บมาก/เจ็บเวลาไอหรือหายใจ)
+  - qid: emer_adult_cou006
+    text: ไข้สูงร่วม และอ่อนเพลียมาก
+Sore Throat:
+  - qid: emer_adult_sor001
+    text: หายใจลำบาก / เสียงหายใจดังผิดปกติ หายใจเสียงครืดคราด / แน่นคอมาก
+  - qid: emer_adult_sor002
+    text: กลืนไม่ได้แม้แต่น้ำลาย / น้ำลายไหลตลอด / กลืนลำบากมากขึ้นเรื่อย ๆ
+  - qid: emer_adult_sor003
+    text: เสียงเปลี่ยนมาก (เสียงอู้อี้/เสียงก้อง “อมของร้อน”) หรือพูดลำบากชัดเจน
+  - qid: emer_adult_sor004
+    text: อ้าปากได้น้อย หรือลำบาก / ขากรรไกรแข็งเกร็ง
+  - qid: emer_adult_sor005
+    text: ปวดคอ/บวมคอมาก หรือคอแข็งมากผิดปกติ
+  - qid: emer_adult_sor006
+    text: ไข้สูง หนาวสั่น กินได้น้อย อ่อนเพลีย
+Stomachache:
+  - qid: emer_adult_abd001
+    text: ปวดท้องรุนแรงมาก (PS ≥ 7/10) และเกิดขึ้นทันที (ปวดจนงอตัว/ทนไม่ได้ กระสับกระส่าย)
+  - qid: emer_adult_abd002
+    text: ปวดท้องรุนแรงและร้าวทะลุไปด้านหลัง
+  - qid: emer_adult_abd003
+    text: ปวดท้องจุกเสียด แน่นบริเวณยอดอกหรือลิ้นปี่ และ/หรือ แน่นหน้าอก
+  - qid: emer_adult_abd004
+    text: อาเจียนต่อเนื่อง กิน/ดื่มไม่ได้ หรืออาเจียนเป็นเลือด
+  - qid: emer_adult_abd005
+    text: ถ่ายดำ/ถ่ายเป็นเลือดมาก ร่วมกับปวดท้อง
+  - qid: emer_adult_abd006
+    text: ไข้สูง ร่วมกับปวดท้อง หรืออาการทรุดเร็ว
+  - qid: emer_adult_abd007
+    text: ตั้งครรภ์ และมีปวดท้องรุนแรง หรือมี เลือดออกทางช่องคลอดระหว่างตั้งครรภ์
+  - qid: emer_adult_abd008
+    text: (ผู้ป่วยชาย) ปวดอัณฑะ/ถุงอัณฑะรุนแรงหรือเฉียบพลัน ร่วม/แทนปวดท้อง
+  - qid: emer_adult_abd009
+    text: มีภาวะภูมิคุ้มกันต่ำ + มีไข้/หนาวสั่น หรืออาการดูรุนแรงผิดปกติ
+  - qid: emer_adult_abd010
+    text: ใช้ยาต้านการแข็งตัวของเลือด + มีเลือดออก (อาเจียน/ถ่ายเป็นเลือด/ปัสสาวะเป็นเลือด)
+Constipation:
+  - qid: emer_adult_con001
+    text: ปวดท้องรุนแรง (Pain score ≥ 7/10) หรือปวดมากขึ้นเรื่อยๆ
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_con002
+    text: (ในเด็ก) ปวดท้อง และร้องกวนมากผิดปกติ หรืออ่อนเพลียมาก
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_con003
+    text: ท้องบวมมาก/แน่นมาก (ท้องอืดมากผิดปกติ)
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_con004
+    text: ไม่ถ่าย และไม่ผายลมร่วมกับปวดท้องมาก/อาเจียน
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_con005
+    text: อาเจียนต่อเนื่อง อาเจียนเป็นน้ำสีเขียว หรือกิน/ดื่มไม่ได้
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_con006
+    text: มีไข้ร่วมกับอาการท้องผูก
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_con007
+    text: ถ่ายเป็นเลือดมาก / ถ่ายดำคล้ำเหมือนยางมะตอย
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Diarrhea:
+  - qid: emer_adult_dia001
+    text: "อาการขาดน้ำ: ปัสสาวะลดลง หน้ามืด เวียนศีรษะมาก สับสน อ่อนเพลียมาก ซึมลง"
+  - qid: emer_adult_dia002
+    text: ถ่ายเป็นเลือด / ถ่ายดำเหมือนยางมะตอย
+  - qid: emer_adult_dia003
+    text: ไข้สูง (T ≥ 39°C)
+  - qid: emer_adult_dia004
+    text: ปวดท้องรุนแรง (PS >= 7/10) / ปวดมากขึ้นเรื่อย ๆ
+  - qid: emer_adult_dia005
+    text: อาเจียนต่อเนื่อง กิน/ดื่มไม่ได้
+Dysuria:
+  - qid: emer_adult_dys001
+    text: ไข้สูง/หนาวสั่น ร่วมกับปวดสีข้าง/ปวดหลังส่วนบน (สงสัยไตอักเสบ)
+  - qid: emer_adult_dys002
+    text: ภูมิคุ้มกันต่ำ “ร่วมกับ” อาการหนักข้อใดข้อหนึ่ง
+Vaginal Discharge:
+  - qid: emer_adult_vag001
+    text: ปวดท้องน้อย/ปวดเชิงกรานรุนแรง
+  - qid: emer_adult_vag002
+    text: ไข้หนาวสั่นร่วมกับตกขาว โดยเฉพาะมีกลิ่นแรง/ปนเลือด
+  - qid: emer_adult_vag003
+    text: คลื่นไส้/อาเจียนร่วมกับปวดท้องน้อย
+  - qid: emer_adult_vag004
+    text: ตั้งครรภ์ + มีน้ำไหลเหมือนน้ำคร่ำ/สงสัยน้ำเดิน หรือมีไข้ร่วมด้วย
+  - qid: emer_adult_vag005
+    text: หลังคลอด (< 6 สัปดาห์) + ตกขาวเหม็นมาก + ไข้
+  - qid: emer_adult_vag006
+    text: เลือดออกทางช่องคลอดมากร่วมกับตกขาวผิดปกติ
+Skin Rash/Lesion:
+  - qid: emer_adult_rash001
+    text: ไข้สูงร่วมกับผื่น
+  - qid: emer_adult_rash002
+    text: "ผื่น/แผลสงสัยติดเชื้อ: แดงร้อน บวม มีหนอง (ไม่มีไข้สูง)"
+  - qid: emer_adult_rash003
+    text: หน้าบวม/ปากบวม/หายใจลำบาก หรือผื่นลมพิษทั่วตัว (สงสัยแพ้รุนแรง)
+  - qid: emer_adult_rash004
+    text: ผื่นพุพอง/ผิวลอกกว้าง ร่วมกับมีแผลในปาก/ตา
+  - qid: emer_adult_rash005
+    text: ซึม สับสน หน้ามืด
+  - qid: emer_adult_rash006
+    text: ผื่นลามเร็วภายในชั่วโมง
+  - qid: emer_adult_rash007
+    text: จุดม่วง/ดำ/ปื้นคล้ำ (purpura/เนื้อตาย) หรือผื่นจุดเลือดออก
+  - qid: emer_adult_rash008
+    text: ปวดรุนแรงมากผิดปกติ เมื่อเทียบกับผื่น
+  - qid: emer_adult_rash009
+    text: ภูมิคุ้มกันต่ำ + ผื่นใหม่/ลุกลาม
+  - qid: emer_adult_rash010
+    text: ผื่นตุ่มน้ำใสที่เจ็บปวด แสบร้อน บริเวณหน้า/ใกล้ตา
+  - qid: emer_adult_rash011
+    text: เด็กเล็กมาก (เช่น < 6 เดือน) มีผื่นใหม่
+  - qid: emer_adult_rash012
+    text: ผื่นหลังเพิ่งเริ่มยาใหม่
+Wound:
+  - qid: emer_adult_wou001
+    text: เลือดพุ่ง/เลือดไหลไม่หยุด (Vascular injury)
+  - qid: emer_adult_wou002
+    text: แผลลึก/กว้างมาก เห็นกล้ามเนื้อ/เอ็น/กระดูก หรือแผลอ้ากว้างมาก
+  - qid: emer_adult_wou003
+    text: แผลบริเวณใบหน้า/ศีรษะลึก หรือสงสัยบาดเจ็บศีรษะร่วม
+  - qid: emer_adult_wou004
+    text: มีวัตถุของมีคมปักคาแผล (ห้ามดึงออก)
+  - qid: emer_adult_wou005
+    text: สงสัยอวัยวะขาด/เกือบขาด / สงสัยว่ากระดูกหัก ลงน้ำหนักไม่ได้ บวมมาก
+  - qid: emer_adult_wou006
+    text: บาดแผลจากกระสุน/แทงลึก
+  - qid: emer_adult_wou007
+    text: แผลถูกของแหลมทิ่ม/ตะปู/วัตถุสกปรก
+  - qid: emer_adult_wou008
+    text: แผลร่วมกับอวัยวะส่วนปลายมีอาการชาหรือขยับไม่ได้ (Nerve injury)
+  - qid: emer_adult_wou009
+    text: แผลกระแทกที่หน้าอกและท้องรุนแรง
+  - qid: emer_adult_wou010
+    text: "สัญญาณติดเชื้อรุนแรง: ไข้สูง + แผลแดงลามเร็ว/มีเส้นแดงพาด/หนองมาก + อาการแย่ลง"
+  - qid: emer_adult_wou011
+    text: แผลที่โดนกัดที่ทะลุผิวหนัง เช่น คน สุนัข แมว ฯลฯ
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_wou012
+    text: แผลสกปรก/มีสิ่งแปลกปลอม
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Eye Disorder:
+  - qid: emer_adult_eye001
+    text: การมองเห็นลดลงฉับพลัน หรือมองไม่เห็นทันที
+  - qid: emer_adult_eye002
+    text: ปวดตารุนแรง (โดยเฉพาะร่วมกับปวดศีรษะ/คลื่นไส้อาเจียน) /แพ้แสง (photophobia)
+  - qid: emer_adult_eye003
+    text: อุบัติเหตุกระแทกตา/ของมีคม/เศษวัสดุพุ่งเข้าตา
+  - qid: emer_adult_eye004
+    text: สารเคมีเข้าตา (ให้ล้างตาทันที และส่งฉุกเฉิน)
+  - qid: emer_adult_eye005
+    text: มีเลือด/ของเหลวไหลจากตาหลังอุบัติเหตุ
+  - qid: emer_adult_eye006
+    text: เห็นแสงแฟลช/หยากไย่/จุดดำจำนวนมากใหม่ ๆ หรือเหมือนม่านบังตา
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_eye007
+    text: เปลือกตาบวมมาก + ไข้ หรือเห็นภาพซ้อน
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+  - qid: emer_adult_eye008
+    text: เห็นภาพซ้อนเกิดใหม่
+    min_severity:
+      id: sev002_5
+    department:
+      - id: dept002
+Ear Disorder:
+  - qid: emer_adult_ear001
+    text: ปวดหูรุนแรง + ไข้สูงมาก หรือคอแข็ง/ปวดศีรษะมาก
+  - qid: emer_adult_ear002
+    text: ซึม สับสน อ่อนเพลียมากร่วมกับอาการหู
+  - qid: emer_adult_ear003
+    text: บวมแดงหลังหู/กดเจ็บหลังหู หรือใบหูถูกดันออกด้านหน้า
+  - qid: emer_adult_ear004
+    text: หลังอุบัติเหตุศีรษะมีเลือด/น้ำใสไหลจากหู
+  - qid: emer_adult_ear005
+    text: ได้ยินลดลงฉับพลัน (ร่วมกับปวดหรือเวียนศีรษะ)
+  - qid: emer_adult_ear006
+    text: ผู้ป่วยเบาหวาน/ภูมิคุ้มกันต่ำ + ปวดหูรุนแรง
+  - qid: emer_adult_ear007
+    text: มีวัตถุในหูเป็น “ถ่านกระดุม/แบตเตอรี่” หรือของมีคมเข้าไป
+  - qid: emer_adult_ear008
+    text: น้ำ/หนองไหลจากหูร่วมกับปวดหูมาก

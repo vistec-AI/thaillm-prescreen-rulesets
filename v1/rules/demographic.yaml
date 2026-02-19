@@ -1,0 +1,47 @@
+- qid: demo_dob
+  key: date_of_birth
+  field_name: Date of Birth (BC)
+  field_name_th: วัน เดือน ปี (พ.ศ.) เกิด
+  type: datetime
+- qid: demo_gender
+  key: gender
+  field_name: Biological Gender
+  field_name_th: เพศ
+  type: enum
+  values:
+    - Male
+    - Female
+- qid: demo_height
+  key: height
+  field_name: Height (cm)
+  field_name_th: ความสูง (ซม.)
+  type: float
+- qid: demo_weight
+  key: weight
+  field_name: Weight (kg)
+  field_name_th: น้ำหนัก (กก.)
+  type: float
+- qid: demo_ud
+  key: underlying_diseases
+  field_name: Underlying Diseases
+  field_name_th: โรคประจำตัว
+  type: from_yaml
+  values: const/underlying_diseases.yaml
+- qid: demo_med-history
+  key: medical_history
+  field_name: Medical History
+  field_name_th: ประวัติผู้ป่วย
+  type: str
+  optional: true
+- qid: demo_occupation
+  key: occupation
+  field_name: Occupation
+  field_name_th: อาชีพ
+  type: str
+  optional: true
+- qid: demo_presenting-complaint
+  key: presenting_complaint
+  field_name: Presenting Complaint
+  field_name_th: อาการผู้ป่วย
+  type: str
+  optional: true
