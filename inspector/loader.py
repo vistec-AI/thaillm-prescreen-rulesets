@@ -31,6 +31,22 @@ def load_rules_local(version: str = "v1") -> Dict[Literal["oldcarts", "opd"], An
     }
 
 
+def load_er_rules_local(version: str = "v1") -> Dict[str, Any]:
+    """Load the three ER rule YAML files from ``v1/rules/er/``.
+
+    Returns a dict with three keys:
+    - ``er_symptom``:    flat list of phase-1 critical yes/no checks
+    - ``er_adult``:      dict keyed by symptom name → list of adult checklist items
+    - ``er_pediatric``:  dict keyed by symptom name → list of pediatric checklist items
+    """
+    er_dir = find_repo_root() / version / "rules" / "er"
+    return {
+        "er_symptom": load_yaml(er_dir / "er_symptom.yaml"),
+        "er_adult": load_yaml(er_dir / "er_adult_checklist.yaml"),
+        "er_pediatric": load_yaml(er_dir / "er_pediatric_checklist.yaml"),
+    }
+
+
 def load_constants_local(version: str = "v1") -> Dict[str, Any]:
     base = find_repo_root() / version / "const"
     return {
