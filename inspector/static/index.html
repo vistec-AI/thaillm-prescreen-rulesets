@@ -14,10 +14,53 @@
       h3 { margin: 0; font-size: 22px; }
       .titlebar { display: flex; align-items: center; gap: 8px; margin: 8px 0 10px; }
       .titlebar img.logo { height: 28px; object-fit: contain; }
-      #toolbar { display: flex; gap: 8px; align-items: center; padding-bottom: 6px; flex-wrap: wrap; }
-      #main { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 12px; min-height: 0; width: 100%; }
+
+      /* --- Tab bar --- */
+      .tab-bar { display: flex; gap: 0; border-bottom: 2px solid #ddd; margin-bottom: 8px; }
+      .tab-bar button {
+        padding: 8px 20px; border: none; background: #f3f3f3; cursor: pointer;
+        font-size: 14px; font-weight: 500; color: #666;
+        border-bottom: 2px solid transparent; margin-bottom: -2px;
+        transition: background 0.15s, color 0.15s;
+      }
+      .tab-bar button:hover { background: #e8e8e8; }
+      .tab-bar button.active { background: white; color: #333; border-bottom-color: #4a90d9; font-weight: 600; }
+
+      .tab-content { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; }
+      .tab-content.active { display: flex; }
+
+      /* --- Toolbar (shared pattern) --- */
+      .toolbar { display: flex; gap: 8px; align-items: center; padding-bottom: 6px; flex-wrap: wrap; }
+
+      /* --- Graph tab main area --- */
+      #graph-main { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 12px; min-height: 0; width: 100%; }
       #cy { width: 100%; height: 100%; border: 1px solid #ddd; min-width: 0; overflow: hidden; }
-      #details { border: 1px solid #ddd; padding: 8px; overflow: auto; min-width: 420px; max-width: 420px; }
+      .details-panel { border: 1px solid #ddd; padding: 8px; overflow: auto; min-width: 420px; max-width: 420px; }
+
+      /* --- ER tab main area --- */
+      #er-main { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 12px; min-height: 0; width: 100%; }
+
+      /* --- ER Table --- */
+      .er-table-wrap { overflow: auto; border: 1px solid #ddd; }
+      .er-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      .er-table thead { position: sticky; top: 0; z-index: 1; }
+      .er-table th { background: #f5f5f5; padding: 6px 8px; text-align: left; border-bottom: 2px solid #ddd; white-space: nowrap; }
+      .er-table td { padding: 6px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+      .er-table tr { cursor: pointer; transition: background 0.1s; }
+      .er-table tbody tr:hover { background: #f0f6ff; }
+      .er-table tbody tr.selected { background: #e0edff; }
+      /* Orange left border for override rows */
+      .er-table tbody tr.override td:first-child { border-left: 3px solid #ffb74d; }
+      /* Gray italic for default routing */
+      .er-table .default-routing { color: #999; font-style: italic; }
+
+      /* --- Badges --- */
+      .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+      .badge-emergency { background: #ffcdd2; color: #c62828; }
+      .badge-urgent { background: #ffe0b2; color: #e65100; }
+      .badge-visit { background: #fff9c4; color: #f57f17; }
+      .badge-home { background: #c8e6c9; color: #2e7d32; }
+
       .legend { font-size: 0.85em; color: #555; }
       #valid-output { font-size: 12px; line-height: 1.2; max-height: 120px; overflow: auto; background: #f7f7f7; padding: 6px; border-radius: 4px; border: 1px solid #eee; }
       footer { margin-top: 8px; padding-top: 6px; border-top: 1px solid #e5e5e5; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -31,24 +74,20 @@
     </style>
   </head>
   <body>
-    <div id="overlay"><div class="card"><div class="spinner"></div><div id="overlay-text">Saving and running tests…</div></div></div>
+    <div id="overlay"><div class="card"><div class="spinner"></div><div id="overlay-text">Saving and running tests...</div></div></div>
+
     <div class="titlebar">
       <img class="logo" src="/static/brand/thaillm.png" alt="ThaiLLM" />
       <h3>Prescreen Initial Assessment Rules Inspector</h3>
     </div>
-    <div id="toolbar">
-      <label>Symptom: <select id="symptom"></select></label>
-      <label>Mode: 
-        <select id="mode">
-          <option value="combined">Combined</option>
-          <option value="oldcarts">Oldcarts</option>
-          <option value="opd">OPD</option>
-        </select>
-      </label>
-      <button id="reload">Load</button>
-      <button id="reset">Reset view</button>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="graph-tab">OLDCARTS / OPD</button>
+      <button class="tab-btn" data-tab="er-tab">ER Checklist</button>
     </div>
-    <div class="legend">Node colors: terminate=red, opd node=blue, others=gray.</div>
+
+    <!-- Shared validation section -->
     <details>
       <summary>Validation</summary>
       <div style="display:flex; gap:8px; align-items:center;">
@@ -57,11 +96,29 @@
       </div>
       <pre id="valid-output"></pre>
     </details>
-    <div id="main">
-      <div id="cy"></div>
-      <div id="details">
-        <h4>Details</h4>
-        <div id="details-content">Click a node to inspect its details.</div>
+
+    <!-- ============================================================ -->
+    <!-- Tab 1: OLDCARTS / OPD Graph -->
+    <!-- ============================================================ -->
+    <div id="graph-tab" class="tab-content active">
+      <div class="toolbar">
+        <label>Symptom: <select id="symptom"></select></label>
+        <label>Mode:
+          <select id="mode">
+            <option value="combined">Combined</option>
+            <option value="oldcarts">Oldcarts</option>
+            <option value="opd">OPD</option>
+          </select>
+        </label>
+        <button id="reload">Load</button>
+        <button id="reset">Reset view</button>
+      </div>
+      <div class="legend">Node colors: terminate=red, opd=blue, others=gray.</div>
+      <div id="graph-main">
+        <div id="cy"></div>
+        <div id="details" class="details-panel">
+          <h4>Details</h4>
+          <div id="details-content">Click a node to inspect its details.</div>
           <div id="editor" style="display:none; margin-top:8px;">
             <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
               <b>Raw Editor</b>
@@ -73,10 +130,60 @@
               <button id="editor-cancel">Cancel</button>
             </div>
           </div>
+        </div>
       </div>
     </div>
+
+    <!-- ============================================================ -->
+    <!-- Tab 2: ER Checklist -->
+    <!-- ============================================================ -->
+    <div id="er-tab" class="tab-content">
+      <div class="toolbar">
+        <label>Sub-mode:
+          <select id="er-mode">
+            <option value="er_symptom">ER Critical Symptoms</option>
+            <option value="er_adult">ER Adult Checklist</option>
+            <option value="er_pediatric">ER Pediatric Checklist</option>
+          </select>
+        </label>
+        <label>Symptom: <select id="er-symptom" disabled></select></label>
+        <button id="er-load">Load</button>
+      </div>
+      <div id="er-main">
+        <div class="er-table-wrap">
+          <table class="er-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>QID</th>
+                <th>Text</th>
+                <th>Severity</th>
+                <th>Department</th>
+              </tr>
+            </thead>
+            <tbody id="er-tbody"></tbody>
+          </table>
+        </div>
+        <div id="er-details" class="details-panel">
+          <h4>Details</h4>
+          <div id="er-details-content">Click a row to inspect its details.</div>
+          <div id="er-editor" style="display:none; margin-top:8px;">
+            <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
+              <b>Raw Editor</b>
+              <span id="er-editor-status" style="margin-left:auto;"></span>
+            </div>
+            <textarea id="er-editor-text" style="width:100%; height:220px; font-family: ui-monospace, Menlo, monospace; font-size:12px;"></textarea>
+            <div style="display:flex; gap:8px; margin-top:6px;">
+              <button id="er-editor-save">Save</button>
+              <button id="er-editor-cancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <footer>
-      <div>Developed by <b>VISAI</b> • Sponsored by <b>VISTEC</b> & <b>BDI</b></div>
+      <div>Developed by <b>VISAI</b> &bull; Sponsored by <b>VISTEC</b> &amp; <b>BDI</b></div>
       <div class="brand">
         <img src="/static/brand/visai.png" alt="VISAI" onerror="this.style.display='none'" />
         <img src="/static/brand/vistec.png" alt="VISTEC" onerror="this.style.display='none'" />
@@ -87,24 +194,98 @@
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
     <script>
-      const symptomSel = document.getElementById('symptom');
-      const modeSel = document.getElementById('mode');
-      const reloadBtn = document.getElementById('reload');
-      let cy;
+      // ==================================================================
+      // Shared utilities
+      // ==================================================================
       let lastVersion = null;
-      let lastGraphData = null; // cache latest /api/graph payload
-      let selectedNodeId = null; // persist current selection across reloads
       let pollTimer = null;
+      let activeTab = 'graph-tab'; // tracks which tab is visible
+
       function showOverlay(text) {
         const ov = document.getElementById('overlay');
-        const txt = document.getElementById('overlay-text');
-        if (text) txt.textContent = text;
+        document.getElementById('overlay-text').textContent = text || 'Saving and running tests...';
         ov.style.display = 'flex';
       }
-      function hideOverlay() {
-        const ov = document.getElementById('overlay');
-        ov.style.display = 'none';
+      function hideOverlay() { document.getElementById('overlay').style.display = 'none'; }
+
+      function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+      function pre(obj) { return `<pre>${escapeHtml(JSON.stringify(obj, null, 2))}</pre>`; }
+
+      /** Return a CSS class for severity badge coloring. */
+      function sevBadgeClass(sevId) {
+        if (sevId === 'sev003') return 'badge-emergency';
+        if (sevId === 'sev002_5') return 'badge-urgent';
+        if (sevId === 'sev002') return 'badge-visit';
+        if (sevId === 'sev001') return 'badge-home';
+        return '';
       }
+
+      // ==================================================================
+      // Tab switching
+      // ==================================================================
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          btn.classList.add('active');
+          const tabId = btn.dataset.tab;
+          document.getElementById(tabId).classList.add('active');
+          activeTab = tabId;
+          // When returning to graph tab, Cytoscape needs a resize to render properly
+          if (tabId === 'graph-tab' && cy) {
+            requestAnimationFrame(() => { cy.resize(); cy.fit(cy.elements(), 40); });
+          }
+        });
+      });
+
+      // ==================================================================
+      // Shared validation
+      // ==================================================================
+      async function runValidate() {
+        const btn = document.getElementById('validate');
+        const out = document.getElementById('valid-output');
+        const status = document.getElementById('valid-status');
+        btn.disabled = true; status.textContent = 'Running tests...'; out.textContent = '';
+        try {
+          const { data } = await axios.get('/api/validate');
+          status.textContent = data.ok ? 'OK' : 'FAILED';
+          out.textContent = (data.stdout || '') + (data.stderr || '');
+        } catch (e) {
+          status.textContent = 'ERROR';
+          out.textContent = String(e);
+        } finally {
+          btn.disabled = false;
+        }
+      }
+      document.getElementById('validate').addEventListener('click', runValidate);
+
+      // ==================================================================
+      // Version polling — refreshes whichever tab is active
+      // ==================================================================
+      async function pollVersion() {
+        try {
+          const { data } = await axios.get('/api/version');
+          if (lastVersion && data.version !== lastVersion) {
+            if (activeTab === 'graph-tab') {
+              await loadGraph();
+            } else {
+              await loadErChecklist();
+            }
+            await runValidate();
+          }
+          lastVersion = data.version;
+        } catch (e) { /* ignore */ }
+      }
+      pollTimer = setInterval(pollVersion, 2000);
+
+      // ==================================================================
+      // Tab 1: OLDCARTS / OPD Graph
+      // ==================================================================
+      const symptomSel = document.getElementById('symptom');
+      const modeSel = document.getElementById('mode');
+      let cy;
+      let lastGraphData = null;
+      let selectedNodeId = null;
 
       async function loadSymptoms() {
         const { data } = await axios.get('/api/symptoms');
@@ -116,13 +297,13 @@
         }
       }
 
-      function layout() {
+      function graphLayout() {
         cy.layout({ name: 'breadthfirst', directed: true, padding: 20, spacingFactor: 1.2 }).run();
         cy.resize();
         cy.fit(cy.elements(), 40);
       }
 
-      function style() {
+      function graphStyle() {
         cy.style([
           { selector: 'node', style: { 'label': 'data(label)', 'text-valign': 'center', 'background-color': '#888', 'color': '#222', 'font-size': 10 } },
           { selector: 'node[type = "terminate"]', style: { 'background-color': '#e57373', 'shape': 'round-rectangle' } },
@@ -134,8 +315,7 @@
       async function loadGraph() {
         const s = symptomSel.value; const m = modeSel.value;
         if (!s) return;
-        // Use query form to avoid issues with slashes in symptom names
-        const { data } = await axios.get(`/api/graph`, { params: { symptom: s, mode: m } });
+        const { data } = await axios.get('/api/graph', { params: { symptom: s, mode: m } });
         lastGraphData = data;
         const elements = [
           ...data.nodes.map(n => ({ data: n.data, group: 'nodes' })),
@@ -143,12 +323,12 @@
         ];
         if (!cy) {
           cy = cytoscape({ container: document.getElementById('cy'), elements });
-          style();
-          layout();
+          graphStyle();
+          graphLayout();
           cy.on('tap', 'node', (evt) => {
             const n = evt.target;
             selectedNodeId = n.id();
-            renderDetails(n.data());
+            renderGraphDetails(n.data());
           });
           cy.on('tap', (evt) => {
             if (evt.target === cy) {
@@ -158,32 +338,32 @@
         } else {
           cy.elements().remove();
           cy.add(elements);
-          layout();
+          graphLayout();
         }
-        // After graph is ready, try to keep the details panel in sync with selection
         if (selectedNodeId) {
           const node = cy.getElementById(selectedNodeId);
-          if (node && node.length) {
-            renderDetails(node.data());
-          }
+          if (node && node.length) renderGraphDetails(node.data());
         }
       }
 
-      function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-      function pre(obj) { return `<pre>${escapeHtml(JSON.stringify(obj, null, 2))}</pre>`; }
-      function renderDetails(d) {
+      function renderGraphDetails(d) {
         const el = document.getElementById('details-content');
         const editor = document.getElementById('editor');
-        // Always show editor read-only initially
-        editor.style.display = 'block';
-        setEditorDisabled(true);
-        document.getElementById('editor-text').value = JSON.stringify(d?.raw || {}, null, 2);
+        if (d?.raw) {
+          editor.style.display = 'block';
+          setGraphEditorDisabled(true);
+          document.getElementById('editor-text').value = JSON.stringify(d.raw, null, 2);
+        } else {
+          editor.style.display = 'none';
+        }
         document.getElementById('editor-status').textContent = '';
         if (!d) { el.innerHTML = 'No data'; return; }
+
         let html = '';
         html += `<div><b>QID</b>: ${escapeHtml(d.id || '')}</div>`;
         html += `<div><b>Type</b>: ${escapeHtml(d.type || '')}</div>`;
         html += `<div style="margin: 4px 0;"><b>Question</b>: ${escapeHtml(d.label || '')}</div>`;
+
         if (d.image) {
           html += `<div><b>Image</b>:</div><img src="${d.image}" alt="image" style="max-width: 100%; border: 1px solid #ccc;" />`;
         }
@@ -203,12 +383,12 @@
             const lbl = escapeHtml(o.label || o.id || '');
             const a = o.action || {};
             let actionStr = '';
-            if (a.action === 'goto') { actionStr = `→ ${escapeHtml((a.qid||[]).join(', '))}`; }
-            else if (a.action === 'opd') { actionStr = `→ OPD`; }
+            if (a.action === 'goto') { actionStr = `&rarr; ${escapeHtml((a.qid||[]).join(', '))}`; }
+            else if (a.action === 'opd') { actionStr = `&rarr; OPD`; }
             else if (a.action === 'terminate') {
               const dept = a.metadata?.department;
               const deptList = Array.isArray(dept) ? dept : (dept ? [dept] : []);
-              actionStr = `↯ ${escapeHtml(deptList.join(', '))}`;
+              actionStr = `&#8623; ${escapeHtml(deptList.join(', '))}`;
             }
             return `<li>${lbl} <small>${actionStr}</small></li>`;
           }).join('') + '</ul>';
@@ -219,69 +399,56 @@
             const cond = (r.when || []).map(w => `${escapeHtml(w.qid)} ${escapeHtml(w.op)} ${escapeHtml(typeof w.value === 'object' ? JSON.stringify(w.value) : String(w.value))}`).join(' AND ');
             const a = r.then || {};
             let thenStr = '';
-            if (a.action === 'goto') { thenStr = `goto → ${escapeHtml((a.qid||[]).join(', '))}`; }
+            if (a.action === 'goto') { thenStr = `goto &rarr; ${escapeHtml((a.qid||[]).join(', '))}`; }
             else if (a.action === 'terminate') {
               const dept = a.metadata?.department;
               const deptList = Array.isArray(dept) ? dept : (dept ? [dept] : []);
-              thenStr = `terminate ↯ ${escapeHtml(deptList.join(', '))}`;
+              thenStr = `terminate &#8623; ${escapeHtml(deptList.join(', '))}`;
             }
             return `<li><div><b>When</b>: ${cond || '(none)'}</div><div><b>Then</b>: ${thenStr}</div></li>`;
           }).join('') + '</ol>';
           if (d.default) {
             const a = d.default;
             let thenStr = '';
-            if (a.action === 'goto') { thenStr = `goto → ${escapeHtml((a.qid||[]).join(', '))}`; }
+            if (a.action === 'goto') { thenStr = `goto &rarr; ${escapeHtml((a.qid||[]).join(', '))}`; }
             else if (a.action === 'terminate') {
               const dept = a.metadata?.department;
               const deptList = Array.isArray(dept) ? dept : (dept ? [dept] : []);
-              thenStr = `terminate ↯ ${escapeHtml(deptList.join(', '))}`;
+              thenStr = `terminate &#8623; ${escapeHtml(deptList.join(', '))}`;
             }
             html += `<div><b>Default</b>: ${thenStr}</div>`;
           }
         }
-        // Raw content shown in editor. Provide Edit button to enable editing.
         html += `<div style="margin-top:8px;"><button id="edit-raw">Edit</button></div>`;
         el.innerHTML = html;
 
         const editBtn = document.getElementById('edit-raw');
-        if (editBtn) {
-          editBtn.addEventListener('click', () => openEditor(d));
-        }
+        if (editBtn) editBtn.addEventListener('click', () => openGraphEditor(d));
       }
 
-      let editorCtx = null; // {source, symptom, qid, data}
-      function openEditor(d) {
-        editorCtx = {
-          source: d.source, // 'oldcarts' | 'opd'
-          symptom: symptomSel.value,
-          qid: d.id,
-          data: d.raw
-        };
+      // --- Graph editor ---
+      let editorCtx = null;
+      function openGraphEditor(d) {
+        editorCtx = { source: d.source, symptom: symptomSel.value, qid: d.id, data: d.raw };
         selectedNodeId = d.id;
-        const ta = document.getElementById('editor-text');
-        ta.value = JSON.stringify(editorCtx.data, null, 2);
+        document.getElementById('editor-text').value = JSON.stringify(editorCtx.data, null, 2);
         document.getElementById('editor-status').textContent = '';
         document.getElementById('editor').style.display = 'block';
-        setEditorDisabled(false);
+        setGraphEditorDisabled(false);
       }
 
-      async function saveEditor() {
+      async function saveGraphEditor() {
         if (!editorCtx) return;
         const status = document.getElementById('editor-status');
         status.textContent = '';
         let obj;
-        try {
-          obj = JSON.parse(document.getElementById('editor-text').value);
-        } catch (e) {
-          status.textContent = 'Invalid JSON';
-          return;
-        }
+        try { obj = JSON.parse(document.getElementById('editor-text').value); }
+        catch (e) { status.textContent = 'Invalid JSON'; return; }
         const payload = { source: editorCtx.source, symptom: editorCtx.symptom, qid: editorCtx.qid, data: obj };
-        // Optimistically disable controls
-        setEditorDisabled(true);
+        setGraphEditorDisabled(true);
         status.textContent = 'Saving and running tests...';
         try {
-          showOverlay('Saving and running tests…');
+          showOverlay('Saving and running tests...');
           const { data } = await axios.post('/api/update_question', payload);
           if (!data.ok) {
             alert('Save failed. Tests failed or validation error.\n' + ((data.stdout || '') + (data.stderr || '')));
@@ -290,101 +457,310 @@
             status.textContent = 'Saved';
             selectedNodeId = editorCtx.qid;
             await loadGraph();
-            // Re-render details for the same node using the freshly fetched graph data
             if (editorCtx && lastGraphData) {
               const nd = (lastGraphData.nodes || []).find(n => n?.data?.id === editorCtx.qid);
-              if (nd && nd.data) {
-                renderDetails(nd.data);
-              } else if (cy) {
-                const node = cy.getElementById(editorCtx.qid);
-                if (node && node.length) renderDetails(node.data());
-              }
+              if (nd && nd.data) renderGraphDetails(nd.data);
+              else if (cy) { const node = cy.getElementById(editorCtx.qid); if (node && node.length) renderGraphDetails(node.data()); }
             }
             await runValidate();
             document.getElementById('editor').style.display = 'none';
             editorCtx = null;
           }
         } catch (e) {
-          // Try to extract detailed server error
           let msg = '';
-          if (e.response && e.response.data) {
-            try {
-              const err = e.response.data;
-              msg = JSON.stringify(err, null, 2);
-            } catch (_) {
-              msg = String(e);
-            }
-          } else {
-            msg = String(e);
-          }
+          if (e.response && e.response.data) { try { msg = JSON.stringify(e.response.data, null, 2); } catch (_) { msg = String(e); } }
+          else { msg = String(e); }
           alert('Save error:\n' + msg);
           status.textContent = 'Error';
         } finally {
-          setEditorDisabled(false);
+          setGraphEditorDisabled(false);
           hideOverlay();
         }
-        hideOverlay();
       }
 
-      function cancelEditor() {
-        // Revert to original content of the last selected node
-        if (editorCtx) {
-          document.getElementById('editor-text').value = JSON.stringify(editorCtx.data || {}, null, 2);
-        }
-        setEditorDisabled(true);
+      function cancelGraphEditor() {
+        if (editorCtx) document.getElementById('editor-text').value = JSON.stringify(editorCtx.data || {}, null, 2);
+        setGraphEditorDisabled(true);
         editorCtx = null;
       }
 
-      function setEditorDisabled(disabled) {
+      function setGraphEditorDisabled(disabled) {
         document.getElementById('editor-save').disabled = disabled;
         document.getElementById('editor-cancel').disabled = disabled;
         const ta = document.getElementById('editor-text');
-        ta.disabled = disabled;
-        ta.readOnly = disabled;
+        ta.disabled = disabled; ta.readOnly = disabled;
         ta.style.background = disabled ? '#f9f9f9' : 'white';
       }
 
-      async function pollVersion() {
-        try {
-          const { data } = await axios.get('/api/version');
-          if (lastVersion && data.version !== lastVersion) {
-            await loadGraph();
-            await runValidate();
-          }
-          lastVersion = data.version;
-        } catch (e) {
-          // ignore
-        }
-      }
-
-      async function runValidate() {
-        const btn = document.getElementById('validate');
-        const out = document.getElementById('valid-output');
-        const status = document.getElementById('valid-status');
-        btn.disabled = true; status.textContent = 'Running tests...'; out.textContent = '';
-        try {
-          const { data } = await axios.get('/api/validate');
-          status.textContent = data.ok ? 'OK' : 'FAILED';
-          out.textContent = (data.stdout || '') + (data.stderr || '');
-        } catch (e) {
-          status.textContent = 'ERROR';
-          out.textContent = String(e);
-        } finally {
-          btn.disabled = false;
-        }
-      }
-
-      document.getElementById('validate').addEventListener('click', runValidate);
-      reloadBtn.addEventListener('click', async () => { await loadGraph(); await runValidate(); });
-      symptomSel.addEventListener('change', async () => { await loadGraph(); await runValidate(); });
+      // --- Graph event listeners ---
+      document.getElementById('reload').addEventListener('click', async () => { await loadGraph(); await runValidate(); });
+      symptomSel.addEventListener('change', async () => { await loadGraph(); });
+      modeSel.addEventListener('change', async () => { await loadGraph(); });
       document.getElementById('reset').addEventListener('click', () => { if (cy) { cy.fit(cy.elements(), 40); } });
-      document.getElementById('editor-save').addEventListener('click', saveEditor);
-      document.getElementById('editor-cancel').addEventListener('click', cancelEditor);
-      loadSymptoms().then(async () => { await loadGraph(); await runValidate(); });
-      window.addEventListener('resize', () => { if (cy) { cy.resize(); } });
-      pollTimer = setInterval(pollVersion, 2000);
+      document.getElementById('editor-save').addEventListener('click', saveGraphEditor);
+      document.getElementById('editor-cancel').addEventListener('click', cancelGraphEditor);
+
+      // ==================================================================
+      // Tab 2: ER Checklist
+      // ==================================================================
+      const erModeSel = document.getElementById('er-mode');
+      const erSymptomSel = document.getElementById('er-symptom');
+      let erChecklistData = null;  // latest /api/er_checklist response
+      let erSelectedQid = null;    // currently selected row qid
+      let erEditorCtx = null;      // {mode, symptom, qid, data}
+      let erSymptomCache = null;   // cached /api/er_symptoms response
+
+      /** Populate the ER symptom dropdown for the current sub-mode. */
+      async function updateErSymptomDropdown() {
+        const m = erModeSel.value;
+        if (m === 'er_symptom') {
+          // Critical symptoms mode has no per-symptom breakdown
+          erSymptomSel.disabled = true;
+          erSymptomSel.innerHTML = '<option value="">(not applicable)</option>';
+          return;
+        }
+        // Fetch symptom lists (cache after first call)
+        if (!erSymptomCache) {
+          try {
+            const { data } = await axios.get('/api/er_symptoms');
+            erSymptomCache = data;
+          } catch (e) {
+            console.error('Failed to fetch ER symptoms', e);
+            erSymptomCache = { adult: [], pediatric: [] };
+          }
+        }
+        const list = m === 'er_adult' ? erSymptomCache.adult : erSymptomCache.pediatric;
+        erSymptomSel.disabled = false;
+        erSymptomSel.innerHTML = '';
+        for (const s of list) {
+          const opt = document.createElement('option');
+          opt.value = s; opt.textContent = s;
+          erSymptomSel.appendChild(opt);
+        }
+      }
+
+      /** Load ER checklist data and render the table. */
+      async function loadErChecklist() {
+        const m = erModeSel.value;
+        const s = erSymptomSel.value;
+        // Adult/pediatric require a symptom
+        if (m !== 'er_symptom' && !s) return;
+
+        const params = { mode: m };
+        if (m !== 'er_symptom') params.symptom = s;
+
+        try {
+          const { data } = await axios.get('/api/er_checklist', { params });
+          erChecklistData = data;
+          renderErTable(data.items);
+          // Try to keep selection if the same qid still exists
+          if (erSelectedQid) {
+            const item = data.items.find(i => i.qid === erSelectedQid);
+            if (item) renderErDetails(item);
+          }
+        } catch (e) {
+          console.error('Failed to load ER checklist', e);
+          document.getElementById('er-tbody').innerHTML = '<tr><td colspan="5">Error loading checklist</td></tr>';
+        }
+      }
+
+      /** Render the ER checklist as table rows. */
+      function renderErTable(items) {
+        const tbody = document.getElementById('er-tbody');
+        if (!items || items.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">No items for this symptom.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = '';
+        items.forEach((item, idx) => {
+          const tr = document.createElement('tr');
+          if (item.has_override) tr.classList.add('override');
+          if (item.qid === erSelectedQid) tr.classList.add('selected');
+          tr.dataset.qid = item.qid;
+
+          // # column
+          const tdNum = document.createElement('td');
+          tdNum.textContent = idx + 1;
+          tr.appendChild(tdNum);
+
+          // QID column
+          const tdQid = document.createElement('td');
+          tdQid.style.fontFamily = 'ui-monospace, Menlo, monospace';
+          tdQid.style.fontSize = '11px';
+          tdQid.textContent = item.qid;
+          tr.appendChild(tdQid);
+
+          // Text column
+          const tdText = document.createElement('td');
+          tdText.textContent = item.text;
+          tr.appendChild(tdText);
+
+          // Severity column
+          const tdSev = document.createElement('td');
+          const sevSpan = document.createElement('span');
+          sevSpan.className = 'badge ' + sevBadgeClass(item.severity);
+          sevSpan.textContent = item.severity_label;
+          if (!item.has_override) {
+            // Default routing shown in gray italic
+            tdSev.classList.add('default-routing');
+            tdSev.textContent = item.severity_label;
+          } else {
+            tdSev.appendChild(sevSpan);
+          }
+          tr.appendChild(tdSev);
+
+          // Department column
+          const tdDept = document.createElement('td');
+          if (!item.has_override) {
+            tdDept.classList.add('default-routing');
+            tdDept.textContent = item.department_labels.join(', ');
+          } else {
+            tdDept.textContent = item.department_labels.join(', ');
+          }
+          tr.appendChild(tdDept);
+
+          tr.addEventListener('click', () => {
+            erSelectedQid = item.qid;
+            // Update row selection highlighting
+            tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+            tr.classList.add('selected');
+            renderErDetails(item);
+          });
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      /** Render ER details panel for a selected item. */
+      function renderErDetails(item) {
+        const el = document.getElementById('er-details-content');
+        const editor = document.getElementById('er-editor');
+
+        // Show editor pane in read-only mode
+        if (item?.raw) {
+          editor.style.display = 'block';
+          setErEditorDisabled(true);
+          document.getElementById('er-editor-text').value = JSON.stringify(item.raw, null, 2);
+        } else {
+          editor.style.display = 'none';
+        }
+        document.getElementById('er-editor-status').textContent = '';
+
+        let html = '';
+        html += `<div><b>QID</b>: <code>${escapeHtml(item.qid)}</code></div>`;
+        html += `<div style="margin: 4px 0;"><b>Text</b>: ${escapeHtml(item.text)}</div>`;
+        html += `<div><b>Severity</b>: <span class="badge ${sevBadgeClass(item.severity)}">${escapeHtml(item.severity_label)}</span>`;
+        html += ` <small>(${escapeHtml(item.severity)})</small></div>`;
+        html += `<div><b>Department</b>: ${escapeHtml(item.department_labels.join(', '))}`;
+        html += ` <small>(${escapeHtml(item.department.join(', '))})</small></div>`;
+
+        if (item.has_override) {
+          html += `<div style="margin-top:4px; color:#e65100;"><b>Override</b>: This item has custom severity/department routing.</div>`;
+        } else {
+          html += `<div style="margin-top:4px; color:#999;"><i>Default routing: Emergency</i></div>`;
+        }
+
+        html += `<div style="margin-top:8px;"><button id="er-edit-raw">Edit</button></div>`;
+        el.innerHTML = html;
+
+        document.getElementById('er-edit-raw').addEventListener('click', () => openErEditor(item));
+      }
+
+      // --- ER editor ---
+      function openErEditor(item) {
+        erEditorCtx = {
+          mode: erModeSel.value,
+          symptom: erSymptomSel.value || null,
+          qid: item.qid,
+          data: item.raw,
+        };
+        erSelectedQid = item.qid;
+        document.getElementById('er-editor-text').value = JSON.stringify(item.raw, null, 2);
+        document.getElementById('er-editor-status').textContent = '';
+        document.getElementById('er-editor').style.display = 'block';
+        setErEditorDisabled(false);
+      }
+
+      async function saveErEditor() {
+        if (!erEditorCtx) return;
+        const status = document.getElementById('er-editor-status');
+        status.textContent = '';
+        let obj;
+        try { obj = JSON.parse(document.getElementById('er-editor-text').value); }
+        catch (e) { status.textContent = 'Invalid JSON'; return; }
+        const payload = { mode: erEditorCtx.mode, symptom: erEditorCtx.symptom, qid: erEditorCtx.qid, data: obj };
+        setErEditorDisabled(true);
+        status.textContent = 'Saving and running tests...';
+        try {
+          showOverlay('Saving and running tests...');
+          const { data } = await axios.post('/api/update_er_question', payload);
+          if (!data.ok) {
+            alert('Save failed. Tests failed or validation error.\n' + ((data.stdout || '') + (data.stderr || '')));
+            status.textContent = 'Save failed';
+          } else {
+            status.textContent = 'Saved';
+            erSelectedQid = erEditorCtx.qid;
+            await loadErChecklist();
+            // Re-render details for the same item using the fresh data
+            if (erChecklistData) {
+              const updated = erChecklistData.items.find(i => i.qid === erEditorCtx.qid);
+              if (updated) renderErDetails(updated);
+            }
+            await runValidate();
+            document.getElementById('er-editor').style.display = 'none';
+            erEditorCtx = null;
+          }
+        } catch (e) {
+          let msg = '';
+          if (e.response && e.response.data) { try { msg = JSON.stringify(e.response.data, null, 2); } catch (_) { msg = String(e); } }
+          else { msg = String(e); }
+          alert('Save error:\n' + msg);
+          status.textContent = 'Error';
+        } finally {
+          setErEditorDisabled(false);
+          hideOverlay();
+        }
+      }
+
+      function cancelErEditor() {
+        if (erEditorCtx) document.getElementById('er-editor-text').value = JSON.stringify(erEditorCtx.data || {}, null, 2);
+        setErEditorDisabled(true);
+        erEditorCtx = null;
+      }
+
+      function setErEditorDisabled(disabled) {
+        document.getElementById('er-editor-save').disabled = disabled;
+        document.getElementById('er-editor-cancel').disabled = disabled;
+        const ta = document.getElementById('er-editor-text');
+        ta.disabled = disabled; ta.readOnly = disabled;
+        ta.style.background = disabled ? '#f9f9f9' : 'white';
+      }
+
+      // --- ER event listeners ---
+      erModeSel.addEventListener('change', async () => {
+        await updateErSymptomDropdown();
+        await loadErChecklist();
+      });
+      erSymptomSel.addEventListener('change', async () => { await loadErChecklist(); });
+      document.getElementById('er-load').addEventListener('click', async () => { await loadErChecklist(); await runValidate(); });
+      document.getElementById('er-editor-save').addEventListener('click', saveErEditor);
+      document.getElementById('er-editor-cancel').addEventListener('click', cancelErEditor);
+
+      // ==================================================================
+      // Initialization
+      // ==================================================================
+      (async () => {
+        // Load graph tab data
+        await loadSymptoms();
+        await loadGraph();
+        // Pre-populate ER symptom dropdown
+        await updateErSymptomDropdown();
+        // Load ER checklist for the default mode (er_symptom, no symptom needed)
+        await loadErChecklist();
+        // Run validation once
+        await runValidate();
+      })();
+      window.addEventListener('resize', () => { if (cy) cy.resize(); });
     </script>
   </body>
-  </html>
-
-
+</html>

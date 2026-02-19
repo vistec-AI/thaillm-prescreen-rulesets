@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Dict, Any, List, Literal, Optional
 import hashlib
 import subprocess
-import sys
 import shlex
 import logging
 import os
@@ -13,11 +12,14 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
 import yaml
-import traceback
 from fastapi.exceptions import RequestValidationError
 
-from .loader import load_rules_local, load_constants_local, find_repo_root
-from .graph import build_oldcarts_graph, build_opd_graph, build_combined_graph
+from .loader import load_rules_local, load_er_rules_local, load_constants_local, find_repo_root
+from .graph import (
+    build_oldcarts_graph,
+    build_opd_graph,
+    build_combined_graph,
+)
 
 
 # ----------------------------------------------------------------------
@@ -33,6 +35,13 @@ class UpdateQuestionRequest(BaseModel):
     @staticmethod
     def example() -> Dict[str, Any]:  # pragma: no cover - helper for error messages
         return {"source": "oldcarts", "symptom": "Headache", "qid": "hea_d_001", "data": {"qid": "hea_d_001"}}
+
+
+class UpdateErQuestionRequest(BaseModel):
+    mode: str                              # er_symptom | er_adult | er_pediatric
+    symptom: Optional[str] = None          # required for adult/pediatric
+    qid: str
+    data: Dict[str, Any]
 
 
 def create_app() -> FastAPI:
@@ -111,11 +120,20 @@ def create_app() -> FastAPI:
         available = [s for s in symptoms if s in available]
         return {"symptoms": available}
 
+    @app.get("/api/er_symptoms")
+    def list_er_symptoms() -> Dict[str, Any]:
+        """Return symptom lists available in ER adult and pediatric checklists."""
+        er = load_er_rules_local()
+        return {
+            "adult": sorted(er["er_adult"].keys()),
+            "pediatric": sorted(er["er_pediatric"].keys()),
+        }
+
     @app.get("/api/version")
     def version() -> Dict[str, Any]:
         root = find_repo_root()
         paths: List[Path] = []
-        for rel in ["v1/rules", "v1/const"]:
+        for rel in ["v1/rules", "v1/rules/er", "v1/const"]:
             d = root / rel
             if d.exists():
                 paths.extend([p for p in d.glob("*.yaml") if p.is_file()])
@@ -132,7 +150,7 @@ def create_app() -> FastAPI:
     def _run_pytest() -> Dict[str, Any]:
         """Run pytest and return result dict."""
         root = find_repo_root()
-        cmd = "pytest -q tests/test_const_yaml.py tests/test_oldcarts.py tests/test_opd.py"
+        cmd = "pytest -q tests/test_const_yaml.py tests/test_oldcarts.py tests/test_opd.py tests/test_er.py"
         try:
             proc = subprocess.run(
                 shlex.split(cmd),
@@ -253,6 +271,7 @@ def create_app() -> FastAPI:
         
 
     def _compute_graph(symptom: str, mode: str) -> Dict[str, Any]:
+        """Build a Cytoscape graph for OLDCARTS / OPD modes only."""
         rules = load_rules_local()
         oldcarts = rules["oldcarts"].get(symptom)
         opd = rules["opd"].get(symptom)
@@ -274,6 +293,207 @@ def create_app() -> FastAPI:
     @app.get("/api/graph")
     def get_graph_q(symptom: str = Query(...), mode: str = "combined") -> Dict[str, Any]:
         return _compute_graph(symptom, mode)
+
+    # ------------------------------------------------------------------
+    # ER Checklist API — flat table data instead of graph
+    # ------------------------------------------------------------------
+
+    @app.get("/api/er_checklist")
+    def get_er_checklist(mode: str = Query(...), symptom: str = Query("")) -> Dict[str, Any]:
+        """Return a flat list of ER checklist items for the table view.
+
+        Modes:
+        - ``er_symptom``:    critical symptom screen (no symptom needed)
+        - ``er_adult``:      adult checklist for a specific symptom
+        - ``er_pediatric``:  pediatric checklist for a specific symptom
+
+        Each item includes pre-resolved severity/department labels so the
+        frontend can display human-readable text without extra lookups.
+        """
+        er = load_er_rules_local()
+        consts = load_constants_local()
+
+        # Build lookup dicts for severity and department labels
+        sev_map = {s["id"]: s["name"] for s in consts["severity_levels"]}
+        dept_map = {d["id"]: d["name"] for d in consts["departments"]}
+
+        # Default routing for ER: Emergency severity + Emergency Medicine dept
+        default_sev_id = "sev003"
+        default_sev_label = sev_map.get(default_sev_id, "Emergency")
+        default_dept_ids = ["dept002"]
+        default_dept_labels = [dept_map.get("dept002", "Emergency Medicine")]
+
+        if mode == "er_symptom":
+            # Phase 1: flat list of critical yes/no questions — all route to Emergency
+            raw_items = er["er_symptom"]
+            items = []
+            for q in raw_items:
+                items.append({
+                    "qid": q["qid"],
+                    "text": q["text"],
+                    "has_override": False,
+                    "severity": default_sev_id,
+                    "severity_label": default_sev_label,
+                    "department": default_dept_ids,
+                    "department_labels": default_dept_labels,
+                    "raw": q,
+                    "source": "er_symptom",
+                })
+            return {"items": items, "mode": mode, "symptom": None}
+
+        # Adult / Pediatric checklist modes require a symptom
+        if not symptom:
+            raise HTTPException(status_code=400, detail=f"symptom is required for {mode} mode")
+
+        if mode == "er_adult":
+            checklist = er["er_adult"].get(symptom)
+            if checklist is None:
+                raise HTTPException(status_code=404, detail=f"Unknown ER adult symptom: {symptom}")
+            # Adult uses "min_severity" key for severity overrides
+            sev_key = "min_severity"
+            source = "er_adult"
+        elif mode == "er_pediatric":
+            checklist = er["er_pediatric"].get(symptom)
+            if checklist is None:
+                raise HTTPException(status_code=404, detail=f"Unknown ER pediatric symptom: {symptom}")
+            # Pediatric uses "severity" key for severity overrides
+            sev_key = "severity"
+            source = "er_pediatric"
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown ER checklist mode: {mode}")
+
+        items = []
+        for q in checklist:
+            has_override = sev_key in q or "department" in q
+
+            # Resolve severity: use override if present, else default (Emergency)
+            if sev_key in q:
+                sev_id = q[sev_key].get("id", default_sev_id)
+            else:
+                sev_id = default_sev_id
+            sev_label = sev_map.get(sev_id, sev_id)
+
+            # Resolve department: use override if present, else default (ER)
+            if "department" in q:
+                d_ids = [d["id"] for d in q["department"]]
+            else:
+                d_ids = list(default_dept_ids)
+            d_labels = [dept_map.get(did, did) for did in d_ids]
+
+            items.append({
+                "qid": q["qid"],
+                "text": q["text"],
+                "has_override": has_override,
+                "severity": sev_id,
+                "severity_label": sev_label,
+                "department": d_ids,
+                "department_labels": d_labels,
+                "raw": q,
+                "source": source,
+            })
+        return {"items": items, "mode": mode, "symptom": symptom}
+
+    # ------------------------------------------------------------------
+    # ER Question Update — parallel to /api/update_question for OLDCARTS/OPD
+    # ------------------------------------------------------------------
+
+    @app.post("/api/update_er_question")
+    def update_er_question(req: UpdateErQuestionRequest) -> Dict[str, Any]:
+        """Update a single ER question in the YAML, validate with pytest, and rollback on failure.
+
+        Works like /api/update_question but targets the ER YAML files:
+        - er_symptom  → v1/rules/er/er_symptom.yaml  (flat list)
+        - er_adult    → v1/rules/er/er_adult_checklist.yaml  (symptom-keyed dict)
+        - er_pediatric → v1/rules/er/er_pediatric_checklist.yaml  (symptom-keyed dict)
+        """
+        root = find_repo_root()
+        logger.info("update_er_question: mode=%s symptom=%s qid=%s", req.mode, req.symptom, req.qid)
+
+        # Enforce qid immutability
+        if isinstance(req.data, dict) and req.data.get("qid") not in (None, req.qid):
+            logger.warning("Attempt to change qid from %s to %s", req.qid, req.data.get("qid"))
+            return {"ok": False, "error": "Changing qid is not allowed from the editor.", "field": "qid"}
+
+        if not isinstance(req.data, dict):
+            logger.warning("data is not an object: got %s", type(req.data).__name__)
+            return {"ok": False, "error": "data must be a JSON object", "received_type": type(req.data).__name__}
+
+        # Determine which YAML file and how to locate the question
+        er_dir = root / "v1" / "rules" / "er"
+        if req.mode == "er_symptom":
+            path = er_dir / "er_symptom.yaml"
+        elif req.mode == "er_adult":
+            if not req.symptom:
+                raise HTTPException(status_code=400, detail="symptom is required for er_adult mode")
+            path = er_dir / "er_adult_checklist.yaml"
+        elif req.mode == "er_pediatric":
+            if not req.symptom:
+                raise HTTPException(status_code=400, detail="symptom is required for er_pediatric mode")
+            path = er_dir / "er_pediatric_checklist.yaml"
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown ER mode: {req.mode}")
+
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing ER rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+
+        # Locate the question list depending on mode
+        if req.mode == "er_symptom":
+            # er_symptom.yaml is a flat list at the top level
+            entries = doc if isinstance(doc, list) else []
+        else:
+            # Adult/pediatric are symptom-keyed dicts
+            if not isinstance(doc, dict) or req.symptom not in doc:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Symptom '{req.symptom}' not found in {path.name}",
+                )
+            entries = doc[req.symptom] or []
+
+        # Find the question by qid
+        idx = None
+        for i, q in enumerate(entries):
+            if isinstance(q, dict) and q.get("qid") == req.qid:
+                idx = i
+                break
+        if idx is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"QID '{req.qid}' not found in {req.mode}"
+                       + (f" under symptom '{req.symptom}'" if req.symptom else ""),
+            )
+
+        # Apply the update (preserving qid)
+        new_q = dict(req.data)
+        new_q["qid"] = req.qid
+        entries[idx] = new_q
+
+        # For flat-list mode, write the list directly; for dict mode, update the key
+        if req.mode == "er_symptom":
+            doc = entries
+        else:
+            doc[req.symptom] = entries
+
+        # Write tentative update
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        logger.debug("Wrote tentative ER update to %s (mode=%s qid=%s)", path, req.mode, req.qid)
+
+        # Validate with pytest
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back ER update in %s for qid=%s", path, req.qid)
+            return result
+
+        logger.info("ER update succeeded in %s for qid=%s", path, req.qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": f"Saved to {path.name} and tests passed"}
 
     return app
 
