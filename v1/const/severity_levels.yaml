@@ -1,9 +1,20 @@
+# green
 - name: Observe at Home
   name_th: เฝ้าสังเกตอาการที่บ้าน
   description: Symptoms are mild and carry very low risk. The patient can stay home, use self-care, and simply monitor the situation.
+  id: sev001
+# yellow
 - name: Visit Hospital / Clinic
-  name_th: เข้าพบโรงพยาบาลหรือคลินิก
+  name_th: เข้าพบโรงพยาบาลหรือคลินิกเมื่อสะดวกเพื่อตรวจสอบอาการเพิ่ม
   description: Symptoms require medical evaluation (out-patient clinic, urgent-care centre, or possible admission) but are not life-threatening at this moment. This level excludes conditions needing immediate emergency-room care.
+  id: sev002
+# orange
+- name: Visit Hospital / Clinic Urgently
+  name_th: แนะนำให้เข้าพบโรงพยาบาลหรือคลินิกภายในระยะเวลา 24 ชั่วโมงเพื่อตรวจสอบอาการเพิ่มเติม
+  description: Symptoms require medical evaluation (out-patient clinic, urgent-care centre, or possible admission) but are not life-threatening at this moment. This level excludes conditions needing immediate emergency-room care.
+  id: sev002_5
+# red
 - name: Emergency
   name_th: ฉุกเฉิน
   description: Life-threatening or time-critical condition. The patient must proceed to the Emergency Room without delay (e.g. severe chest pain, sudden focal weakness, severe bleeding, altered consciousness).
+  id: sev003
