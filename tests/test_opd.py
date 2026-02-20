@@ -3,6 +3,7 @@ from typing import List, Optional, Set
 from pydantic import ValidationError
 
 from helpers.loader import load_rules, load_constants
+from helpers.utils import find_repo_root, load_yaml
 from helpers.data_model.question import question_mapper, Question
 from helpers.data_model.question import (
     AgeFilterQuestion,
@@ -19,7 +20,12 @@ from helpers.data_model.question import (
 
 
 constant = load_constants()
-_departments = [d["name"] for d in constant["departments"]] + ["Self-care / Observation"]
+# Load severity levels from local files (HF-hosted version may lack 'id' fields)
+_const_dir = find_repo_root() / "v1" / "const"
+_local_severity_levels = load_yaml(_const_dir / "severity_levels.yaml")
+# Validate terminate metadata against known department IDs and severity IDs
+_department_ids = {d["id"] for d in constant["departments"]}
+_severity_ids = {s["id"] for s in _local_severity_levels}
 _allowed_ops = {
     "eq",
     "ne",
@@ -253,7 +259,9 @@ def test_opd_schema_and_parsing():
                 for opt in question.options:
                     if opt.action.action == "terminate":
                         for dept in opt.action.department:
-                            assert dept in _departments, f"Unknown department {dept} in {question.qid}"
+                            assert dept in _department_ids, f"Unknown department {dept} in {question.qid}"
+                        for sev in opt.action.severity:
+                            assert sev in _severity_ids, f"Unknown severity {sev} in {question.qid}"
                     elif opt.action.action == "goto":
                         assert len(opt.action.qid) > 0, f"Empty goto in {question.qid}"
                     else:
@@ -261,7 +269,10 @@ def test_opd_schema_and_parsing():
             elif isinstance(question, NumberRangeQuestion):
                 assert question.min_value < question.max_value, f"Invalid range in {question.qid}"
                 if question.on_submit.action == "terminate":
-                    assert question.on_submit.department in _departments, f"Unknown department {question.on_submit.department} in {question.qid}"
+                    for dept in question.on_submit.department:
+                        assert dept in _department_ids, f"Unknown department {dept} in {question.qid}"
+                    for sev in question.on_submit.severity:
+                        assert sev in _severity_ids, f"Unknown severity {sev} in {question.qid}"
                 elif question.on_submit.action == "goto":
                     assert len(question.on_submit.qid) > 0, f"Empty goto in {question.qid}"
                 else:
@@ -281,7 +292,9 @@ def test_opd_schema_and_parsing():
                     # then action
                     if rule.then.action == "terminate":
                         for dept in rule.then.department:
-                            assert dept in _departments, f"Unknown department {dept} in {question.qid}"
+                            assert dept in _department_ids, f"Unknown department {dept} in {question.qid}"
+                        for sev in rule.then.severity:
+                            assert sev in _severity_ids, f"Unknown severity {sev} in {question.qid}"
                     elif rule.then.action == "goto":
                         assert len(rule.then.qid) > 0, f"Empty goto in rule of {question.qid}"
                     else:
@@ -290,7 +303,9 @@ def test_opd_schema_and_parsing():
                 if question.default is not None:
                     if question.default.action == "terminate":
                         for dept in question.default.department:
-                            assert dept in _departments, f"Unknown department {dept} in {question.qid}"
+                            assert dept in _department_ids, f"Unknown department {dept} in {question.qid}"
+                        for sev in question.default.severity:
+                            assert sev in _severity_ids, f"Unknown severity {sev} in {question.qid}"
                     elif question.default.action == "goto":
                         assert len(question.default.qid) > 0, f"Empty default goto in {question.qid}"
                     else:

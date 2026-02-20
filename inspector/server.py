@@ -273,16 +273,22 @@ def create_app() -> FastAPI:
     def _compute_graph(symptom: str, mode: str) -> Dict[str, Any]:
         """Build a Cytoscape graph for OLDCARTS / OPD modes only."""
         rules = load_rules_local()
+        consts = load_constants_local()
         oldcarts = rules["oldcarts"].get(symptom)
         opd = rules["opd"].get(symptom)
         if oldcarts is None and opd is None:
             raise HTTPException(status_code=404, detail=f"Unknown symptom {symptom}")
+
+        # Lookup maps so terminate nodes show human-readable names
+        dept_map = {d["id"]: d["name"] for d in consts["departments"]}
+        sev_map = {s["id"]: s["name"] for s in consts["severity_levels"]}
+
         if mode == "oldcarts":
-            return build_oldcarts_graph(symptom, oldcarts or [])
+            return build_oldcarts_graph(symptom, oldcarts or [], dept_map, sev_map)
         elif mode == "opd":
-            return build_opd_graph(symptom, opd or [])
+            return build_opd_graph(symptom, opd or [], dept_map, sev_map)
         else:
-            return build_combined_graph(symptom, oldcarts or [], opd or [])
+            return build_combined_graph(symptom, oldcarts or [], opd or [], dept_map, sev_map)
 
     # Backward-compatible path form, now capturing slashes too
     @app.get("/api/graph/{symptom:path}")
