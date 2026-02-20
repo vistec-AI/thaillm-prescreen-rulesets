@@ -1,8 +1,50 @@
 from __future__ import annotations
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 
-def build_oldcarts_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _extract_terminate_label(
+    act: Dict[str, Any],
+    dept_map: Optional[Dict[str, str]] = None,
+    sev_map: Optional[Dict[str, str]] = None,
+) -> Tuple[str, str]:
+    """Extract a human-readable label and unique suffix from a terminate action's metadata.
+
+    Department entries are {id: "dept002"} dicts.  Severity entries (optional)
+    are {id: "sev001"} dicts.  When department list is empty, the action
+    represents self-care / observation.
+
+    If dept_map / sev_map are provided, IDs are resolved to "Name (id)" for
+    the display label while the suffix always uses raw IDs (stable node keys).
+    """
+    meta = act.get("metadata", {})
+    dept_ids = [d["id"] if isinstance(d, dict) else d for d in meta.get("department", [])]
+    sev_ids = [s["id"] if isinstance(s, dict) else s for s in meta.get("severity", [])]
+
+    # Resolve IDs to readable names for the label shown in the graph
+    if dept_map:
+        dept_labels = [f"{dept_map.get(d, d)} ({d})" for d in dept_ids]
+    else:
+        dept_labels = list(dept_ids)
+    if sev_map:
+        sev_labels = [f"{sev_map.get(s, s)} ({s})" for s in sev_ids]
+    else:
+        sev_labels = list(sev_ids)
+
+    label_parts = dept_labels + sev_labels
+    label = ", ".join(label_parts) if label_parts else "Self-care / Observation"
+
+    # Suffix uses raw IDs so node keys stay stable regardless of name changes
+    suffix_parts = dept_ids + sev_ids
+    suffix = "_".join(suffix_parts) if suffix_parts else "self_care"
+    return label, suffix
+
+
+def build_oldcarts_graph(
+    symptom: str,
+    q_list: List[Dict[str, Any]],
+    dept_map: Optional[Dict[str, str]] = None,
+    sev_map: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
     nodes = []
     edges = []
     qid_set = {q.get("qid") for q in q_list if isinstance(q, dict)}
@@ -47,6 +89,11 @@ def build_oldcarts_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str
                     edges.append({"data": {"source": qid, "target": tgt, "label": "goto"}})
             elif act.get("action") == "opd":
                 edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": "opd"}})
+            elif act.get("action") == "terminate":
+                label, suffix = _extract_terminate_label(act, dept_map, sev_map)
+                term_id = f"{qid}_TERM_{suffix}"
+                edges.append({"data": {"source": qid, "target": term_id, "label": label}})
+                nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
         elif qtype in ["multi_select", "image_multi_select"]:
             act = q_dict.get("next", {})
             if act.get("action") == "goto":
@@ -54,6 +101,11 @@ def build_oldcarts_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str
                     edges.append({"data": {"source": qid, "target": tgt, "label": "goto"}})
             elif act.get("action") == "opd":
                 edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": "opd"}})
+            elif act.get("action") == "terminate":
+                label, suffix = _extract_terminate_label(act, dept_map, sev_map)
+                term_id = f"{qid}_TERM_{suffix}"
+                edges.append({"data": {"source": qid, "target": term_id, "label": label}})
+                nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
         elif qtype in ["single_select", "image_single_select", "gender_filter", "age_filter"]:
             for opt in q_dict.get("options", []):
                 act = opt.get("action", {})
@@ -62,6 +114,11 @@ def build_oldcarts_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str
                         edges.append({"data": {"source": qid, "target": tgt, "label": opt.get("label", opt.get("id", ""))}})
                 elif act.get("action") == "opd":
                     edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": opt.get("label", opt.get("id", ""))}})
+                elif act.get("action") == "terminate":
+                    label, suffix = _extract_terminate_label(act, dept_map, sev_map)
+                    term_id = f"{qid}_TERM_{suffix}"
+                    edges.append({"data": {"source": qid, "target": term_id, "label": opt.get("label", opt.get("id", ""))}})
+                    nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
         elif qtype == "conditional":
             for rule in q_dict.get("rules", []):
                 act = rule.get("then", {})
@@ -72,6 +129,11 @@ def build_oldcarts_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str
                         edges.append({"data": {"source": qid, "target": tgt, "label": cond or "goto"}})
                 elif act.get("action") == "opd":
                     edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": cond or "opd"}})
+                elif act.get("action") == "terminate":
+                    label, suffix = _extract_terminate_label(act, dept_map, sev_map)
+                    term_id = f"{qid}_TERM_{suffix}"
+                    edges.append({"data": {"source": qid, "target": term_id, "label": cond or label}})
+                    nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
                 # Predicate reference edges (to visualize dependency and keep graph connected)
                 for w in rule.get("when", []) or []:
                     src = w.get("qid")
@@ -84,13 +146,23 @@ def build_oldcarts_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str
                         edges.append({"data": {"source": qid, "target": tgt, "label": "default"}})
                 elif act.get("action") == "opd":
                     edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": "default"}})
+                elif act.get("action") == "terminate":
+                    label, suffix = _extract_terminate_label(act, dept_map, sev_map)
+                    term_id = f"{qid}_TERM_{suffix}"
+                    edges.append({"data": {"source": qid, "target": term_id, "label": "default"}})
+                    nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
 
     # add virtual OPD node
     nodes.append({"data": {"id": f"{symptom}_OPD", "label": "OPD", "type": "opd"}})
     return {"nodes": nodes, "edges": edges}
 
 
-def build_opd_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+def build_opd_graph(
+    symptom: str,
+    q_list: List[Dict[str, Any]],
+    dept_map: Optional[Dict[str, str]] = None,
+    sev_map: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
     nodes = []
     edges = []
 
@@ -128,22 +200,20 @@ def build_opd_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str, Any
                     for tgt in act.get("qid", []):
                         edges.append({"data": {"source": qid, "target": tgt, "label": opt.get("label", opt.get("id", ""))}})
                 elif act.get("action") == "terminate":
-                    depts = act.get("metadata", {}).get("department", [])
-                    depts_list = depts if isinstance(depts, list) else ([depts] if depts else [])
-                    for dept in depts_list:
-                        edges.append({"data": {"source": qid, "target": f"{qid}_TERM_{dept}", "label": dept}})
-                        nodes.append({"data": {"id": f"{qid}_TERM_{dept}", "label": dept, "type": "terminate"}})
+                    label, suffix = _extract_terminate_label(act, dept_map, sev_map)
+                    term_id = f"{qid}_TERM_{suffix}"
+                    edges.append({"data": {"source": qid, "target": term_id, "label": opt.get("label", opt.get("id", ""))}})
+                    nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
         elif qt in ["number_range"]:
             act = q.get("on_submit", {})
             if act.get("action") == "goto":
                 for tgt in act.get("qid", []):
                     edges.append({"data": {"source": qid, "target": tgt, "label": "goto"}})
             elif act.get("action") == "terminate":
-                depts = act.get("metadata", {}).get("department", [])
-                depts_list = depts if isinstance(depts, list) else ([depts] if depts else [])
-                for dept in depts_list:
-                    edges.append({"data": {"source": qid, "target": f"{qid}_TERM_{dept}", "label": dept}})
-                    nodes.append({"data": {"id": f"{qid}_TERM_{dept}", "label": dept, "type": "terminate"}})
+                label, suffix = _extract_terminate_label(act, dept_map, sev_map)
+                term_id = f"{qid}_TERM_{suffix}"
+                edges.append({"data": {"source": qid, "target": term_id, "label": label}})
+                nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
         elif qt == "conditional":
             for rule in q.get("rules", []):
                 act = rule.get("then", {})
@@ -152,31 +222,33 @@ def build_opd_graph(symptom: str, q_list: List[Dict[str, Any]]) -> Dict[str, Any
                     for tgt in act.get("qid", []):
                         edges.append({"data": {"source": qid, "target": tgt, "label": cond or "goto"}})
                 elif act.get("action") == "terminate":
-                    depts = act.get("metadata", {}).get("department", [])
-                    depts_list = depts if isinstance(depts, list) else ([depts] if depts else [])
-                    for dept in depts_list:
-                        term_id = f"{qid}_TERM_{dept}"
-                        edges.append({"data": {"source": qid, "target": term_id, "label": cond or dept}})
-                        nodes.append({"data": {"id": term_id, "label": dept, "type": "terminate"}})
+                    label, suffix = _extract_terminate_label(act, dept_map, sev_map)
+                    term_id = f"{qid}_TERM_{suffix}"
+                    edges.append({"data": {"source": qid, "target": term_id, "label": cond or label}})
+                    nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
             if q.get("default"):
                 act = q["default"]
                 if act.get("action") == "goto":
                     for tgt in act.get("qid", []):
                         edges.append({"data": {"source": qid, "target": tgt, "label": "default"}})
                 elif act.get("action") == "terminate":
-                    depts = act.get("metadata", {}).get("department", [])
-                    depts_list = depts if isinstance(depts, list) else ([depts] if depts else [])
-                    for dept in depts_list:
-                        term_id = f"{qid}_TERM_{dept}"
-                        edges.append({"data": {"source": qid, "target": term_id, "label": "default"}})
-                        nodes.append({"data": {"id": term_id, "label": dept, "type": "terminate"}})
+                    label, suffix = _extract_terminate_label(act, dept_map, sev_map)
+                    term_id = f"{qid}_TERM_{suffix}"
+                    edges.append({"data": {"source": qid, "target": term_id, "label": "default"}})
+                    nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
 
     return {"nodes": nodes, "edges": edges}
 
 
-def build_combined_graph(symptom: str, oldcarts: List[Dict[str, Any]], opd: List[Dict[str, Any]]) -> Dict[str, Any]:
-    old_graph = build_oldcarts_graph(symptom, oldcarts)
-    opd_graph = build_opd_graph(symptom, opd)
+def build_combined_graph(
+    symptom: str,
+    oldcarts: List[Dict[str, Any]],
+    opd: List[Dict[str, Any]],
+    dept_map: Optional[Dict[str, str]] = None,
+    sev_map: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    old_graph = build_oldcarts_graph(symptom, oldcarts, dept_map, sev_map)
+    opd_graph = build_opd_graph(symptom, opd, dept_map, sev_map)
 
     # Merge nodes/edges and connect virtual OPD node to OPD entry nodes (heuristic: first OPD qid)
     nodes = old_graph["nodes"] + opd_graph["nodes"]
@@ -187,5 +259,3 @@ def build_combined_graph(symptom: str, oldcarts: List[Dict[str, Any]], opd: List
         edges.append({"data": {"source": f"{symptom}_OPD", "target": entry_qid, "label": "-> OPD"}})
 
     return {"nodes": nodes, "edges": edges}
-
-
