@@ -48,3 +48,8 @@ prescreen_rulesets = "src/prescreen_rulesets"
 
 [tool.setuptools.package-data]
 inspector = ["static/*", "static/**/*"]
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.3.0",
+]
