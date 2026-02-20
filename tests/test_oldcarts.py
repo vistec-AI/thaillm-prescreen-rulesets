@@ -1,6 +1,7 @@
 from typing import List, Optional, Set
 
 from helpers.loader import load_rules, load_constants
+from helpers.utils import find_repo_root, load_yaml
 from helpers.data_model.question import question_mapper, Question
 from helpers.data_model.question import (
     FreeTextQuestion,
@@ -12,11 +13,16 @@ from helpers.data_model.question import (
     ImageMultiSelectQuestion,
     ConditionalQuestion,
 )
-from helpers.utils import find_repo_root
 from pathlib import Path
 
 
 constant = load_constants()
+# Load severity levels from local files (HF-hosted version may lack 'id' fields)
+_const_dir = find_repo_root() / "v1" / "const"
+_local_severity_levels = load_yaml(_const_dir / "severity_levels.yaml")
+# Reference sets for validating terminate metadata
+_department_ids = {d["id"] for d in constant["departments"]}
+_severity_ids = {s["id"] for s in _local_severity_levels}
 
 
 def _get_question_from_tree(qid: str, q_list: List[dict]) -> Optional[Question]:
@@ -163,9 +169,6 @@ def test_oldcarts_schema():
             if parsed_question.question_type in ["free_text", "free_text_with_fields", "number_range", "multi_select"]:
                 action = parsed_question.on_submit if parsed_question.question_type != "multi_select" else parsed_question.next
 
-                # oldcarts must have no terminate action
-                assert action.action != "terminate", "oldcarts question can't have terminate"
-
                 # update has_opd state
                 # also check if there's only one opd action exists
                 if action.action == "opd":
@@ -177,12 +180,17 @@ def test_oldcarts_schema():
                     for goto_q in action.qid:
                         assert len(goto_q.split("_")) == 3, \
                             f"goto action from {parsed_question.qid}, qid {goto_q} does not follow `<symptom_id>_<oldcarts_id>_<qid>` format"
+
+                # early termination: validate department/severity IDs
+                elif action.action == "terminate":
+                    for dept in action.department:
+                        assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid}"
+                    for sev in action.severity:
+                        assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid}"
+
             elif parsed_question.question_type in ["single_select", "image_single_select", "gender_filter", "age_filter"]:
                 for opt in parsed_question.options:
                     action = opt.action
-
-                    # oldcarts must have no terminate action
-                    assert action.action != "terminate", "oldcarts question can't have terminate"
 
                     # update has_opd state, don't check because single select is any
                     if action.action == "opd":
@@ -194,22 +202,32 @@ def test_oldcarts_schema():
                         for goto_q in action.qid:
                             assert len(goto_q.split("_")) == 3, \
                                 f"goto action from {parsed_question.qid}, qid {goto_q} does not follow `<symptom_id>_<oldcarts_id>_<qid>` format"
+
+                    # early termination: validate department/severity IDs
+                    elif action.action == "terminate":
+                        for dept in action.department:
+                            assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid}"
+                        for sev in action.severity:
+                            assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid}"
+
             elif isinstance(parsed_question, ConditionalQuestion):
                 # check if default action is needed based on rule coverage
                 needs_default = _conditional_needs_default(parsed_question, rules["oldcarts"][symptom])
                 if needs_default:
                     assert parsed_question.default is not None, f"Conditional {parsed_question.qid} has no default action (rules don't cover all cases)"
-                
-                # if default exists, oldcarts must have no terminate action
+
+                # validate default action
                 if parsed_question.default is not None:
-                    assert parsed_question.default.action != "terminate", "oldcarts question can't have terminate"
-                    # update has_opd state from default
                     if parsed_question.default.action == "opd":
                         has_opd = True
-                
+                    elif parsed_question.default.action == "terminate":
+                        for dept in parsed_question.default.department:
+                            assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid} default"
+                        for sev in parsed_question.default.severity:
+                            assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid} default"
+
                 # validate rules
                 for rule in parsed_question.rules:
-                    assert rule.then.action != "terminate", "oldcarts question can't have terminate"
                     if rule.then.action == "opd":
                         has_opd = True
                     elif rule.then.action == "goto":
@@ -217,6 +235,11 @@ def test_oldcarts_schema():
                         for goto_q in rule.then.qid:
                             assert len(goto_q.split("_")) == 3, \
                                 f"goto action from {parsed_question.qid}, qid {goto_q} does not follow `<symptom_id>_<oldcarts_id>_<qid>` format"
+                    elif rule.then.action == "terminate":
+                        for dept in rule.then.department:
+                            assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid}"
+                        for sev in rule.then.severity:
+                            assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid}"
 
         # oldcards must have at least 1 opd
         assert has_opd, f"Symptom {symptom} must have at least one OPD action"
@@ -246,10 +269,10 @@ def recursive_traverse(
 
     if question.question_type  in ["free_text", "free_text_with_fields", "number_range", "multi_select",  "image_multi_select"]:
         action = question.on_submit if question.question_type not in ["multi_select", "image_multi_select"] else question.next
-        # base case
-        if action.action == "opd":
+        # base case: opd handoff or early termination both end traversal
+        if action.action in ("opd", "terminate"):
             return qid_pools
-        
+
         # recursive
         next_qid = action.qid[0] # get default value as first element
         qid_pools.add(next_qid)
@@ -264,8 +287,8 @@ def recursive_traverse(
         for opt in question.options:
             action = opt.action
 
-            # base
-            if action.action != "opd":
+            # base: opd and terminate are leaf actions, only follow goto
+            if action.action == "goto":
                 next_qid = action.qid[0]
                 possible_paths.add(next_qid)
 
@@ -284,7 +307,7 @@ def recursive_traverse(
         return qid_pools
     elif question.question_type == "conditional":
         possible_paths = set()
-        # collect all goto targets from rules
+        # collect all goto targets from rules (opd and terminate are leaf actions)
         for rule in question.rules:
             action = rule.then
             if action.action == "goto":
