@@ -58,6 +58,14 @@ from prescreen_rulesets.models.session import (
     TerminationStep,
 )
 
+# --- Pipeline (post-rule-based stages) ---
+from prescreen_rulesets.models.pipeline import (
+    DiagnosisResult,
+    GeneratedQuestions,
+    PredictionResult,
+    QAPair,
+)
+
 __all__ = [
     # Actions
     "Action",
@@ -101,4 +109,9 @@ __all__ = [
     "SessionInfo",
     "StepResult",
     "TerminationStep",
+    # Pipeline
+    "DiagnosisResult",
+    "GeneratedQuestions",
+    "PredictionResult",
+    "QAPair",
 ]
