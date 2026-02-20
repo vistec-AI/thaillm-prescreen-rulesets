@@ -1,141 +1,27 @@
-from __future__ import annotations
-from typing import Any, List, Optional, Union, Annotated, Literal
-from pydantic import BaseModel, Field, model_validator
+"""Re-export question models from the SDK.
 
-from helpers.data_model.question.action import Action
+Canonical definitions now live in ``prescreen_rulesets.models.question``.
+This file re-exports them so existing test imports continue working.
+"""
 
-# base question typing
-class BaseQuestion(BaseModel):
-    qid: str
-    question: str
-
-    @property
-    def is_oldcarts(self) -> bool:
-        return "_opd_" not in self.qid
-    
-    @property
-    def oldcarts_state(self) -> Optional[Literal["o", "l", "d", "c", "a", "r", "t", "s", "as"]]:
-        if not self.is_oldcarts:
-            return None
-        return self.qid.split("_")[1]
-
-class Option(BaseModel):
-    id: str
-    label: str
-
-
-class ActionOption(Option):
-    action: Action
-
-
-class TextField(BaseModel):
-    id: str
-    label: str
-    kind: Literal["text"]
-
-
-# question variants
-class FreeTextQuestion(BaseQuestion):
-    question_type: Literal["free_text"] = "free_text"
-    on_submit: Action
-
-class FreeTextWithFieldQuestion(BaseQuestion):
-    question_type: Literal["free_text_with_fields"] = "free_text_with_fields"
-    fields: List[TextField]
-    on_submit: Action
-
-class NumberRangeQuestion(BaseQuestion):
-    question_type: Literal["number_range"] = "number_range"
-    min_value: float
-    max_value: float
-    step: float = 1.0
-    default_value: Optional[float] = None
-    on_submit: Action
-
-    @model_validator(mode="after")
-    def _chk(self):
-        if self.min_value >= self.max_value:
-            raise ValueError("min_value must be < max_value")
-        # Set default_value to min_value if not provided
-        if self.default_value is None:
-            self.default_value = self.min_value
-        return self
-
-class SingleSelectQuestion(BaseQuestion):
-    question_type: Literal["single_select"] = "single_select"
-    options: List[ActionOption]
-
-class MultiSelectQuestion(BaseQuestion):
-    question_type: Literal["multi_select"] = "multi_select"
-    options: List[Option]          # options have NO per-option actions
-    next: Action
-
-class ImageHotspot(Option):
-    image: Optional[str] = None
-
-class ImageSelectQuestion(BaseQuestion):
-    question_type: Literal["image_single_select"] = "image_single_select"
-    image: str
-    options: List[ActionOption]
-
-class ImageMultiSelectQuestion(BaseQuestion):
-    question_type: Literal["image_multi_select"] = "image_multi_select"
-    image: str
-    options: List[Option]          # options have NO per-option actions
-    next: Action
-
-class GenderQuestion(BaseQuestion):
-    question_type: Literal["gender_filter"] = "gender_filter"
-    options: List[ActionOption]
-
-class AgeFilterQuestion(BaseQuestion):
-    question_type: Literal["age_filter"] = "age_filter"
-    options: List[ActionOption]
-
-class Predicate(BaseModel):
-    qid: str
-    field: Optional[str] = None
-    op: Literal[
-        "eq","ne","contains","not_contains","matches",
-        "contains_any","contains_all",
-        "lt","le","gt","ge","between"
-    ]
-    value: Any
-
-class Rule(BaseModel):
-    when: List[Predicate]
-    then: Action
-
-class ConditionalQuestion(BaseQuestion):
-    question_type: Literal["conditional"] = "conditional"
-    rules: List[Rule]
-    default: Optional[Action] = None
-
-Question = Annotated[
-    Union[
-        FreeTextQuestion,
-        FreeTextWithFieldQuestion,
-        NumberRangeQuestion,
-        SingleSelectQuestion,
-        MultiSelectQuestion,
-        ImageSelectQuestion,
-        ImageMultiSelectQuestion,
-        GenderQuestion,
-        AgeFilterQuestion,
-        ConditionalQuestion,
-    ],
-    Field(discriminator="question_type"),
-]
-
-question_mapper = {
-    "free_text": FreeTextQuestion,
-    "free_text_with_fields": FreeTextWithFieldQuestion,
-    "number_range": NumberRangeQuestion,
-    "single_select": SingleSelectQuestion,
-    "multi_select": MultiSelectQuestion,
-    "image_single_select": ImageSelectQuestion,
-    "image_multi_select": ImageMultiSelectQuestion,
-    "gender_filter": GenderQuestion,
-    "age_filter": AgeFilterQuestion,
-    "conditional": ConditionalQuestion
-}
+from prescreen_rulesets.models.question import (  # noqa: F401
+    ActionOption,
+    AgeFilterQuestion,
+    BaseQuestion,
+    ConditionalQuestion,
+    FreeTextQuestion,
+    FreeTextWithFieldQuestion,
+    GenderQuestion,
+    ImageHotspot,
+    ImageMultiSelectQuestion,
+    ImageSelectQuestion,
+    MultiSelectQuestion,
+    NumberRangeQuestion,
+    Option,
+    Predicate,
+    Question,
+    Rule,
+    SingleSelectQuestion,
+    TextField,
+    question_mapper,
+)
