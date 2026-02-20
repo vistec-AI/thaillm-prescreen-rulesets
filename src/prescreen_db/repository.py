@@ -15,7 +15,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from prescreen_db.models.enums import SessionStatus
+from prescreen_db.models.enums import PipelineStage, SessionStatus
 from prescreen_db.models.session import PrescreenSession
 
 
@@ -222,6 +222,50 @@ class SessionRepository:
         session.updated_at = now
         await db.flush()
         return session
+
+    # ------------------------------------------------------------------
+    # Update — pipeline stage
+    # ------------------------------------------------------------------
+
+    async def set_pipeline_stage(
+        self,
+        db: AsyncSession,
+        session: PrescreenSession,
+        stage: PipelineStage,
+    ) -> PrescreenSession:
+        """Update the pipeline macro-stage (rule_based → llm_questioning → done)."""
+        session.pipeline_stage = stage.value
+        session.updated_at = datetime.now(timezone.utc)
+        await db.flush()
+        return session
+
+    async def save_llm_questions(
+        self,
+        db: AsyncSession,
+        session: PrescreenSession,
+        questions: list[str],
+    ) -> PrescreenSession:
+        """Store generated LLM follow-up questions."""
+        session.llm_questions = questions
+        session.updated_at = datetime.now(timezone.utc)
+        await db.flush()
+        return session
+
+    async def save_llm_responses(
+        self,
+        db: AsyncSession,
+        session: PrescreenSession,
+        responses: list[dict],
+    ) -> PrescreenSession:
+        """Store LLM Q&A pairs (question + user answer)."""
+        session.llm_responses = responses
+        session.updated_at = datetime.now(timezone.utc)
+        await db.flush()
+        return session
+
+    # ------------------------------------------------------------------
+    # Update — terminal states
+    # ------------------------------------------------------------------
 
     async def complete_session(
         self,

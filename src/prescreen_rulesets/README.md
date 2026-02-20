@@ -348,6 +348,200 @@ if question.question_type in AUTO_EVAL_TYPES:
     print(f"Auto-resolved to: {action}")
 ```
 
+## Post-Rule-Based Pipeline (Interface Only)
+
+After the rule-based flow finishes, two additional stages can run. The SDK defines their input/output contracts as abstract base classes — concrete implementations live in separate packages.
+
+```
+Rule-based (phases 0-5)
+        │
+        ▼
+  ┌─────────────────────┐     list[QAPair]       ┌───────────────────┐
+  │  Collect rule-based  │ ──────────────────────▶│ QuestionGenerator │
+  │  Q&A history         │                        │   (LLM follow-up) │
+  └─────────────────────┘                        └────────┬──────────┘
+                                                          │ GeneratedQuestions
+                                                          ▼
+                                                 Present to patient,
+                                                 collect answers
+                                                          │
+        ┌─────────────────────────────────────────────────┘
+        │  list[QAPair]  (rule-based + LLM pairs combined)
+        ▼
+  ┌──────────────────┐
+  │ PredictionModule │ ──▶ PredictionResult
+  │  (DDx + routing) │      • diagnoses: list[DiagnosisResult]
+  └──────────────────┘      • departments: list[str]
+                            • severity: str | None
+```
+
+### Data Models
+
+**`QAPair`** — A single question-answer record. The `source` field distinguishes where it came from:
+
+```python
+from prescreen_rulesets import QAPair
+
+# Rule-based pair (carries structured metadata)
+rb_pair = QAPair(
+    question="How did the headache start?",
+    answer="sudden_onset",
+    source="rule_based",
+    qid="hea_o_001",
+    question_type="single_select",
+    phase=4,
+)
+
+# LLM-generated pair (free-form, no qid/phase)
+llm_pair = QAPair(
+    question="Does the headache get worse when you bend forward?",
+    answer="Yes, significantly",
+    source="llm_generated",
+)
+```
+
+**`GeneratedQuestions`** — Wrapper returned by `QuestionGenerator`:
+
+```python
+from prescreen_rulesets import GeneratedQuestions
+
+gen = GeneratedQuestions(questions=[
+    "Does the headache get worse when you bend forward?",
+    "Have you experienced any visual disturbances?",
+])
+```
+
+**`PredictionResult`** / **`DiagnosisResult`** — Output of `PredictionModule`:
+
+```python
+from prescreen_rulesets import PredictionResult, DiagnosisResult
+
+result = PredictionResult(
+    diagnoses=[
+        DiagnosisResult(disease_id="d042", confidence=0.82),
+        DiagnosisResult(disease_id="d015", confidence=0.45),
+    ],
+    departments=["dept004"],     # Internal Medicine
+    severity="sev002",           # Visit Hospital / Clinic
+)
+```
+
+### Implementing `QuestionGenerator`
+
+Subclass the ABC and implement the `generate` async method. The method receives the rule-based Q&A history and returns follow-up questions for the patient.
+
+```python
+from prescreen_rulesets import QuestionGenerator, QAPair, GeneratedQuestions
+
+
+class MyLLMQuestionGenerator(QuestionGenerator):
+    """Example implementation that calls an LLM to generate follow-up questions."""
+
+    def __init__(self, llm_client):
+        self.llm_client = llm_client
+
+    async def generate(self, qa_pairs: list[QAPair]) -> GeneratedQuestions:
+        # Build a prompt from the Q&A history
+        history = "\n".join(
+            f"Q: {p.question}\nA: {p.answer}" for p in qa_pairs
+        )
+        prompt = (
+            "Based on this patient interview, generate 2-3 follow-up "
+            "questions to narrow down the diagnosis:\n\n" + history
+        )
+
+        response = await self.llm_client.complete(prompt)
+
+        # Parse the LLM output into individual question strings
+        questions = [q.strip() for q in response.split("\n") if q.strip()]
+        return GeneratedQuestions(questions=questions)
+```
+
+### Implementing `PredictionModule`
+
+Subclass the ABC and implement the `predict` async method. The method receives all Q&A pairs (both rule-based and LLM-generated) and returns the diagnosis, department, and severity predictions.
+
+```python
+from prescreen_rulesets import (
+    PredictionModule, QAPair, PredictionResult, DiagnosisResult,
+)
+
+
+class MyPredictionHead(PredictionModule):
+    """Example implementation that runs a classifier on the Q&A pairs."""
+
+    def __init__(self, model):
+        self.model = model
+
+    async def predict(self, qa_pairs: list[QAPair]) -> PredictionResult:
+        # Separate sources if needed
+        rb_pairs = [p for p in qa_pairs if p.source == "rule_based"]
+        llm_pairs = [p for p in qa_pairs if p.source == "llm_generated"]
+
+        # Feed into your model
+        output = await self.model.infer(qa_pairs)
+
+        return PredictionResult(
+            diagnoses=[
+                DiagnosisResult(disease_id=d["id"], confidence=d["score"])
+                for d in output["diseases"]
+            ],
+            departments=output["departments"],   # e.g. ["dept004"]
+            severity=output["severity"],         # e.g. "sev002"
+        )
+```
+
+### End-to-End Integration
+
+```python
+from prescreen_rulesets import (
+    PrescreenEngine, RulesetStore, QAPair,
+)
+
+# --- 1. Run rule-based flow (existing code) ---
+store = RulesetStore()
+store.load()
+engine = PrescreenEngine(store)
+
+async with Session() as db:
+    await engine.create_session(db, user_id="p1", session_id="s1")
+    # ... submit answers through phases 0-5 ...
+    # ... collect the session's responses ...
+    await db.commit()
+
+# --- 2. Build QAPairs from rule-based responses ---
+# (extract from your session's response storage)
+rule_based_pairs: list[QAPair] = [...]
+
+# --- 3. LLM question generation ---
+generator = MyLLMQuestionGenerator(llm_client=...)
+generated = await generator.generate(rule_based_pairs)
+
+# Present generated.questions to the patient and collect answers
+llm_pairs: list[QAPair] = [
+    QAPair(question=q, answer=a, source="llm_generated")
+    for q, a in zip(generated.questions, patient_answers)
+]
+
+# --- 4. Prediction ---
+predictor = MyPredictionHead(model=...)
+result = await predictor.predict(rule_based_pairs + llm_pairs)
+
+print(result.diagnoses)     # ranked DDx list
+print(result.departments)   # e.g. ["dept004"]
+print(result.severity)      # e.g. "sev002"
+```
+
+### Reference Spaces
+
+The prediction outputs are bounded by the constants in `v1/const/`:
+
+| Output | Constant file | ID format | Example |
+|--------|--------------|-----------|---------|
+| `DiagnosisResult.disease_id` | `v1/const/diseases.yaml` | `d001`–`d###` | `d042` (Migraine) |
+| `PredictionResult.departments` | `v1/const/departments.yaml` | `dept001`–`dept012` | `dept004` (Internal Medicine) |
+| `PredictionResult.severity` | `v1/const/severity_levels.yaml` | `sev001`/`sev002`/`sev002_5`/`sev003` | `sev002` (Visit Hospital) |
+
 ## Package Layout
 
 ```
@@ -357,12 +551,14 @@ src/prescreen_rulesets/
 ├── ruleset.py           # RulesetStore — YAML loading + lookups
 ├── evaluator.py         # ConditionalEvaluator — auto-eval logic
 ├── constants.py         # Shared constants (severity order, phase names, defaults)
+├── interfaces.py        # ABCs: QuestionGenerator, PredictionModule
 └── models/
     ├── __init__.py      # Re-exports all model classes
     ├── action.py        # GotoAction, OPDAction, TerminateAction
     ├── question.py      # 10 question types + Question union + question_mapper
     ├── schema.py        # DepartmentConst, SeverityConst, NHSOSymptom, etc.
-    └── session.py       # StepResult, QuestionsStep, TerminationStep, SessionInfo
+    ├── session.py       # StepResult, QuestionsStep, TerminationStep, SessionInfo
+    └── pipeline.py      # QAPair, GeneratedQuestions, PredictionResult, DiagnosisResult
 ```
 
 ## Testing

@@ -21,7 +21,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from prescreen_db.models.base import Base
-from prescreen_db.models.enums import SessionStatus
+from prescreen_db.models.enums import PipelineStage, SessionStatus
 
 
 class PrescreenSession(Base):
@@ -101,6 +101,23 @@ class PrescreenSession(Base):
     # Shape: {"departments": [...], "severity": "...", ...}
     result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
+    # --- Pipeline stage (post-rule-based orchestration) ---
+    # Tracks which macro-stage of the full pipeline the session is in:
+    # rule_based → llm_questioning → done.
+    # server_default ensures existing rows get 'rule_based' without data migration.
+    pipeline_stage: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=PipelineStage.RULE_BASED,
+        server_default=text("'rule_based'"),
+    )
+
+    # --- LLM Q&A (populated after rule-based phase completes) ---
+    # Generated follow-up question strings: ["q1", "q2", ...]
+    llm_questions: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    # LLM Q&A pairs: [{"question": "...", "answer": "..."}, ...]
+    llm_responses: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+
     # --- Timestamps ---
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
@@ -137,6 +154,8 @@ class PrescreenSession(Base):
             name="ck_terminated_has_phase",
         ),
         # --- Indexes ---
+        # B-tree on pipeline_stage for filtering sessions by macro-stage
+        Index("ix_pipeline_stage", "pipeline_stage"),
         # B-tree on primary_symptom for routing lookups (only non-null rows)
         Index(
             "ix_primary_symptom",

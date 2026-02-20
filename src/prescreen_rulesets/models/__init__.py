@@ -62,6 +62,10 @@ from prescreen_rulesets.models.session import (
 from prescreen_rulesets.models.pipeline import (
     DiagnosisResult,
     GeneratedQuestions,
+    LLMAnswer,
+    LLMQuestionsStep,
+    PipelineResult,
+    PipelineStep,
     PredictionResult,
     QAPair,
 )
@@ -112,6 +116,10 @@ __all__ = [
     # Pipeline
     "DiagnosisResult",
     "GeneratedQuestions",
+    "LLMAnswer",
+    "LLMQuestionsStep",
+    "PipelineResult",
+    "PipelineStep",
     "PredictionResult",
     "QAPair",
 ]

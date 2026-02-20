@@ -105,3 +105,47 @@ class PredictionResult(BaseModel):
         default=None,
         description="Predicted severity-level ID (e.g. 'sev002').",
     )
+
+
+# ---------------------------------------------------------------------------
+# Pipeline orchestrator models
+# ---------------------------------------------------------------------------
+# These models are used by PrescreenPipeline to communicate step results
+# that span beyond the rule-based engine (LLM questioning + final result).
+
+
+class LLMAnswer(BaseModel):
+    """Input to submit_llm_answers(): one user answer to an LLM question."""
+
+    question: str
+    answer: str
+
+
+class LLMQuestionsStep(BaseModel):
+    """Pipeline step: present LLM-generated follow-up questions."""
+
+    type: Literal["llm_questions"] = "llm_questions"
+    questions: list[str]
+
+
+class PipelineResult(BaseModel):
+    """Pipeline step: final result with DDx, department, severity.
+
+    Returned when the pipeline reaches the ``done`` stage — either after
+    prediction runs or after early termination (ER redirect).
+    """
+
+    type: Literal["pipeline_result"] = "pipeline_result"
+    departments: list[dict]
+    severity: dict | None = None
+    diagnoses: list[DiagnosisResult] = Field(default_factory=list)
+    reason: str | None = None
+    terminated_early: bool = False
+
+
+# Union for pipeline step dispatching — callers match on step.type.
+# Includes rule-based QuestionsStep (from session module) + pipeline-specific types.
+# Defined here to avoid circular imports; consumers import via models/__init__.py.
+from prescreen_rulesets.models.session import QuestionsStep  # noqa: E402
+
+PipelineStep = QuestionsStep | LLMQuestionsStep | PipelineResult

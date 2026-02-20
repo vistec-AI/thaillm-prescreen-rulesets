@@ -54,6 +54,10 @@ class MockSessionRow:
     result: dict | None = None
     terminated_at_phase: int | None = None
     termination_reason: str | None = None
+    # Pipeline-stage fields (used by PrescreenPipeline)
+    pipeline_stage: str = "rule_based"
+    llm_questions: list | None = None
+    llm_responses: list | None = None
     created_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
@@ -139,6 +143,23 @@ class MockRepository:
         session.result = result
         session.completed_at = now
         session.updated_at = now
+        return session
+
+    # Pipeline-stage methods (used by PrescreenPipeline)
+
+    async def set_pipeline_stage(self, db, session, stage):
+        session.pipeline_stage = stage.value
+        session.updated_at = datetime.now(timezone.utc)
+        return session
+
+    async def save_llm_questions(self, db, session, questions):
+        session.llm_questions = questions
+        session.updated_at = datetime.now(timezone.utc)
+        return session
+
+    async def save_llm_responses(self, db, session, responses):
+        session.llm_responses = responses
+        session.updated_at = datetime.now(timezone.utc)
         return session
 
     async def list_by_user(self, db, user_id, *, limit=20, offset=0):

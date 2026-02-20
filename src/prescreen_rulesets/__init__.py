@@ -2,6 +2,7 @@
 
 Public API:
     PrescreenEngine   — main orchestrator for the 6-phase prescreening flow
+    PrescreenPipeline — full pipeline orchestrator (engine + LLM + prediction)
     RulesetStore      — loads YAML rulesets into typed models with lookup helpers
     StepResult        — union type returned by engine step methods
     QuestionsStep     — step: present questions to the user
@@ -15,6 +16,12 @@ Pipeline interfaces (post-rule-based stages):
     GeneratedQuestions — output wrapper for the question generator
     PredictionResult  — output of the prediction module
     DiagnosisResult   — single disease entry in the DDx output
+
+Pipeline step models:
+    LLMAnswer         — input for submit_llm_answers
+    LLMQuestionsStep  — step: LLM-generated follow-up questions
+    PipelineResult    — step: final result with DDx, department, severity
+    PipelineStep      — union of all pipeline step types
 """
 
 from prescreen_rulesets.engine import PrescreenEngine
@@ -22,6 +29,10 @@ from prescreen_rulesets.interfaces import PredictionModule, QuestionGenerator
 from prescreen_rulesets.models.pipeline import (
     DiagnosisResult,
     GeneratedQuestions,
+    LLMAnswer,
+    LLMQuestionsStep,
+    PipelineResult,
+    PipelineStep,
     PredictionResult,
     QAPair,
 )
@@ -32,11 +43,13 @@ from prescreen_rulesets.models.session import (
     StepResult,
     TerminationStep,
 )
+from prescreen_rulesets.pipeline import PrescreenPipeline
 from prescreen_rulesets.ruleset import RulesetStore
 
 __all__ = [
     # Engine & store
     "PrescreenEngine",
+    "PrescreenPipeline",
     "RulesetStore",
     # Session / step
     "QuestionPayload",
@@ -52,4 +65,8 @@ __all__ = [
     "GeneratedQuestions",
     "PredictionResult",
     "DiagnosisResult",
+    "LLMAnswer",
+    "LLMQuestionsStep",
+    "PipelineResult",
+    "PipelineStep",
 ]
