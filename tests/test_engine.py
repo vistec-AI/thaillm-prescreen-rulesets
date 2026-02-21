@@ -507,3 +507,497 @@ class TestEdgeCases:
         )
         assert isinstance(step, TerminationStep), "Expected TerminationStep"
         assert step.type == "terminated", "Should be 'terminated'"
+
+
+# =====================================================================
+# QID auto-derivation (qid=None)
+# =====================================================================
+
+
+class TestQidAutoDerivation:
+    """Tests that submit_answer works when qid is omitted (None).
+
+    For bulk phases (0-3), qid is unused by the engine — passing None
+    should behave identically to passing the phase marker string.
+    For sequential phases (4-5), the engine auto-derives the qid from
+    the current step via _derive_current_qid.
+    """
+
+    @pytest.mark.asyncio
+    async def test_submit_demographics_without_qid(self, engine, mock_db):
+        """Phase 0 accepts qid=None — demographics submission works."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value={"gender": "Male", "age": 30},
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 1, "Should advance to phase 1"
+
+    @pytest.mark.asyncio
+    async def test_submit_er_critical_without_qid(self, engine, mock_db):
+        """Phase 1 accepts qid=None — ER critical submission works."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value={"gender": "Male", "age": 30},
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=er_responses,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 2, "Should advance to phase 2"
+
+    @pytest.mark.asyncio
+    async def test_submit_symptoms_without_qid(self, engine, mock_db):
+        """Phase 2 accepts qid=None — symptom selection works."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value={"gender": "Male", "age": 30},
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value={"primary_symptom": "Headache"},
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 3, "Should advance to phase 3"
+
+    @pytest.mark.asyncio
+    async def test_submit_er_checklist_without_qid(self, engine, mock_db):
+        """Phase 3 accepts qid=None — ER checklist submission works."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value={"gender": "Male", "age": 30},
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms", value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=checklist_responses,
+        )
+        assert isinstance(step, (QuestionsStep, TerminationStep)), (
+            "Expected QuestionsStep or TerminationStep"
+        )
+        if isinstance(step, QuestionsStep):
+            assert step.phase >= 4, f"Expected phase >= 4, got {step.phase}"
+
+    @pytest.mark.asyncio
+    async def test_submit_sequential_without_qid(self, engine, mock_db):
+        """Phases 4-5 auto-derive qid from _compute_step when qid=None."""
+        # Advance to phase 4 using explicit qids
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value={"gender": "Male", "age": 30},
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms", value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_checklist", value=checklist_responses,
+        )
+
+        # Now in sequential phase — get the first question
+        step = await engine.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        if not isinstance(step, QuestionsStep):
+            # Tree auto-resolved (all filters), nothing to test
+            return
+
+        # Submit without qid — engine should auto-derive it
+        first_q = step.questions[0]
+        # Pick a valid answer: first option ID for select types, or a string
+        if first_q.options:
+            answer = first_q.options[0]["id"]
+        else:
+            answer = "test answer"
+
+        # Compare: submit with explicit qid vs auto-derived should produce
+        # the same next step type.  Here we just verify no error is raised
+        # and a valid step is returned.
+        next_step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=answer,
+        )
+        assert isinstance(next_step, (QuestionsStep, TerminationStep)), (
+            f"Expected QuestionsStep or TerminationStep, got {type(next_step).__name__}"
+        )
+
+
+# =====================================================================
+# Multi-step sequential submission (regression for qid derivation bug)
+# =====================================================================
+
+
+class TestMultiStepSequential:
+    """Verify that submitting multiple sequential answers (qid=None) works.
+
+    Regression test: before the fix, _derive_current_qid would return
+    the NEXT question's qid instead of the current one after the first
+    sequential submission, because the pending queue had the current
+    question already popped.
+    """
+
+    async def _setup_phase4(self, engine, mock_db):
+        """Create session and advance to phase 4 (OLDCARTS) with Headache."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics",
+            value={"gender": "Male", "date_of_birth": "1994-06-15"},
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms", value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_checklist", value=checklist_responses,
+        )
+        return step
+
+    def _pick_answer(self, q):
+        """Pick a deterministic valid answer for a question payload."""
+        qtype = q.question_type
+        if qtype in ("single_select", "image_single_select"):
+            return q.options[0]["id"] if q.options else "unknown"
+        if qtype in ("multi_select", "image_multi_select"):
+            return [q.options[0]["id"]] if q.options else []
+        if qtype == "number_range":
+            c = q.constraints or {}
+            lo = c.get("min", 0)
+            hi = c.get("max", 10)
+            return (lo + hi) / 2
+        if qtype == "free_text_with_fields":
+            if q.fields:
+                return {f["id"]: "ไม่มี" for f in q.fields}
+            return "ไม่มี"
+        return "ไม่มี"
+
+    @pytest.mark.asyncio
+    async def test_multiple_sequential_submissions_advance_correctly(
+        self, engine, mock_db, mock_repo,
+    ):
+        """Submitting 4+ sequential answers with qid=None yields distinct qids each time."""
+        step = await self._setup_phase4(engine, mock_db)
+        if not isinstance(step, QuestionsStep):
+            pytest.skip("OLDCARTS tree auto-resolved — no sequential questions to test")
+
+        seen_qids = []
+        # Drive at least 4 sequential questions to exercise the pending queue
+        for i in range(4):
+            assert isinstance(step, QuestionsStep), (
+                f"Expected QuestionsStep on iteration {i}, got {type(step).__name__}"
+            )
+            q = step.questions[0]
+            current_qid = q.qid
+            seen_qids.append(current_qid)
+
+            # get_current_step should return the same question
+            check = await engine.get_current_step(
+                mock_db, user_id="u1", session_id="s1",
+            )
+            assert isinstance(check, QuestionsStep), (
+                f"get_current_step should agree with submit result on iteration {i}"
+            )
+            assert check.questions[0].qid == current_qid, (
+                f"get_current_step returned {check.questions[0].qid}, "
+                f"expected {current_qid} on iteration {i}"
+            )
+
+            answer = self._pick_answer(q)
+            step = await engine.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=answer,
+            )
+
+        # All seen qids should be unique — no question was presented twice
+        assert len(seen_qids) == len(set(seen_qids)), (
+            f"Duplicate qid detected in sequential flow: {seen_qids}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_sequential_records_correct_qid(
+        self, engine, mock_db, mock_repo,
+    ):
+        """Each sequential answer is recorded under the correct qid in responses."""
+        step = await self._setup_phase4(engine, mock_db)
+        if not isinstance(step, QuestionsStep):
+            pytest.skip("OLDCARTS tree auto-resolved")
+
+        row = mock_repo._sessions[("u1", "s1")]
+        expected_pairs = []
+
+        for i in range(3):
+            if not isinstance(step, QuestionsStep):
+                break
+            q = step.questions[0]
+            answer = self._pick_answer(q)
+            expected_pairs.append((q.qid, answer))
+
+            step = await engine.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=answer,
+            )
+
+        # Check that each answer was recorded under its correct qid
+        for qid, expected_answer in expected_pairs:
+            assert qid in row.responses, (
+                f"Response for {qid} not found in session responses"
+            )
+            recorded = row.responses[qid]
+            actual = recorded["value"] if isinstance(recorded, dict) else recorded
+            assert actual == expected_answer, (
+                f"Wrong value recorded for {qid}: "
+                f"expected {expected_answer!r}, got {actual!r}"
+            )
+
+
+# =====================================================================
+# Schema Fields (answer_schema / submission_schema)
+# =====================================================================
+
+
+class TestSchemaFields:
+    """Tests that answer_schema and submission_schema are correctly populated."""
+
+    @pytest.mark.asyncio
+    async def test_phase0_schemas(self, engine, mock_db):
+        """Demographics step has answer_schema on each question and an object submission_schema."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        step = await engine.get_current_step(mock_db, user_id="u1", session_id="s1")
+
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 0, "Should be phase 0"
+
+        # Every question should have an answer_schema with a "type" key
+        for q in step.questions:
+            assert q.answer_schema is not None, (
+                f"answer_schema missing for {q.qid}"
+            )
+            assert "type" in q.answer_schema, (
+                f"answer_schema missing 'type' for {q.qid}"
+            )
+
+        # datetime fields should have format: "date"
+        datetime_qs = [q for q in step.questions if q.question_type == "datetime"]
+        for q in datetime_qs:
+            assert q.answer_schema.get("format") == "date", (
+                f"datetime field {q.qid} should have format='date'"
+            )
+
+        # enum fields should have an "enum" list
+        enum_qs = [q for q in step.questions if q.question_type == "enum"]
+        for q in enum_qs:
+            assert "enum" in q.answer_schema, (
+                f"enum field {q.qid} should have 'enum' list"
+            )
+            assert isinstance(q.answer_schema["enum"], list), (
+                f"enum field {q.qid} 'enum' should be a list"
+            )
+
+        # submission_schema should be an object with properties and required
+        ss = step.submission_schema
+        assert ss is not None, "submission_schema should not be None"
+        assert ss["type"] == "object", "submission_schema type should be 'object'"
+        assert "properties" in ss, "submission_schema should have 'properties'"
+        assert "required" in ss, "submission_schema should have 'required'"
+
+        # Optional fields should NOT be in required
+        for q in step.questions:
+            key = q.metadata["key"]
+            if q.metadata.get("optional"):
+                assert key not in ss["required"], (
+                    f"Optional field '{key}' should not be in required"
+                )
+
+    @pytest.mark.asyncio
+    async def test_phase1_schemas(self, engine, mock_db):
+        """ER critical step has boolean answer_schemas and an object submission_schema."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value={"gender": "Male", "age": 30},
+        )
+        step = await engine.get_current_step(mock_db, user_id="u1", session_id="s1")
+
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 1, "Should be phase 1"
+
+        # All ER critical questions should have boolean answer_schema
+        for q in step.questions:
+            assert q.answer_schema is not None, (
+                f"answer_schema missing for {q.qid}"
+            )
+            assert q.answer_schema["type"] == "boolean", (
+                f"ER critical {q.qid} answer_schema type should be 'boolean'"
+            )
+
+        # submission_schema should be an object with boolean properties
+        ss = step.submission_schema
+        assert ss is not None, "submission_schema should not be None"
+        assert ss["type"] == "object", "submission_schema type should be 'object'"
+        assert len(ss["properties"]) == len(step.questions), (
+            "submission_schema properties count should match question count"
+        )
+
+    @pytest.mark.asyncio
+    async def test_phase2_schemas(self, engine, mock_db):
+        """Symptom selection has string+enum primary and array secondary schemas."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value={"gender": "Male", "age": 30},
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        step = await engine.get_current_step(mock_db, user_id="u1", session_id="s1")
+
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 2, "Should be phase 2"
+
+        # primary_symptom: string with enum
+        primary = [q for q in step.questions if q.qid == "primary_symptom"][0]
+        assert primary.answer_schema["type"] == "string", (
+            "primary_symptom should be string type"
+        )
+        assert "enum" in primary.answer_schema, (
+            "primary_symptom should have enum list"
+        )
+
+        # secondary_symptoms: array of strings
+        secondary = [q for q in step.questions if q.qid == "secondary_symptoms"][0]
+        assert secondary.answer_schema["type"] == "array", (
+            "secondary_symptoms should be array type"
+        )
+
+        # submission_schema: required should include primary_symptom only
+        ss = step.submission_schema
+        assert ss is not None, "submission_schema should not be None"
+        assert ss["required"] == ["primary_symptom"], (
+            "Only primary_symptom should be required"
+        )
+
+    @pytest.mark.asyncio
+    async def test_phase3_schemas(self, engine, mock_db):
+        """ER checklist has boolean answer_schemas and an object submission_schema."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value={"gender": "Male", "age": 30},
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms", value={"primary_symptom": "Headache"},
+        )
+        step = await engine.get_current_step(mock_db, user_id="u1", session_id="s1")
+
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 3, "Should be phase 3"
+
+        # All ER checklist questions should have boolean answer_schema
+        for q in step.questions:
+            assert q.answer_schema is not None, (
+                f"answer_schema missing for {q.qid}"
+            )
+            assert q.answer_schema["type"] == "boolean", (
+                f"ER checklist {q.qid} answer_schema type should be 'boolean'"
+            )
+
+        # submission_schema should be an object
+        ss = step.submission_schema
+        assert ss is not None, "submission_schema should not be None"
+        assert ss["type"] == "object", "submission_schema type should be 'object'"
+
+    @pytest.mark.asyncio
+    async def test_sequential_schemas(self, engine, mock_db):
+        """Sequential phases have answer_schema populated and submission_schema == answer_schema."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value={"gender": "Male", "age": 30},
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms", value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_checklist", value=checklist_responses,
+        )
+
+        step = await engine.get_current_step(mock_db, user_id="u1", session_id="s1")
+        if not isinstance(step, QuestionsStep):
+            # Tree auto-resolved, nothing to validate
+            return
+
+        assert step.phase in (4, 5), f"Expected phase 4 or 5, got {step.phase}"
+        assert len(step.questions) == 1, "Sequential step should have exactly 1 question"
+
+        q = step.questions[0]
+        assert q.answer_schema is not None, (
+            f"answer_schema missing for sequential question {q.qid}"
+        )
+
+        # For sequential phases, submission_schema == the single question's answer_schema
+        assert step.submission_schema == q.answer_schema, (
+            "submission_schema should equal the question's answer_schema in sequential phases"
+        )

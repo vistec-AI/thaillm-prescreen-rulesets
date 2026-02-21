@@ -103,11 +103,13 @@ class PrescreenPipeline:
         store: RulesetStore,
         generator: QuestionGenerator | None = None,
         predictor: PredictionModule | None = None,
+        prompt_manager: "PromptManager | None" = None,
     ) -> None:
         self._engine = engine
         self._store = store
         self._generator = generator
         self._predictor = predictor
+        self._prompt_manager = prompt_manager
         self._repo = SessionRepository()
 
     # ==================================================================
@@ -171,13 +173,15 @@ class PrescreenPipeline:
         *,
         user_id: str,
         session_id: str,
-        qid: str,
+        qid: str | None = None,
         value: Any,
     ) -> PipelineStep:
         """Submit an answer during the rule-based stage.
 
         Delegates to the engine and handles the transition when the engine
-        signals completion or termination.
+        signals completion or termination.  ``qid`` is optional — for bulk
+        phases (0-3) it is ignored by the engine, and for sequential phases
+        (4-5) the engine auto-derives it from the current step when ``None``.
 
         Raises:
             ValueError: if the session is not in the ``rule_based`` stage
@@ -253,6 +257,74 @@ class PrescreenPipeline:
         await self._repo.set_pipeline_stage(db, row, PipelineStage.DONE)
 
         return self._build_pipeline_result(row)
+
+    async def get_llm_prompt(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+        include_history: bool = True,
+    ) -> str | None:
+        """Render the current step as an LLM-ready prompt string.
+
+        Returns a formatted prompt describing the current question(s) and
+        expected JSON response format.  Returns ``None`` only when the
+        session is in the ``done`` stage or has been terminated/completed
+        without pending questions.
+
+        Handles both pipeline stages:
+          - ``rule_based``: renders the engine's current ``QuestionsStep``
+          - ``llm_questioning``: renders stored LLM follow-up questions
+            as free-text prompts
+
+        Args:
+            include_history: when ``True`` (the default), prepends the
+                accumulated Q&A history to the prompt so the LLM has
+                full conversational context.
+
+        This method only handles prompt formatting — no LLM calls are made.
+        The ``PromptManager`` is lazy-initialized on first call to avoid
+        import cost when the feature is not used.
+
+        Uses the already-loaded session row to compute the engine step
+        directly (via ``_compute_step``), avoiding a redundant DB round-trip
+        that would occur if we called the engine's public ``get_current_step``.
+        """
+        row = await self._load_session(db, user_id, session_id)
+        stage = row.pipeline_stage
+
+        # Lazy-initialize the PromptManager on first use
+        if self._prompt_manager is None:
+            from prescreen_rulesets.prompt import PromptManager
+            self._prompt_manager = PromptManager()
+
+        # Build Q&A history from the session when requested
+        history = self._build_qa_pairs(row) if include_history else None
+
+        if stage == PipelineStage.RULE_BASED.value:
+            # Terminal sessions have no questions to prompt for
+            if row.status in (SessionStatus.COMPLETED, SessionStatus.TERMINATED):
+                return None
+
+            # Compute the step directly from the row we already loaded,
+            # avoiding a second _load_session inside engine.get_current_step.
+            step = self._engine._compute_step(row)
+            if not isinstance(step, QuestionsStep):
+                return None
+
+            return self._prompt_manager.render_step(step, history=history)
+
+        if stage == PipelineStage.LLM_QUESTIONING.value:
+            questions = row.llm_questions or []
+            if not questions:
+                return None
+            return self._prompt_manager.render_llm_questions(
+                questions, history=history,
+            )
+
+        # stage == "done" — nothing to prompt for
+        return None
 
     # ==================================================================
     # Internal: rule-based end handling

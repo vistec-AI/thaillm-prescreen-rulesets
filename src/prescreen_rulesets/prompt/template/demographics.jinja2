@@ -1,0 +1,13 @@
+{% include '_history.jinja2' %}
+Please provide the following demographic information.
+
+Fields:
+{% for q in step.questions %}
+- {{ q.metadata.key }} ({{ q.question }}): {{ q.answer_schema.type }}
+  {%- if q.answer_schema.enum %}, one of: {{ q.answer_schema.enum | tojson }}{% endif %}
+  {%- if q.answer_schema.format %}, format: {{ q.answer_schema.format }}{% endif %}
+  {%- if q.metadata and q.metadata.optional %} [optional]{% endif %}
+{% endfor %}
+
+Respond with a JSON object keyed by field key. Example:
+{{ submission_example }}

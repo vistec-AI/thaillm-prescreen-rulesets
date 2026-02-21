@@ -1,0 +1,15 @@
+{% include '_history.jinja2' %}
+Please answer each of the following questions with a free-text response.
+
+{% for q in questions %}
+{{ loop.index }}. {{ q }}
+{% endfor %}
+
+Respond with a JSON array of answer objects, one per question. Example:
+[
+  {"question": "{{ questions[0] }}", "answer": "your answer here"}
+  {%- if questions | length > 1 -%}
+  ,
+  {"question": "{{ questions[1] }}", "answer": "your answer here"}
+  {%- endif %}
+]

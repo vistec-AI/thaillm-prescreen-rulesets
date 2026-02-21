@@ -96,6 +96,26 @@ Test coverage includes:
 - **OLDCARTS** — decision tree schema, graph connectivity, conditional coverage, image asset existence
 - **OPD** — decision tree schema, goto targets, reachability, predicate semantic validation
 
+## Scripts
+
+### Pipeline Simulation
+
+Run a full end-to-end simulation of the `PrescreenPipeline` with mocked DB and LLM components. The script drives through all 6 rule-based phases plus LLM questioning and prediction, printing rich audit logs of every question and answer.
+
+```bash
+# Default run (Headache symptom)
+python scripts/simulate_pipeline.py
+
+# Choose a different symptom
+python scripts/simulate_pipeline.py -s Fever
+
+# List available NHSO symptoms
+python scripts/simulate_pipeline.py --list-symptoms
+
+# Verbose mode (include schemas in output)
+python scripts/simulate_pipeline.py -v
+```
+
 ## Limitations
 
 Although these rulesets are curated by doctors for research purposes, they carry many limitations and should be used with caution on the application side, especially in the medical domain where accuracy is critical for downstream applications.

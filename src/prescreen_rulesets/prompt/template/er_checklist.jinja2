@@ -1,0 +1,9 @@
+{% include '_history.jinja2' %}
+Answer true/false for each of the following checklist items.
+
+{% for q in step.questions %}
+- "{{ q.qid }}": {{ q.question }}
+{% endfor %}
+
+Respond with a JSON object mapping each qid to a boolean. Example:
+{"{{ step.questions[0].qid }}": false, ...}

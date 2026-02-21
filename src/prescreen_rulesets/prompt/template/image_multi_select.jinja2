@@ -1,0 +1,14 @@
+{% include '_history.jinja2' %}
+Question: {{ question.question }}
+
+{% if question.image %}
+[Image: {{ question.image }}]
+{% endif %}
+
+Options (select one or more):
+{% for opt in question.options %}
+- "{{ opt.id }}": {{ opt.label }}
+{% endfor %}
+
+Respond with a JSON array of selected option ID strings. Example:
+["{{ question.options[0].id }}"]

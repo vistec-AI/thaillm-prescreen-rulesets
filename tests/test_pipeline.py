@@ -764,3 +764,174 @@ class TestQAPairBuilding:
         pairs = pipeline._build_qa_pairs(row)
         qids = [p.qid for p in pairs]
         assert "__pending" not in qids, "__pending should be excluded"
+
+
+# =====================================================================
+# Tests: QID auto-derivation (qid=None)
+# =====================================================================
+
+
+class TestQidAutoDerivation:
+    """Pipeline passes qid=None through to the engine correctly.
+
+    For bulk phases, qid is unused — omitting it should work.
+    For sequential phases, the engine auto-derives the qid.
+    """
+
+    @pytest.mark.asyncio
+    async def test_submit_answer_without_qid_bulk(self, pipeline, mock_db):
+        """Pipeline forwards qid=None for bulk phases without error."""
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+        # Phase 0: submit demographics without qid
+        step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value={"gender": "Male", "age": 30},
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 1, "Should advance to phase 1"
+
+    @pytest.mark.asyncio
+    async def test_submit_answer_without_qid_sequential(
+        self, pipeline, engine, mock_db,
+    ):
+        """Pipeline forwards qid=None for sequential phases; engine auto-derives."""
+        store = engine._store
+
+        # Advance through bulk phases to reach sequential
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value={"gender": "Male", "age": 30},
+        )
+        er_responses = {item.qid: False for item in store.er_critical}
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms", value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_checklist", value=checklist_responses,
+        )
+
+        # Now in sequential phase — get the current step
+        step = await pipeline.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        if not isinstance(step, QuestionsStep):
+            # Tree auto-resolved to completion, nothing to test
+            return
+
+        # Submit without qid — pipeline passes None, engine auto-derives
+        first_q = step.questions[0]
+        if first_q.options:
+            answer = first_q.options[0]["id"]
+        else:
+            answer = "test answer"
+
+        next_step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=answer,
+        )
+        # Should get a valid step back (could be QuestionsStep, TerminationStep,
+        # or PipelineResult if the engine completed)
+        assert next_step is not None, "Expected a non-None step result"
+
+
+# =====================================================================
+# Tests: Multi-step sequential through pipeline (regression)
+# =====================================================================
+
+
+class TestPipelineMultiStepSequential:
+    """Full pipeline multi-step sequential test.
+
+    Regression test: verifies that submitting multiple sequential answers
+    through the pipeline (qid=None) produces distinct, correctly-ordered
+    questions and eventually transitions to LLM questioning or result.
+    """
+
+    @staticmethod
+    def _pick_answer(q):
+        """Pick a deterministic valid answer for a question payload."""
+        qtype = q.question_type
+        if qtype in ("single_select", "image_single_select"):
+            return q.options[0]["id"] if q.options else "unknown"
+        if qtype in ("multi_select", "image_multi_select"):
+            return [q.options[0]["id"]] if q.options else []
+        if qtype == "number_range":
+            c = q.constraints or {}
+            return (c.get("min", 0) + c.get("max", 10)) / 2
+        if qtype == "free_text_with_fields":
+            if q.fields:
+                return {f["id"]: "ไม่มี" for f in q.fields}
+            return "ไม่มี"
+        return "ไม่มี"
+
+    @pytest.mark.asyncio
+    async def test_full_sequential_flow_completes(
+        self, pipeline, engine, mock_db,
+    ):
+        """Drive the full sequential flow through the pipeline to completion."""
+        store = engine._store
+
+        # Advance through bulk phases
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics",
+            value={"gender": "Male", "date_of_birth": "1994-06-15"},
+        )
+        er_responses = {item.qid: False for item in store.er_critical}
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms", value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_checklist", value=checklist_responses,
+        )
+
+        # Drive through all sequential questions
+        seen_qids = []
+        seq_count = 0
+        while isinstance(step, QuestionsStep):
+            q = step.questions[0]
+            seen_qids.append(q.qid)
+            answer = self._pick_answer(q)
+            step = await pipeline.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=answer,
+            )
+            seq_count += 1
+            # Safety limit to prevent infinite loops
+            assert seq_count < 50, (
+                f"Sequential loop exceeded 50 iterations — possible infinite loop"
+            )
+
+        # After sequential phase, pipeline should transition to LLM or result
+        assert isinstance(step, (LLMQuestionsStep, PipelineResult)), (
+            f"Expected LLMQuestionsStep or PipelineResult after sequential, "
+            f"got {type(step).__name__}"
+        )
+
+        # Verify all qids were unique (no question presented twice)
+        assert len(seen_qids) == len(set(seen_qids)), (
+            f"Duplicate qid in sequential flow: {seen_qids}"
+        )
+
+        # Should have answered at least 3 sequential questions for Headache
+        assert seq_count >= 3, (
+            f"Expected at least 3 sequential questions for Headache, got {seq_count}"
+        )

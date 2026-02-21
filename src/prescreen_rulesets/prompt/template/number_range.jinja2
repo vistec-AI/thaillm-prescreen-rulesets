@@ -1,0 +1,11 @@
+{% include '_history.jinja2' %}
+Question: {{ question.question }}
+
+{% if question.constraints %}
+Range: {{ question.constraints.min }} to {{ question.constraints.max }}
+  {%- if question.constraints.step %} (step: {{ question.constraints.step }}){% endif %}
+  {%- if question.constraints.default is not none %}, default: {{ question.constraints.default }}{% endif %}
+{% endif %}
+
+Respond with a JSON number. Example:
+{{ question.constraints.default if question.constraints and question.constraints.default is not none else question.constraints.min if question.constraints else 0 }}

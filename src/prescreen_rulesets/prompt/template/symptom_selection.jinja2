@@ -1,0 +1,15 @@
+{% include '_history.jinja2' %}
+Select the patient's primary symptom and optionally any secondary symptoms.
+
+Primary symptom options:
+{% for opt in step.questions[0].options %}
+- "{{ opt.id }}": {{ opt.label }}
+{% endfor %}
+
+Respond with a JSON object:
+{
+  "primary_symptom": "<symptom_id>",
+  "secondary_symptoms": ["<symptom_id>", ...]
+}
+
+"secondary_symptoms" is optional and may be an empty list or omitted.

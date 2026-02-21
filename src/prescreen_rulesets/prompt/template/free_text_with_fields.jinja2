@@ -1,0 +1,12 @@
+{% include '_history.jinja2' %}
+Question: {{ question.question }}
+
+Fill in the following fields:
+{% for field in question.fields %}
+- "{{ field.id }}": {{ field.label }}
+{% endfor %}
+
+Respond with a JSON object keyed by field ID. Example:
+{ {%- for field in question.fields -%}
+"{{ field.id }}": "..."{{ ", " if not loop.last }}
+{%- endfor -%} }
