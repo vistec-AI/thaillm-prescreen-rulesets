@@ -97,6 +97,58 @@ Every engine method returns a `StepResult`, which is one of:
 
 Dispatch on `step.type` to decide what to render.
 
+### Schema Fields
+
+Each `QuestionPayload` carries an optional `answer_schema` — a JSON-Schema-like dict describing the expected answer format. Each `QuestionsStep` carries an optional `submission_schema` — the shape of the `value` parameter to `submit_answer()`.
+
+**Question type → `answer_schema` mapping:**
+
+| Question type | Schema |
+|---------------|--------|
+| `single_select` / `image_single_select` | `{"type": "string", "enum": [option_ids]}` |
+| `multi_select` / `image_multi_select` | `{"type": "array", "items": {"type": "string", "enum": [...]}}` |
+| `number_range` | `{"type": "number", "minimum": N, "maximum": N}` |
+| `free_text` | `{"type": "string"}` |
+| `free_text_with_fields` | `{"type": "object", "properties": {...}, "required": [...]}` |
+| `datetime` (demographics) | `{"type": "string", "format": "date"}` |
+| `enum` (demographics) | `{"type": "string", "enum": [values]}` |
+| `float` (demographics) | `{"type": "number"}` |
+| `yes_no` (ER critical/checklist) | `{"type": "boolean"}` |
+
+**Phase → `submission_schema` shape:**
+
+| Phase | submission_schema type |
+|-------|-----------------------|
+| 0 (Demographics) | `{"type": "object", "properties": {key: schema}, "required": [...]}` |
+| 1 (ER Critical) | `{"type": "object", "properties": {qid: {"type": "boolean"}}, "required": [...]}` |
+| 2 (Symptom Selection) | `{"type": "object", "properties": {"primary_symptom": ..., "secondary_symptoms": ...}, "required": ["primary_symptom"]}` |
+| 3 (ER Checklist) | `{"type": "object", "properties": {qid: {"type": "boolean"}}, "required": [...]}` |
+| 4-5 (Sequential) | Same as the single question's `answer_schema` |
+
+### LLM Prompt Rendering
+
+`PromptManager` renders `QuestionsStep` objects into LLM-ready prompt strings with JSON response format instructions. It uses Jinja2 templates and dispatches by phase (bulk) or question type (sequential).
+
+```python
+from prescreen_rulesets import PromptManager
+
+pm = PromptManager()
+prompt = pm.render_step(step)  # step is a QuestionsStep
+# Returns a string like:
+# "Phase 0 — Demographics\n\nPlease provide the following..."
+```
+
+The pipeline also provides a convenience method that handles both stages:
+
+```python
+prompt = await pipeline.get_llm_prompt(
+    db, user_id="patient-1", session_id="sess-1",
+)
+# During rule_based stage: renders the current engine step
+# During llm_questioning stage: renders LLM follow-up questions as free-text prompts
+# Returns None when pipeline_stage is "done" or session is terminated
+```
+
 ## API Reference
 
 ### `PrescreenEngine`
@@ -138,14 +190,26 @@ step: StepResult = await engine.get_current_step(
 # Submit an answer and advance the session
 step: StepResult = await engine.submit_answer(
     db, user_id="u1", session_id="s1",
-    qid="demographics",    # phase marker (bulk) or question ID (sequential)
+    qid="demographics",    # optional: phase marker (bulk) or question ID (sequential)
     value={...},            # full batch (bulk) or single answer (sequential)
+)
+
+# qid is optional — for bulk phases (0-3) it is ignored, and for sequential
+# phases (4-5) it is auto-derived from the current step when omitted:
+step: StepResult = await engine.submit_answer(
+    db, user_id="u1", session_id="s1",
+    value={...},            # qid omitted — engine derives it automatically
 )
 ```
 
 #### Submitting Answers Per Phase
 
-Each phase expects a different `qid` and `value` shape:
+The `qid` parameter is **optional** in `submit_answer()`.  For bulk phases
+(0-3) it is ignored by the engine, and for sequential phases (4-5) it is
+auto-derived from the current step when omitted.  You can still pass it
+explicitly for clarity or backward compatibility.
+
+Each phase expects a different `value` shape:
 
 **Phase 0 — Demographics:**
 ```python
@@ -201,7 +265,12 @@ await engine.submit_answer(db, user_id=..., session_id=...,
 
 **Phases 4-5 — Sequential (OLDCARTS / OPD):**
 ```python
-# qid is the specific question ID from the previous step
+# qid can be omitted — the engine auto-derives it from the current step
+await engine.submit_answer(db, user_id=..., session_id=...,
+    value="sudden_onset",       # single_select: option ID
+)
+
+# Or pass qid explicitly if preferred
 await engine.submit_answer(db, user_id=..., session_id=...,
     qid="hea_o_001",           # the question's qid
     value="sudden_onset",       # single_select: option ID
@@ -348,9 +417,118 @@ if question.question_type in AUTO_EVAL_TYPES:
     print(f"Auto-resolved to: {action}")
 ```
 
-## Post-Rule-Based Pipeline (Interface Only)
+## Pipeline
 
-After the rule-based flow finishes, two additional stages can run. The SDK defines their input/output contracts as abstract base classes — concrete implementations live in separate packages.
+`PrescreenPipeline` orchestrates the full prescreening flow: rule-based engine, optional LLM question generation, and optional prediction. It wraps `PrescreenEngine` and manages the macro-stage transitions via the `pipeline_stage` DB column.
+
+```
+rule_based ──► llm_questioning ──► done
+            │                        ▲
+            └──── (early exit) ──────┘
+```
+
+### Quick Start
+
+```python
+from prescreen_rulesets import (
+    PrescreenEngine, PrescreenPipeline, RulesetStore, LLMAnswer,
+)
+
+store = RulesetStore()
+store.load()
+engine = PrescreenEngine(store)
+
+# Plug in your LLM generator and prediction head (both optional)
+pipeline = PrescreenPipeline(
+    engine, store,
+    generator=MyLLMQuestionGenerator(llm_client=...),
+    predictor=MyPredictionHead(model=...),
+)
+
+async with Session() as db:
+    # Create session (same API as engine)
+    info = await pipeline.create_session(db, user_id="p1", session_id="s1")
+
+    # Rule-based phase — pipeline proxies to engine
+    step = await pipeline.get_current_step(db, user_id="p1", session_id="s1")
+    step = await pipeline.submit_answer(
+        db, user_id="p1", session_id="s1",
+        qid="demographics", value={...},
+    )
+    # ... submit answers through all phases until engine signals completion ...
+
+    # If LLM questions are generated:
+    #   step.type == "llm_questions"
+    #   step.questions == ["Does the headache get worse when you bend forward?", ...]
+
+    # Submit LLM answers
+    result = await pipeline.submit_llm_answers(
+        db, user_id="p1", session_id="s1",
+        answers=[
+            LLMAnswer(question="Does the headache get worse?", answer="Yes"),
+        ],
+    )
+    # result.type == "pipeline_result"
+    # result.departments, result.severity, result.diagnoses
+
+    await db.commit()
+```
+
+### Pipeline API
+
+```python
+pipeline = PrescreenPipeline(engine, store, generator=..., predictor=...)
+```
+
+**`create_session(db, user_id, session_id)`** — Proxies to the engine. The `pipeline_stage` column defaults to `rule_based`.
+
+**`get_current_step(db, user_id, session_id)`** → `PipelineStep` — Dispatches by `pipeline_stage`:
+- `rule_based` → delegates to engine's `get_current_step`
+- `llm_questioning` → returns `LLMQuestionsStep` with stored questions
+- `done` → returns cached `PipelineResult`
+
+**`submit_answer(db, user_id, session_id, qid=None, value=...)`** → `PipelineStep` — Only valid during `rule_based` stage. Delegates to the engine and handles the transition when the engine signals completion or termination. `qid` is optional — omit it for convenience (see engine docs).
+
+**`submit_llm_answers(db, user_id, session_id, answers)`** → `PipelineResult` — Only valid during `llm_questioning` stage. Stores answers, runs prediction, and transitions to `done`.
+
+### PipelineStep Types
+
+`PipelineStep` is a union of step types the pipeline can return:
+
+| Type | Class | When |
+|------|-------|------|
+| `"questions"` | `QuestionsStep` | During `rule_based` stage — present questions to the user |
+| `"llm_questions"` | `LLMQuestionsStep` | Entering `llm_questioning` — LLM-generated follow-up questions |
+| `"pipeline_result"` | `PipelineResult` | Stage is `done` — final result with DDx, departments, severity |
+
+**`PipelineResult`** fields:
+```python
+{
+    "type": "pipeline_result",
+    "departments": [{"id": "dept004", "name": "Internal Medicine", ...}],
+    "severity": {"id": "sev002", "name": "Visit Hospital / Clinic", ...},
+    "diagnoses": [
+        {"disease_id": "d042", "confidence": 0.82},
+        {"disease_id": "d015", "confidence": 0.45},
+    ],
+    "reason": "...",              # termination reason if applicable
+    "terminated_early": False,    # True if ER early exit
+}
+```
+
+### Early Termination
+
+If the rule-based engine terminates early (e.g. ER critical positive), the pipeline skips the LLM/prediction stages and returns a `PipelineResult` with `terminated_early=True` and an empty `diagnoses` list. The department and severity come from the rule-based engine.
+
+### Without Generator or Predictor
+
+Both `generator` and `predictor` are optional:
+- **No generator:** skips the `llm_questioning` stage entirely; goes straight from rule-based completion to prediction (or `done`).
+- **No predictor:** returns a `PipelineResult` with an empty `diagnoses` list; department and severity come from the rule-based engine alone.
+
+## Post-Rule-Based Interfaces
+
+The pipeline's optional stages (`QuestionGenerator` and `PredictionModule`) are defined as abstract base classes — concrete implementations live in separate packages.
 
 ```
 Rule-based (phases 0-5)
@@ -493,43 +671,69 @@ class MyPredictionHead(PredictionModule):
 
 ### End-to-End Integration
 
+The recommended way to run the full flow is through `PrescreenPipeline`, which handles Q&A reconstruction, stage transitions, and result merging automatically:
+
 ```python
 from prescreen_rulesets import (
-    PrescreenEngine, RulesetStore, QAPair,
+    PrescreenEngine, PrescreenPipeline, RulesetStore, LLMAnswer,
 )
 
-# --- 1. Run rule-based flow (existing code) ---
 store = RulesetStore()
 store.load()
 engine = PrescreenEngine(store)
 
-async with Session() as db:
-    await engine.create_session(db, user_id="p1", session_id="s1")
-    # ... submit answers through phases 0-5 ...
-    # ... collect the session's responses ...
-    await db.commit()
+pipeline = PrescreenPipeline(
+    engine, store,
+    generator=MyLLMQuestionGenerator(llm_client=...),
+    predictor=MyPredictionHead(model=...),
+)
 
-# --- 2. Build QAPairs from rule-based responses ---
-# (extract from your session's response storage)
+async with Session() as db:
+    await pipeline.create_session(db, user_id="p1", session_id="s1")
+
+    # Submit answers through rule-based phases 0-5
+    step = await pipeline.submit_answer(db, user_id="p1", session_id="s1",
+                                         qid="demographics", value={...})
+    # ... continue submitting answers ...
+
+    # When engine finishes, pipeline auto-generates LLM questions:
+    #   step.type == "llm_questions"
+
+    # Collect patient answers and submit
+    result = await pipeline.submit_llm_answers(
+        db, user_id="p1", session_id="s1",
+        answers=[LLMAnswer(question=q, answer=a) for q, a in patient_responses],
+    )
+
+    # result.type == "pipeline_result"
+    print(result.diagnoses)     # ranked DDx list
+    print(result.departments)   # resolved department dicts
+    print(result.severity)      # resolved severity dict
+
+    await db.commit()
+```
+
+If you need manual control (e.g. using the interfaces without the pipeline), you can call `QuestionGenerator` and `PredictionModule` directly:
+
+```python
+from prescreen_rulesets import QAPair
+
+# Build QAPairs from your session's stored responses
 rule_based_pairs: list[QAPair] = [...]
 
-# --- 3. LLM question generation ---
+# LLM question generation
 generator = MyLLMQuestionGenerator(llm_client=...)
 generated = await generator.generate(rule_based_pairs)
 
-# Present generated.questions to the patient and collect answers
-llm_pairs: list[QAPair] = [
+# Present generated.questions to the patient, collect answers
+llm_pairs = [
     QAPair(question=q, answer=a, source="llm_generated")
     for q, a in zip(generated.questions, patient_answers)
 ]
 
-# --- 4. Prediction ---
+# Prediction
 predictor = MyPredictionHead(model=...)
 result = await predictor.predict(rule_based_pairs + llm_pairs)
-
-print(result.diagnoses)     # ranked DDx list
-print(result.departments)   # e.g. ["dept004"]
-print(result.severity)      # e.g. "sev002"
 ```
 
 ### Reference Spaces
@@ -547,7 +751,8 @@ The prediction outputs are bounded by the constants in `v1/const/`:
 ```
 src/prescreen_rulesets/
 ├── __init__.py          # Public exports
-├── engine.py            # PrescreenEngine — orchestrator
+├── engine.py            # PrescreenEngine — 6-phase rule-based orchestrator
+├── pipeline.py          # PrescreenPipeline — full pipeline (engine + LLM + prediction)
 ├── ruleset.py           # RulesetStore — YAML loading + lookups
 ├── evaluator.py         # ConditionalEvaluator — auto-eval logic
 ├── constants.py         # Shared constants (severity order, phase names, defaults)
@@ -558,7 +763,8 @@ src/prescreen_rulesets/
     ├── question.py      # 10 question types + Question union + question_mapper
     ├── schema.py        # DepartmentConst, SeverityConst, NHSOSymptom, etc.
     ├── session.py       # StepResult, QuestionsStep, TerminationStep, SessionInfo
-    └── pipeline.py      # QAPair, GeneratedQuestions, PredictionResult, DiagnosisResult
+    └── pipeline.py      # QAPair, GeneratedQuestions, PredictionResult, DiagnosisResult,
+                         # LLMAnswer, LLMQuestionsStep, PipelineResult, PipelineStep
 ```
 
 ## Testing

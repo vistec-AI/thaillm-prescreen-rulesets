@@ -38,6 +38,9 @@ class QuestionPayload(BaseModel):
     image: str | None = None
     # Extra context (e.g. symptom grouping for ER checklist)
     metadata: dict | None = None
+    # JSON-Schema-like dict describing the expected answer format for this question.
+    # Populated by the engine so LLM players know what shape to submit.
+    answer_schema: dict | None = None
 
 
 class QuestionsStep(BaseModel):
@@ -47,6 +50,10 @@ class QuestionsStep(BaseModel):
     phase: int
     phase_name: str
     questions: list[QuestionPayload]
+    # JSON-Schema-like dict describing the value shape for submit_answer().
+    # For bulk phases this is an object with per-question keys; for sequential
+    # phases it mirrors the single question's answer_schema.
+    submission_schema: dict | None = None
 
 
 class TerminationStep(BaseModel):

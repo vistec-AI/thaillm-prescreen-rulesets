@@ -44,12 +44,14 @@ from prescreen_rulesets.models.session import (
     TerminationStep,
 )
 from prescreen_rulesets.pipeline import PrescreenPipeline
+from prescreen_rulesets.prompt import PromptManager
 from prescreen_rulesets.ruleset import RulesetStore
 
 __all__ = [
     # Engine & store
     "PrescreenEngine",
     "PrescreenPipeline",
+    "PromptManager",
     "RulesetStore",
     # Session / step
     "QuestionPayload",

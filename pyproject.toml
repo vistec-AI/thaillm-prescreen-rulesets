@@ -17,6 +17,7 @@ dependencies = [
     "asyncpg>=0.29",
     "alembic>=1.13",
     "psycopg2-binary>=2.9",
+    "jinja2>=3.1",
 ]
 
 [project.scripts]
@@ -37,6 +38,7 @@ packages = [
     "prescreen_db.migrations",
     "prescreen_rulesets",
     "prescreen_rulesets.models",
+    "prescreen_rulesets.prompt",
 ]
 
 [tool.setuptools.package-dir]
@@ -45,9 +47,11 @@ prescreen_db = "src/prescreen_db"
 "prescreen_db.migrations" = "src/prescreen_db/migrations"
 prescreen_rulesets = "src/prescreen_rulesets"
 "prescreen_rulesets.models" = "src/prescreen_rulesets/models"
+"prescreen_rulesets.prompt" = "src/prescreen_rulesets/prompt"
 
 [tool.setuptools.package-data]
 inspector = ["static/*", "static/**/*"]
+"prescreen_rulesets.prompt" = ["template/*.jinja2"]
 
 [dependency-groups]
 dev = [
