@@ -9,6 +9,7 @@ import ValidationSection from "@/components/shared/ValidationSection";
 import DemographicTab from "@/components/demographic/DemographicTab";
 import ErTab from "@/components/er/ErTab";
 import GraphTab from "@/components/graph/GraphTab";
+import SimulatorTab from "@/components/simulator/SimulatorTab";
 
 export default function Home() {
   const { activeTab } = useApp();
@@ -28,6 +29,7 @@ export default function Home() {
         {activeTab === "demographic" && <DemographicTab />}
         {activeTab === "er" && <ErTab />}
         {activeTab === "graph" && <GraphTab />}
+        {activeTab === "simulator" && <SimulatorTab />}
       </div>
 
       <Footer />

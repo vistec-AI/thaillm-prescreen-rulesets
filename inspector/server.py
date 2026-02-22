@@ -150,6 +150,34 @@ def create_app() -> FastAPI:
             return HTMLResponse(legacy_index.read_text(encoding="utf-8"))
         raise HTTPException(status_code=500, detail="Missing frontend index.html")
 
+    # ------------------------------------------------------------------
+    # Simulator API — returns all rule data bundled into one payload
+    # ------------------------------------------------------------------
+
+    @app.get("/api/simulator_data")
+    def get_simulator_data() -> Dict[str, Any]:
+        """Return all rule data for the client-side simulator.
+
+        Bundles demographics, ER rules, OLDCARTS/OPD rules, and constants
+        into a single payload so the simulator can run entirely client-side
+        without additional API calls.
+        """
+        demo = load_demographic_local()
+        er = load_er_rules_local()
+        rules = load_rules_local()
+        consts = load_constants_local()
+        return {
+            "demographic": demo,
+            "er_critical": er["er_symptom"],
+            "er_adult": er["er_adult"],
+            "er_pediatric": er["er_pediatric"],
+            "oldcarts": rules["oldcarts"],
+            "opd": rules["opd"],
+            "nhso_symptoms": consts["nhso_symptoms"],
+            "severity_levels": consts["severity_levels"],
+            "departments": consts["departments"],
+        }
+
     @app.get("/api/symptoms")
     def list_symptoms() -> Dict[str, Any]:
         consts = load_constants_local()

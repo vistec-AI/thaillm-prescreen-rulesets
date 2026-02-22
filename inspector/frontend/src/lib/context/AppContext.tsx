@@ -6,7 +6,7 @@ import { fetchConstants } from "../api/constants";
 import { runValidation, fetchVersion } from "../api/validation";
 
 // ── Tab identifiers (in display order) ──────────────────────────────
-export type TabId = "demographic" | "er" | "graph";
+export type TabId = "demographic" | "er" | "graph" | "simulator";
 
 interface AppState {
   /** Currently active tab. */
