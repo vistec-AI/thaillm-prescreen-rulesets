@@ -164,6 +164,40 @@ class PrescreenPipeline:
         )
 
     # ==================================================================
+    # Session deletion
+    # ==================================================================
+
+    async def soft_delete_session(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> None:
+        """Soft-delete a session (sets deleted_at, hides from queries).
+
+        Raises:
+            ValueError: if the session does not exist for this user
+        """
+        row = await self._load_session(db, user_id, session_id)
+        await self._repo.soft_delete(db, row)
+
+    async def hard_delete_session(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> None:
+        """Permanently delete a session row (irreversible, for GDPR erasure).
+
+        Raises:
+            ValueError: if the session does not exist for this user
+        """
+        row = await self._load_session(db, user_id, session_id)
+        await self._repo.hard_delete(db, row)
+
+    # ==================================================================
     # Step API
     # ==================================================================
 

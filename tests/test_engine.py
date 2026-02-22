@@ -75,6 +75,8 @@ class MockSessionRow:
         default_factory=lambda: datetime.now(timezone.utc)
     )
     completed_at: datetime | None = None
+    # Soft-delete timestamp — None means live, non-None means soft-deleted
+    deleted_at: datetime | None = None
 
 
 class MockRepository:
@@ -100,7 +102,11 @@ class MockRepository:
         return row
 
     async def get_by_user_and_session(self, db, user_id, session_id):
-        return self._sessions.get((user_id, session_id))
+        row = self._sessions.get((user_id, session_id))
+        # Exclude soft-deleted rows, matching real repository behaviour
+        if row is not None and row.deleted_at is not None:
+            return None
+        return row
 
     async def save_demographics(self, db, session, demographics):
         merged = {**session.demographics, **demographics}
@@ -175,8 +181,24 @@ class MockRepository:
     async def list_by_user(self, db, user_id, *, limit=20, offset=0):
         return [
             row for (uid, _), row in self._sessions.items()
-            if uid == user_id
+            if uid == user_id and row.deleted_at is None
         ][:limit]
+
+    async def soft_delete(self, db, session):
+        """Set deleted_at on a session, hiding it from normal queries."""
+        if session.deleted_at is not None:
+            raise ValueError(
+                f"Session already deleted: session_id={session.session_id}"
+            )
+        now = datetime.now(timezone.utc)
+        session.deleted_at = now
+        session.updated_at = now
+        return session
+
+    async def hard_delete(self, db, session):
+        """Permanently remove a session from the in-memory store."""
+        key = (session.user_id, session.session_id)
+        self._sessions.pop(key, None)
 
 
 # =====================================================================

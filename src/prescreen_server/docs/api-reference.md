@@ -22,6 +22,8 @@ This page provides a quick-reference endpoint table and key model shapes.
 | `POST` | `/api/v1/sessions` | `X-User-ID` | Create a new prescreening session. Body: `{"session_id": "...", "ruleset_version": "..."}`. Returns 201. |
 | `GET` | `/api/v1/sessions/{session_id}` | `X-User-ID` | Get session info. Returns 404 if not found. |
 | `GET` | `/api/v1/sessions` | `X-User-ID` | List sessions for the current user. Query params: `limit` (1-100, default 20), `offset` (default 0). |
+| `DELETE` | `/api/v1/sessions/{session_id}` | `X-User-ID` | Soft-delete a session. The row is retained but hidden from queries. Returns 204. |
+| `DELETE` | `/api/v1/sessions/{session_id}/permanent` | `X-User-ID` | Permanently delete a session (irreversible, for GDPR erasure). Returns 204. |
 
 ### Steps
 
@@ -45,6 +47,15 @@ This page provides a quick-reference endpoint table and key model shapes.
 | `GET` | `/api/v1/reference/severity-levels` | No | List all severity/triage levels. |
 | `GET` | `/api/v1/reference/symptoms` | No | List all NHSO symptoms. |
 | `GET` | `/api/v1/reference/underlying-diseases` | No | List all underlying diseases. |
+
+### Admin (Bulk Cleanup)
+
+These endpoints require the `X-Admin-Key` header matching the `ADMIN_API_KEY` environment variable. Returns 401 if the header is missing, 403 if the key is invalid or not configured.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/v1/admin/cleanup/sessions` | `X-Admin-Key` | Bulk soft-delete or hard-delete old sessions. Query params: `older_than_days` (default 90), `status` (repeatable filter), `hard` (default false). |
+| `POST` | `/api/v1/admin/cleanup/purge-deleted` | `X-Admin-Key` | Permanently remove soft-deleted rows. Query params: `older_than_days` (default 0 = all). |
 
 ## Key Response Shapes
 
@@ -125,6 +136,19 @@ Returned when `type` is `"pipeline_result"` — the final outcome.
   "terminated_early": false
 }
 ```
+
+### CleanupResult
+
+Returned by admin cleanup endpoints.
+
+```json
+{
+  "affected_rows": 42,
+  "action": "soft_delete"
+}
+```
+
+The `action` field is one of `"soft_delete"`, `"hard_delete"`, or `"purge_soft_deleted"`.
 
 ### Error Response
 

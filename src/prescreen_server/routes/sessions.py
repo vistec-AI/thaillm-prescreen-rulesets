@@ -70,6 +70,40 @@ async def get_session(
     return info
 
 
+@router.delete("/sessions/{session_id}", status_code=204)
+async def soft_delete_session(
+    session_id: str,
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+    pipeline: PrescreenPipeline = Depends(get_pipeline),
+) -> None:
+    """Soft-delete a session.
+
+    The session row is retained but excluded from all normal queries.
+    Returns 204 on success, 404 if the session does not exist.
+    """
+    await pipeline.soft_delete_session(
+        db, user_id=user_id, session_id=session_id,
+    )
+
+
+@router.delete("/sessions/{session_id}/permanent", status_code=204)
+async def hard_delete_session(
+    session_id: str,
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+    pipeline: PrescreenPipeline = Depends(get_pipeline),
+) -> None:
+    """Permanently delete a session (irreversible, GDPR erasure).
+
+    The session row is removed from the database entirely.
+    Returns 204 on success, 404 if the session does not exist.
+    """
+    await pipeline.hard_delete_session(
+        db, user_id=user_id, session_id=session_id,
+    )
+
+
 @router.get("/sessions")
 async def list_sessions(
     user_id: str = Depends(get_user_id),

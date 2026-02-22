@@ -13,10 +13,11 @@ Client ──► API Gateway (auth) ──► Prescreen API
 
 ## Which Endpoints Need It
 
-| Requires `X-User-ID` | Endpoints |
-|-----------------------|-----------|
-| **Yes** | All `/api/v1/sessions/*` endpoints (create, get, list, step, LLM) |
-| **No** | `/health`, `/api/v1/reference/*`, `/docs`, `/redoc`, `/guide/` |
+| Header | Endpoints |
+|--------|-----------|
+| `X-User-ID` | All `/api/v1/sessions/*` endpoints (create, get, list, delete, step, LLM) |
+| `X-Admin-Key` | All `/api/v1/admin/*` endpoints (bulk cleanup, purge) |
+| Neither | `/health`, `/api/v1/reference/*`, `/docs`, `/redoc`, `/guide/` |
 
 ## Sending the Header
 
@@ -65,6 +66,22 @@ Sessions are scoped to the `(user_id, session_id)` pair. This means:
 - The same `session_id` string can exist for different users without conflict
 - Listing sessions (`GET /api/v1/sessions`) only returns sessions for the current `X-User-ID`
 
+## Admin Endpoints — `X-Admin-Key`
+
+The `/api/v1/admin/*` endpoints (bulk cleanup and purge) are protected by a shared secret. Set the `ADMIN_API_KEY` environment variable and pass it as the `X-Admin-Key` header:
+
+```bash
+curl -X POST "http://localhost:8080/api/v1/admin/cleanup/sessions?older_than_days=90" \
+  -H "X-Admin-Key: my-secret-key"
+```
+
+| Scenario | Response |
+|----------|----------|
+| `ADMIN_API_KEY` not configured | 403 — admin endpoints disabled |
+| `X-Admin-Key` header missing | 401 |
+| `X-Admin-Key` does not match | 403 |
+| Valid key | Request proceeds |
+
 ## Production Recommendations
 
 In production, do **not** rely on the client to self-report `X-User-ID`. Instead:
@@ -75,3 +92,5 @@ In production, do **not** rely on the client to self-report `X-User-ID`. Instead
 4. The Prescreen API trusts the header because it only accepts traffic from the gateway
 
 This keeps the Prescreen API simple and stateless while delegating auth to the gateway.
+
+For admin endpoints, store the `ADMIN_API_KEY` securely (e.g. in a secrets manager) and only expose admin routes to internal networks or trusted operators.

@@ -11,6 +11,8 @@
 | `SERVER_CORS_ORIGINS` | `*` | Comma-separated allowed origins (e.g. `https://app.example.com,https://admin.example.com`) |
 | `SERVER_RULESET_DIR` | (auto) | Path to the `v1/` rulesets directory. Auto-detected from the repository root when not set. |
 | `SERVER_LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `SESSION_TTL_DAYS` | `0` | Default age threshold (days) for session cleanup. 0 = infinite (no automatic cleanup). |
+| `ADMIN_API_KEY` | (none) | Shared secret for admin endpoints. Admin endpoints are disabled when not set. |
 
 ### Database Settings
 
@@ -99,6 +101,43 @@ Use this for:
 - **Docker health checks:** `HEALTHCHECK CMD curl -f http://localhost:8080/health`
 - **Load balancer health checks**
 
+## Session Cleanup CLI
+
+The `prescreen-cleanup` command provides a standalone tool for purging old sessions. It connects directly to the database and is suitable for cron jobs or one-off maintenance.
+
+```bash
+# Soft-delete completed/terminated sessions older than 90 days (default)
+uv run prescreen-cleanup
+
+# Permanently delete sessions older than 30 days
+uv run prescreen-cleanup --days 30 --hard
+
+# Purge all soft-deleted rows
+uv run prescreen-cleanup --purge-deleted
+
+# Purge soft-deleted rows older than 7 days
+uv run prescreen-cleanup --purge-deleted --days 7
+
+# Only target specific statuses
+uv run prescreen-cleanup --status completed --status terminated
+```
+
+Options:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--days` | `$SESSION_TTL_DAYS` or `0` | Age threshold in days (0 = all matching sessions) |
+| `--status` | `completed`, `terminated` | Session status filter (repeatable) |
+| `--hard` | off | Permanently DELETE instead of soft-delete |
+| `--purge-deleted` | off | Remove previously soft-deleted rows |
+| `--log-level` | `INFO` | Log verbosity |
+
+**Cron example** (purge completed sessions older than 90 days nightly):
+
+```cron
+0 3 * * * cd /app && uv run prescreen-cleanup --days 90 >> /var/log/prescreen-cleanup.log 2>&1
+```
+
 ## Production Checklist
 
 1. Set `SERVER_CORS_ORIGINS` to your specific frontend domains
@@ -107,3 +146,5 @@ Use this for:
 4. Set `SERVER_LOG_LEVEL=WARNING` to reduce log noise
 5. Configure the health check in your orchestrator
 6. Ensure the `v1/` rulesets directory is available (copied into the Docker image by default)
+7. Set `ADMIN_API_KEY` to enable admin cleanup endpoints
+8. Schedule `prescreen-cleanup` via cron or a job scheduler to prevent unbounded table growth

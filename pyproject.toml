@@ -23,6 +23,7 @@ dependencies = [
 [project.scripts]
 prescreen-inspector = "inspector.server:cli"
 prescreen-server = "prescreen_server.app:cli"
+prescreen-cleanup = "prescreen_server.cleanup:cli"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

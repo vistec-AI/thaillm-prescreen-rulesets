@@ -20,6 +20,9 @@ notebooks
 CLAUDE.md
 **/.claude
 
+# PostgreSQL data (docker-compose bind mount)
+data/
+
 # MkDocs build output
 src/prescreen_server/docs_site/
 

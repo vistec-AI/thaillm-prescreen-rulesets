@@ -95,6 +95,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         {"name": "steps", "description": "Step interaction — get current step, submit answers"},
         {"name": "llm", "description": "LLM integration — submit LLM answers, get prompts"},
         {"name": "reference", "description": "Read-only reference data (departments, symptoms, etc.)"},
+        {"name": "admin", "description": "Admin-only bulk cleanup and purge operations (requires X-Admin-Key)"},
     ]
 
     app = FastAPI(

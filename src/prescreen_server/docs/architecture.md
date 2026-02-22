@@ -98,6 +98,7 @@ FastAPI's `Depends()` system provides:
 | `get_pipeline()` | Singleton | `PrescreenPipeline` instance (created at startup) |
 | `get_store()` | Singleton | `RulesetStore` instance (loaded at startup) |
 | `get_user_id()` | Per-request | Extracts and validates `X-User-ID` header |
+| `require_admin_key()` | Per-request | Validates `X-Admin-Key` header against `ADMIN_API_KEY` env var |
 
 ## Startup (Lifespan)
 
@@ -117,6 +118,7 @@ Rather than catching errors in every route handler, the server uses **global exc
 | Exception | HTTP Status | Logic |
 |-----------|-------------|-------|
 | `ValueError` containing "already exists" | 409 Conflict | Duplicate session |
+| `ValueError` containing "already deleted" | 409 Conflict | Double soft-delete |
 | `ValueError` containing "not found" | 404 Not Found | Unknown session/resource |
 | `ValueError` containing "only valid during" | 400 Bad Request | Wrong pipeline stage |
 | `ValueError` (other) | 400 Bad Request | Fallback |

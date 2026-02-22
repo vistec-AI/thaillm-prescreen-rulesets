@@ -25,6 +25,13 @@ class ServerSettings:
     # Logging
     log_level: str = "INFO"
 
+    # Session TTL — default age threshold (days) for cleanup operations.
+    # 0 means infinite (no automatic cleanup unless explicitly requested).
+    session_ttl_days: int = 0
+
+    # Admin API key — shared secret for admin endpoints (None = disabled)
+    admin_api_key: str | None = None
+
 
 def load_settings() -> ServerSettings:
     """Build settings from ``SERVER_*`` environment variables."""
@@ -37,4 +44,6 @@ def load_settings() -> ServerSettings:
         cors_origins=origins,
         ruleset_dir=os.getenv("SERVER_RULESET_DIR") or None,
         log_level=os.getenv("SERVER_LOG_LEVEL", "INFO").upper(),
+        session_ttl_days=int(os.getenv("SESSION_TTL_DAYS", "0")),
+        admin_api_key=os.getenv("ADMIN_API_KEY") or None,
     )
