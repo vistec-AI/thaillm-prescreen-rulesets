@@ -1,6 +1,7 @@
 "use client";
 
 import ActionEditor, { type ActionObj } from "./ActionEditor";
+import type { QidOption } from "./QidPicker";
 
 /** Comparison operators available for age filter options. */
 const AGE_OPERATORS = [
@@ -24,6 +25,8 @@ interface Props {
   onChange: (updated: AgeOptionObj[]) => void;
   disabled?: boolean;
   source?: string;
+  /** Available QIDs for searchable dropdowns — forwarded to ActionEditor. */
+  availableQids?: QidOption[];
 }
 
 /** Parse an age_filter label like "<15" or ">=50" into operator + age value. */
@@ -59,6 +62,7 @@ export default function AgeFilterEditor({
   onChange,
   disabled,
   source,
+  availableQids,
 }: Props) {
   const updateOption = (
     index: number,
@@ -167,6 +171,7 @@ export default function AgeFilterEditor({
                   onChange={(a) => updateOptionAction(i, a)}
                   disabled={disabled}
                   source={source}
+                  availableQids={availableQids}
                 />
               </div>
             )}

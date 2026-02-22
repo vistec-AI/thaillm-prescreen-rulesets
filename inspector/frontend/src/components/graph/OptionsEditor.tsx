@@ -1,6 +1,7 @@
 "use client";
 
 import ActionEditor, { type ActionObj } from "./ActionEditor";
+import type { QidOption } from "./QidPicker";
 
 /** Shape of a single option in the YAML graph data. */
 export interface OptionObj {
@@ -17,6 +18,8 @@ interface Props {
   disabled?: boolean;
   /** Source of the question ("oldcarts" | "opd") — passed to ActionEditor. */
   source?: string;
+  /** Available QIDs for searchable dropdowns — forwarded to ActionEditor. */
+  availableQids?: QidOption[];
 }
 
 /**
@@ -31,6 +34,7 @@ export default function OptionsEditor({
   hasPerOptionAction,
   disabled,
   source,
+  availableQids,
 }: Props) {
   const updateOption = (index: number, patch: Partial<OptionObj>) => {
     const updated = options.map((o, i) =>
@@ -111,6 +115,7 @@ export default function OptionsEditor({
                 onChange={(a) => updateOptionAction(i, a)}
                 disabled={disabled}
                 source={source}
+                availableQids={availableQids}
               />
             </div>
           )}

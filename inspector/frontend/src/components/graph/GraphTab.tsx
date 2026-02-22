@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useApp } from "@/lib/context/AppContext";
 import type { GraphResponse, GraphNodeData } from "@/lib/types";
 import { fetchSymptoms, fetchGraph, updateQuestion } from "@/lib/api/graph";
@@ -138,6 +138,24 @@ export default function GraphTab() {
     await triggerValidation();
   };
 
+  // Derive available QIDs from graph nodes for the searchable QID picker.
+  // Filters out virtual terminate nodes (IDs containing "_TERM_").
+  const availableQids = useMemo(() => {
+    if (!graphData) return [];
+    return graphData.nodes
+      .filter((n) => !n.data.id.includes("_TERM_"))
+      .map((n) => ({
+        id: n.data.id,
+        label: n.data.label,
+        type: n.data.type,
+        // Carry option labels so PredicateEditor can offer dropdowns/checkboxes
+        options: n.data.options?.map((o) => ({ id: o.id, label: o.label })),
+        min_value: n.data.min_value,
+        max_value: n.data.max_value,
+        step: n.data.step,
+      }));
+  }, [graphData]);
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <GraphToolbar
@@ -167,6 +185,7 @@ export default function GraphTab() {
               data={selectedNode}
               onSave={handleSave}
               onCancel={handleCancel}
+              availableQids={availableQids}
             />
           ) : (
             <GraphDetails data={selectedNode} onEdit={handleEdit} />

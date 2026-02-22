@@ -2,6 +2,7 @@
 
 import ActionEditor, { type ActionObj } from "./ActionEditor";
 import PredicateEditor, { type PredicateObj } from "./PredicateEditor";
+import type { QidOption } from "./QidPicker";
 
 /** Shape of a single rule in the conditional question's `rules` array. */
 export interface RuleObj {
@@ -15,6 +16,8 @@ interface Props {
   onChange: (rules: RuleObj[], defaultAction: ActionObj | null) => void;
   disabled?: boolean;
   source?: string;
+  /** Available QIDs for searchable dropdowns — forwarded to ActionEditor and PredicateEditor. */
+  availableQids?: QidOption[];
 }
 
 /**
@@ -31,6 +34,7 @@ export default function RulesEditor({
   onChange,
   disabled,
   source,
+  availableQids,
 }: Props) {
   // --- Rule-level operations ---
 
@@ -153,6 +157,7 @@ export default function RulesEditor({
                   onChange={(p) => updatePredicate(ruleIdx, predIdx, p)}
                   onRemove={() => removePredicate(ruleIdx, predIdx)}
                   disabled={disabled}
+                  availableQids={availableQids}
                 />
               ))}
             </div>
@@ -175,6 +180,7 @@ export default function RulesEditor({
                 onChange={(a) => updateRuleAction(ruleIdx, a)}
                 disabled={disabled}
                 source={source}
+                availableQids={availableQids}
               />
             ) : (
               <ActionEditor
@@ -182,6 +188,7 @@ export default function RulesEditor({
                 onChange={(a) => updateRuleAction(ruleIdx, a)}
                 disabled={disabled}
                 source={source}
+                availableQids={availableQids}
               />
             )}
           </div>
@@ -215,6 +222,7 @@ export default function RulesEditor({
             onChange={(a) => onChange(rules, a)}
             disabled={disabled}
             source={source}
+            availableQids={availableQids}
           />
         )}
       </div>

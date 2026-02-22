@@ -7,6 +7,7 @@ import OptionsEditor, { type OptionObj } from "./OptionsEditor";
 import RulesEditor, { type RuleObj } from "./RulesEditor";
 import AgeFilterEditor, { type AgeOptionObj } from "./AgeFilterEditor";
 import GenderFilterEditor, { type GenderOptionObj } from "./GenderFilterEditor";
+import type { QidOption } from "./QidPicker";
 
 // Valid question types per source.
 // OLDCARTS supports all 10 types; OPD only allows a subset.
@@ -45,6 +46,8 @@ interface Props {
   data: GraphNodeData;
   onSave: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
+  /** Available QIDs for searchable dropdowns — forwarded to all sub-editors. */
+  availableQids?: QidOption[];
 }
 
 /** Deep-clone a value via JSON round-trip. */
@@ -65,7 +68,7 @@ function defaultAction(): ActionObj {
  * The question_type is editable — the backend runs pytest after save and
  * rolls back if the new type is invalid or incompatible.
  */
-export default function GraphEditor({ data, onSave, onCancel }: Props) {
+export default function GraphEditor({ data, onSave, onCancel, availableQids = [] }: Props) {
   const raw = data.raw ?? (data as unknown as Record<string, unknown>);
   const source = data.source || "";
 
@@ -212,6 +215,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
         onChange={setOnSubmit}
         disabled={saving}
         source={source}
+        availableQids={availableQids}
       />
     </div>
   );
@@ -366,6 +370,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
         hasPerOptionAction={true}
         disabled={saving}
         source={source}
+        availableQids={availableQids}
       />
     </div>
   );
@@ -380,6 +385,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
           hasPerOptionAction={false}
           disabled={saving}
           source={source}
+          availableQids={availableQids}
         />
       </div>
       <div>
@@ -389,6 +395,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
           onChange={setNextAction}
           disabled={saving}
           source={source}
+          availableQids={availableQids}
         />
       </div>
     </div>
@@ -415,6 +422,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
           hasPerOptionAction={true}
           disabled={saving}
           source={source}
+          availableQids={availableQids}
         />
       </div>
     </div>
@@ -441,6 +449,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
           hasPerOptionAction={false}
           disabled={saving}
           source={source}
+          availableQids={availableQids}
         />
       </div>
       <div>
@@ -450,6 +459,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
           onChange={setNextAction}
           disabled={saving}
           source={source}
+          availableQids={availableQids}
         />
       </div>
     </div>
@@ -463,6 +473,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
         onChange={(opts) => setOptions(opts as OptionObj[])}
         disabled={saving}
         source={source}
+        availableQids={availableQids}
       />
     </div>
   );
@@ -475,6 +486,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
         onChange={(opts) => setOptions(opts as OptionObj[])}
         disabled={saving}
         source={source}
+        availableQids={availableQids}
       />
     </div>
   );
@@ -486,6 +498,7 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
       onChange={handleRulesChange}
       disabled={saving}
       source={source}
+      availableQids={availableQids}
     />
   );
 

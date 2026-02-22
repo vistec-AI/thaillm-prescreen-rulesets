@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { ConstantsResponse } from "@/lib/types";
 import { useApp } from "@/lib/context/AppContext";
+import QidPicker, { type QidOption } from "./QidPicker";
 
 /** Shape of an action object in the YAML graph data. */
 export interface ActionObj {
@@ -21,6 +22,8 @@ interface Props {
   disabled?: boolean;
   /** Source of the question ("oldcarts" | "opd") — controls which action types are available. */
   source?: string;
+  /** Available QIDs for the searchable dropdown in goto actions. */
+  availableQids?: QidOption[];
 }
 
 /**
@@ -31,7 +34,7 @@ interface Props {
  * - opd: no editable params (label only)
  * - terminate: department checkboxes + severity dropdown
  */
-export default function ActionEditor({ value, onChange, disabled, source }: Props) {
+export default function ActionEditor({ value, onChange, disabled, source, availableQids = [] }: Props) {
   const { loadConstants } = useApp();
   const [consts, setConsts] = useState<ConstantsResponse | null>(null);
 
@@ -80,26 +83,57 @@ export default function ActionEditor({ value, onChange, disabled, source }: Prop
   // --- Type-specific controls ---
 
   if (value.action === "goto") {
-    const qidStr = (value.qid || []).join(", ");
+    const qids = value.qid || [];
+
+    const updateQid = (index: number, newQid: string) => {
+      const updated = qids.map((q, i) => (i === index ? newQid : q));
+      onChange({ ...value, qid: updated });
+    };
+
+    const addQid = () => {
+      onChange({ ...value, qid: [...qids, ""] });
+    };
+
+    const removeQid = (index: number) => {
+      onChange({ ...value, qid: qids.filter((_, i) => i !== index) });
+    };
+
     return (
       <div className="space-y-1">
         <div className="flex items-center gap-1.5">
           {actionTypeSelector}
         </div>
-        <input
-          type="text"
-          className="w-full border border-gray-200 rounded px-2 py-0.5 text-sm"
-          value={qidStr}
-          onChange={(e) => {
-            const qids = e.target.value
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            onChange({ ...value, qid: qids });
-          }}
+        {/* One QidPicker per target QID, with remove button */}
+        {qids.map((qid, i) => (
+          <div key={i} className="flex gap-1 items-center">
+            <div className="flex-1">
+              <QidPicker
+                value={qid}
+                onChange={(val) => updateQid(i, val)}
+                availableQids={availableQids}
+                disabled={disabled}
+                placeholder="question_id"
+              />
+            </div>
+            <button
+              type="button"
+              className="px-1.5 text-red-500 hover:text-red-700 text-sm disabled:opacity-50"
+              onClick={() => removeQid(i)}
+              disabled={disabled}
+              title="Remove QID"
+            >
+              &times;
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="px-2 py-0.5 text-xs bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50"
+          onClick={addQid}
           disabled={disabled}
-          placeholder="qid1, qid2, ..."
-        />
+        >
+          + Add QID
+        </button>
       </div>
     );
   }

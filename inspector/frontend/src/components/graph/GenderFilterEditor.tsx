@@ -1,6 +1,7 @@
 "use client";
 
 import ActionEditor, { type ActionObj } from "./ActionEditor";
+import type { QidOption } from "./QidPicker";
 
 /** Shape of a single gender_filter option in the YAML. */
 export interface GenderOptionObj {
@@ -14,6 +15,8 @@ interface Props {
   onChange: (updated: GenderOptionObj[]) => void;
   disabled?: boolean;
   source?: string;
+  /** Available QIDs for searchable dropdowns — forwarded to ActionEditor. */
+  availableQids?: QidOption[];
 }
 
 /** The only valid gender choices — id and label are always "male" or "female". */
@@ -29,6 +32,7 @@ export default function GenderFilterEditor({
   onChange,
   disabled,
   source,
+  availableQids,
 }: Props) {
   // Ensure we always have exactly the two gender options in the correct order,
   // preserving existing actions when available.
@@ -69,6 +73,7 @@ export default function GenderFilterEditor({
                 onChange={(a) => updateAction(opt.id!, a)}
                 disabled={disabled}
                 source={source}
+                availableQids={availableQids}
               />
             </div>
           )}
