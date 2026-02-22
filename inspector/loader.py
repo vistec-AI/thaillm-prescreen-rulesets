@@ -47,6 +47,34 @@ def load_er_rules_local(version: str = "v1") -> Dict[str, Any]:
     }
 
 
+def load_demographic_local(version: str = "v1") -> list[Dict[str, Any]]:
+    """Load demographic field definitions from ``v1/rules/demographic.yaml``.
+
+    Returns the flat list of field dicts.  For fields whose ``type`` is
+    ``from_yaml``, the ``values`` string (a relative path like
+    ``const/underlying_diseases.yaml``) is resolved to the actual list
+    loaded from that YAML file, and the original path is preserved in
+    ``values_path``.
+    """
+    root = find_repo_root()
+    base = root / version
+    items = load_yaml(base / "rules" / "demographic.yaml")
+    if not isinstance(items, list):
+        return []
+
+    for item in items:
+        if item.get("type") == "from_yaml" and isinstance(item.get("values"), str):
+            ref_path = base / item["values"]
+            # Keep the original relative path so the UI can display it
+            item["values_path"] = item["values"]
+            try:
+                item["values"] = load_yaml(ref_path)
+            except FileNotFoundError:
+                item["values"] = []
+
+    return items
+
+
 def load_constants_local(version: str = "v1") -> Dict[str, Any]:
     base = find_repo_root() / version / "const"
     return {

@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #333333;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  margin: 0;
+}
+
+/*
+ * Mobile preview overrides — force mobile-friendly layouts inside the
+ * iPhone frame. Tailwind's md: breakpoints use viewport width, but the
+ * phone container is only 393px, so we override them here.
+ */
+
+/* Force all 2-col grids to single column */
+.mobile-preview .grid {
+  grid-template-columns: 1fr !important;
+}
+
+/* Date picker row: let the 3 selects wrap cleanly (scoped to DOB only) */
+.mobile-preview .dob-date-row {
+  flex-wrap: wrap;
+}
+
+/* Slightly smaller heading for mobile fit */
+.mobile-preview h3 {
+  font-size: 1rem;
+}
+
+/* Toggle rows in ER forms: stack text above toggle on narrow screens */
+.mobile-preview .flex.items-center.justify-between.p-3 {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Make select dropdowns and inputs full-width with proper mobile sizing */
+.mobile-preview select,
+.mobile-preview input[type="text"],
+.mobile-preview input[type="number"],
+.mobile-preview textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  font-size: 16px; /* prevents iOS Safari zoom-on-focus */
+}
+
+/* Buttons: full-width for easier tap targets */
+.mobile-preview button[class*="bg-blue"],
+.mobile-preview button[class*="bg-gray-600"] {
+  width: 100%;
+}
+
+/* --- Mobile-only: hide developer-facing elements --- */
+
+/* Hide English field subtitles, QID badges, and edit pencil icons */
+.mobile-preview .mobile-hide {
+  display: none !important;
+}
+
+/* Remove scroll trap on disease checklist — show all items inline */
+.mobile-preview .max-h-32 {
+  max-height: none !important;
+}
+
+/* Enlarge toggle switches for 44px min tap target */
+.mobile-preview .toggle-switch {
+  width: 52px !important;
+  height: 28px !important;
+}
+.mobile-preview .toggle-thumb {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+/* Sticky submit button container at bottom of mobile form */
+.mobile-preview .sticky-submit {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 15%);
+  padding: 16px 0 8px 0;
+  z-index: 5;
+}
+
+/* Thai text: increase line-height for tone/vowel marks */
+.mobile-preview .text-sm {
+  line-height: 1.6;
+}
+
+/* ER Critical long question: truncate to 3 lines in mobile with expand toggle.
+   The inner EditableText uses inline-flex which breaks -webkit-line-clamp,
+   so we force it to inline display inside the clamp container. */
+.mobile-preview .er-question-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.mobile-preview .er-question-clamp > * {
+  display: inline !important;
+}
+.mobile-preview .er-question-clamp svg {
+  display: none !important;
+}
+
+/* Hide expand/collapse button on desktop — only needed in mobile */
+.er-expand-btn {
+  display: none;
+}
+.mobile-preview .er-expand-btn {
+  display: inline;
+}

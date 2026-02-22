@@ -50,7 +50,7 @@ prescreen_rulesets = "src/prescreen_rulesets"
 "prescreen_rulesets.prompt" = "src/prescreen_rulesets/prompt"
 
 [tool.setuptools.package-data]
-inspector = ["static/*", "static/**/*"]
+inspector = ["static/*", "static/**/*", "frontend/out/**/*"]
 "prescreen_rulesets.prompt" = ["template/*.jinja2"]
 
 [dependency-groups]
