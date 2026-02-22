@@ -17,3 +17,45 @@ body {
   font-size: 14px;
   margin: 0;
 }
+
+/*
+ * Mobile preview overrides — force mobile-friendly layouts inside the
+ * iPhone frame. Tailwind's md: breakpoints use viewport width, but the
+ * phone container is only 393px, so we override them here.
+ */
+
+/* Force all 2-col grids to single column */
+.mobile-preview .grid {
+  grid-template-columns: 1fr !important;
+}
+
+/* Date picker: let the 3 selects wrap onto 2 rows instead of cramming */
+.mobile-preview .flex.gap-2 {
+  flex-wrap: wrap;
+}
+
+/* Slightly smaller text for better fit */
+.mobile-preview h3 {
+  font-size: 1rem;
+}
+
+/* Toggle rows in ER forms: stack text above toggle on narrow screens */
+.mobile-preview .flex.items-center.justify-between.p-3 {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Make select dropdowns and inputs full-width */
+.mobile-preview select,
+.mobile-preview input[type="text"],
+.mobile-preview input[type="number"],
+.mobile-preview textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Buttons: full-width for easier tap targets */
+.mobile-preview button[class*="bg-blue"],
+.mobile-preview button[class*="bg-gray-600"] {
+  width: 100%;
+}
