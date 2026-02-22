@@ -14,7 +14,7 @@ from pydantic import BaseModel, ValidationError
 import yaml
 from fastapi.exceptions import RequestValidationError
 
-from .loader import load_rules_local, load_er_rules_local, load_constants_local, find_repo_root
+from .loader import load_rules_local, load_er_rules_local, load_demographic_local, load_constants_local, find_repo_root
 from .graph import (
     build_oldcarts_graph,
     build_opd_graph,
@@ -44,8 +44,24 @@ class UpdateErQuestionRequest(BaseModel):
     data: Dict[str, Any]
 
 
+class UpdateDemographicRequest(BaseModel):
+    qid: str
+    data: Dict[str, Any]
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Prescreen Rules Inspector")
+
+    # ------------------------------------------------------------------
+    # CORS — allow the Next.js dev server (port 3000) to reach the API
+    # ------------------------------------------------------------------
+    from fastapi.middleware.cors import CORSMiddleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # Logger setup (propagates to uvicorn/root handlers)
     logger = logging.getLogger("inspector")
@@ -95,20 +111,44 @@ def create_app() -> FastAPI:
             "errors": exc.errors(),
         })
 
-    # Serve static assets
+    # ------------------------------------------------------------------
+    # Static file serving
+    # ------------------------------------------------------------------
+    # Prefer the Next.js static export (frontend/out/) over the legacy
+    # monolithic index.html (static/).  Both are kept so the old UI
+    # remains available as a fallback.
     static_dir = Path(__file__).parent / "static"
+    next_out_dir = Path(__file__).parent / "frontend" / "out"
+
+    # Legacy static assets at /static (brand images, etc.)
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
     # Serve image assets from v1/images
     images_dir = find_repo_root() / "v1" / "images"
     if images_dir.exists():
         app.mount("/assets", StaticFiles(directory=str(images_dir)), name="assets")
 
+    # Next.js build artifacts at /_next (JS/CSS chunks)
+    next_assets = next_out_dir / "_next"
+    if next_assets.exists():
+        app.mount("/_next", StaticFiles(directory=str(next_assets)), name="next_assets")
+
+    # Brand images at /brand (Next.js public/brand)
+    brand_dir = next_out_dir / "brand"
+    if brand_dir.exists():
+        app.mount("/brand", StaticFiles(directory=str(brand_dir)), name="brand")
+
     @app.get("/", response_class=HTMLResponse)
     def index() -> HTMLResponse:
-        index_html = static_dir / "index.html"
-        if not index_html.exists():
-            raise HTTPException(status_code=500, detail="Missing frontend index.html")
-        return HTMLResponse(index_html.read_text(encoding="utf-8"))
+        # Prefer Next.js static export
+        next_index = next_out_dir / "index.html"
+        if next_index.exists():
+            return HTMLResponse(next_index.read_text(encoding="utf-8"))
+        # Fall back to legacy monolithic index.html
+        legacy_index = static_dir / "index.html"
+        if legacy_index.exists():
+            return HTMLResponse(legacy_index.read_text(encoding="utf-8"))
+        raise HTTPException(status_code=500, detail="Missing frontend index.html")
 
     @app.get("/api/symptoms")
     def list_symptoms() -> Dict[str, Any]:
@@ -159,7 +199,7 @@ def create_app() -> FastAPI:
     def _run_pytest() -> Dict[str, Any]:
         """Run pytest and return result dict."""
         root = find_repo_root()
-        cmd = "pytest -q tests/test_const_yaml.py tests/test_oldcarts.py tests/test_opd.py tests/test_er.py"
+        cmd = "pytest -q tests/test_const_yaml.py tests/test_demographic.py tests/test_oldcarts.py tests/test_opd.py tests/test_er.py"
         try:
             proc = subprocess.run(
                 shlex.split(cmd),
@@ -308,6 +348,78 @@ def create_app() -> FastAPI:
     @app.get("/api/graph")
     def get_graph_q(symptom: str = Query(...), mode: str = "combined") -> Dict[str, Any]:
         return _compute_graph(symptom, mode)
+
+    # ------------------------------------------------------------------
+    # Demographic API — flat list of field definitions
+    # ------------------------------------------------------------------
+
+    @app.get("/api/demographic")
+    def get_demographic() -> Dict[str, Any]:
+        """Return demographic field definitions with resolved ``from_yaml`` values."""
+        items = load_demographic_local()
+        return {"items": items}
+
+    @app.post("/api/update_demographic")
+    def update_demographic(req: UpdateDemographicRequest) -> Dict[str, Any]:
+        """Update a single demographic field in the YAML, validate with pytest, and rollback on failure.
+
+        The flat list in ``demographic.yaml`` is searched by qid.  On success
+        returns ``{ok: true, version}``.  QID changes are rejected.
+        """
+        root = find_repo_root()
+        logger.info("update_demographic: qid=%s", req.qid)
+
+        # Enforce qid immutability
+        if isinstance(req.data, dict) and req.data.get("qid") not in (None, req.qid):
+            logger.warning("Attempt to change demographic qid from %s to %s", req.qid, req.data.get("qid"))
+            return {"ok": False, "error": "Changing qid is not allowed from the editor.", "field": "qid"}
+
+        if not isinstance(req.data, dict):
+            logger.warning("data is not an object: got %s", type(req.data).__name__)
+            return {"ok": False, "error": "data must be a JSON object", "received_type": type(req.data).__name__}
+
+        path = root / "v1" / "rules" / "demographic.yaml"
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing demographic rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+
+        if not isinstance(doc, list):
+            raise HTTPException(status_code=500, detail="demographic.yaml must be a list")
+
+        # Find the entry by qid
+        idx = None
+        for i, item in enumerate(doc):
+            if isinstance(item, dict) and item.get("qid") == req.qid:
+                idx = i
+                break
+        if idx is None:
+            raise HTTPException(status_code=404, detail=f"QID '{req.qid}' not found in demographic.yaml")
+
+        # Apply update (preserving qid)
+        new_item = dict(req.data)
+        new_item["qid"] = req.qid
+        doc[idx] = new_item
+
+        # Write tentative update
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        logger.debug("Wrote tentative demographic update for qid=%s", req.qid)
+
+        # Validate with pytest
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back demographic update for qid=%s", req.qid)
+            return result
+
+        logger.info("Demographic update succeeded for qid=%s", req.qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": "Saved to demographic.yaml and tests passed"}
 
     # ------------------------------------------------------------------
     # ER Checklist API — flat table data instead of graph

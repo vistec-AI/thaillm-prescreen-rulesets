@@ -19,3 +19,8 @@ notebooks
 .cursor
 CLAUDE.md
 **/.claude
+
+# Next.js frontend
+inspector/frontend/node_modules/
+inspector/frontend/.next/
+inspector/frontend/out/
