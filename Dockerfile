@@ -19,8 +19,12 @@ COPY src/ ./src/
 COPY inspector/ ./inspector/
 COPY v1/ ./v1/
 
-# Install the package
-RUN uv pip install --system -e .
+# Install the package + docs build tool
+RUN uv pip install --system -e . mkdocs-material
+
+# Build the developer guide (MkDocs → static HTML)
+COPY mkdocs.yml ./
+RUN mkdocs build
 
 # ---- Runtime ----
 FROM python:3.13-slim

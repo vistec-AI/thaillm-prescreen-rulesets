@@ -20,6 +20,9 @@ notebooks
 CLAUDE.md
 **/.claude
 
+# MkDocs build output
+src/prescreen_server/docs_site/
+
 # Next.js frontend
 inspector/frontend/node_modules/
 inspector/frontend/.next/

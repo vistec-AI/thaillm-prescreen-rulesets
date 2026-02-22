@@ -57,8 +57,10 @@ prescreen_server = "src/prescreen_server"
 [tool.setuptools.package-data]
 inspector = ["static/*", "static/**/*", "frontend/out/**/*"]
 "prescreen_rulesets.prompt" = ["template/*.jinja2"]
+prescreen_server = ["docs_site/**/*"]
 
 [dependency-groups]
 dev = [
     "pytest-asyncio>=1.3.0",
+    "mkdocs-material>=9.5",
 ]

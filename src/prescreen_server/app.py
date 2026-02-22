@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from prescreen_db.engine import dispose_engine, get_engine
 from prescreen_rulesets.engine import PrescreenEngine
@@ -87,11 +89,24 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
 
+    # --- OpenAPI tag metadata for Swagger UI grouping ---
+    openapi_tags = [
+        {"name": "sessions", "description": "Session lifecycle — create, get, list"},
+        {"name": "steps", "description": "Step interaction — get current step, submit answers"},
+        {"name": "llm", "description": "LLM integration — submit LLM answers, get prompts"},
+        {"name": "reference", "description": "Read-only reference data (departments, symptoms, etc.)"},
+    ]
+
     app = FastAPI(
         title="Prescreen API Server",
-        description="REST API for the ThaiLLM prescreening pipeline",
+        description=(
+            "REST API for the ThaiLLM prescreening pipeline.\n\n"
+            "See the [Developer Guide](/guide/) for narrative documentation, "
+            "flow walkthroughs, and deployment instructions."
+        ),
         version="0.1.0",
         lifespan=lifespan,
+        openapi_tags=openapi_tags,
     )
 
     # Store settings so the lifespan handler can read them
@@ -128,6 +143,14 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     # --- Mount all API routes ---
     register_routes(app)
+
+    # --- Developer guide (MkDocs-built static site) ---
+    # Served at /guide/ when docs_site/ exists.  html=True makes directory
+    # URLs resolve to index.html.  The guard means the server starts even
+    # if the docs haven't been built yet.
+    docs_site = Path(__file__).parent / "docs_site"
+    if docs_site.exists():
+        app.mount("/guide", StaticFiles(directory=str(docs_site), html=True), name="guide")
 
     return app
 

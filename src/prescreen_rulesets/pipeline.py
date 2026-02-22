@@ -380,6 +380,10 @@ class PrescreenPipeline:
 
             await self._repo.set_pipeline_stage(db, row, PipelineStage.DONE)
 
+            # Include Q&A history even for early termination so consumers
+            # can see which questions/answers led to the ER redirect.
+            history = self._build_full_history(row)
+
             return PipelineResult(
                 departments=[
                     self._store.resolve_department(d)
@@ -393,6 +397,7 @@ class PrescreenPipeline:
                 diagnoses=[],
                 reason=result.get("reason") or row.termination_reason,
                 terminated_early=True,
+                history=history,
             )
 
         # COMPLETED — rule-based flow finished normally
@@ -460,7 +465,12 @@ class PrescreenPipeline:
         await db.flush()
 
     def _build_pipeline_result(self, row: PrescreenSession) -> PipelineResult:
-        """Construct a PipelineResult from the session's current state."""
+        """Construct a PipelineResult from the session's current state.
+
+        Includes the full Q&A history (rule-based + LLM) so that the final
+        result payload is self-contained — consumers don't need a second
+        request to reconstruct the conversation.
+        """
         result = row.result or {}
         dept_ids = result.get("departments") or []
         sev_id = result.get("severity")
@@ -491,12 +501,16 @@ class PrescreenPipeline:
             for d in raw_diagnoses
         ]
 
+        # Build full Q&A history: rule-based phases + LLM follow-ups
+        history = self._build_full_history(row)
+
         return PipelineResult(
             departments=departments,
             severity=severity,
             diagnoses=diagnoses,
             reason=result.get("reason") or row.termination_reason,
             terminated_early=(row.status == SessionStatus.TERMINATED),
+            history=history,
         )
 
     # ==================================================================
@@ -616,6 +630,44 @@ class PrescreenPipeline:
                         question_type=question.question_type,
                         phase=phase_num,
                     ))
+
+        return pairs
+
+    # ==================================================================
+    # Session history
+    # ==================================================================
+
+    async def get_history(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> list[QAPair]:
+        """Return the full Q&A history for a session.
+
+        Works at any point during the session — returns whatever has been
+        answered so far (rule-based phases + LLM follow-ups).
+        """
+        row = await self._load_session(db, user_id, session_id)
+        return self._build_full_history(row)
+
+    def _build_full_history(self, row: PrescreenSession) -> list[QAPair]:
+        """Combine rule-based Q&A pairs with LLM follow-up pairs.
+
+        Rule-based pairs come from ``_build_qa_pairs`` (phases 0-5).
+        LLM pairs come from ``row.llm_responses`` (stored after
+        ``submit_llm_answers``).
+        """
+        pairs = self._build_qa_pairs(row)
+
+        # Append LLM follow-up Q&A if any have been submitted
+        for resp in row.llm_responses or []:
+            pairs.append(QAPair(
+                question=resp["question"],
+                answer=resp["answer"],
+                source="llm_generated",
+            ))
 
         return pairs
 
