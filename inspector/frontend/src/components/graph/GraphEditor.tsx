@@ -5,6 +5,8 @@ import type { GraphNodeData } from "@/lib/types";
 import ActionEditor, { type ActionObj } from "./ActionEditor";
 import OptionsEditor, { type OptionObj } from "./OptionsEditor";
 import RulesEditor, { type RuleObj } from "./RulesEditor";
+import AgeFilterEditor, { type AgeOptionObj } from "./AgeFilterEditor";
+import GenderFilterEditor, { type GenderOptionObj } from "./GenderFilterEditor";
 
 // Valid question types per source.
 // OLDCARTS supports all 10 types; OPD only allows a subset.
@@ -453,6 +455,30 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
     </div>
   );
 
+  const renderAgeFilter = () => (
+    <div>
+      <label className="text-xs font-semibold block mb-0.5">Age Options</label>
+      <AgeFilterEditor
+        options={getOptions() as AgeOptionObj[]}
+        onChange={(opts) => setOptions(opts as OptionObj[])}
+        disabled={saving}
+        source={source}
+      />
+    </div>
+  );
+
+  const renderGenderFilter = () => (
+    <div>
+      <label className="text-xs font-semibold block mb-0.5">Gender Options</label>
+      <GenderFilterEditor
+        options={getOptions() as GenderOptionObj[]}
+        onChange={(opts) => setOptions(opts as OptionObj[])}
+        disabled={saving}
+        source={source}
+      />
+    </div>
+  );
+
   const renderConditional = () => (
     <RulesEditor
       rules={getRules()}
@@ -472,11 +498,11 @@ export default function GraphEditor({ data, onSave, onCancel }: Props) {
       case "number_range":
         return renderNumberRange();
       case "single_select":
-      case "age_filter":
-      case "gender_filter":
-        // age_filter and gender_filter use the same options-with-per-option-action
-        // structure as single_select (not rules like conditional).
         return renderSingleSelect();
+      case "age_filter":
+        return renderAgeFilter();
+      case "gender_filter":
+        return renderGenderFilter();
       case "multi_select":
         return renderMultiSelect();
       case "image_single_select":
