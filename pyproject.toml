@@ -22,6 +22,7 @@ dependencies = [
 
 [project.scripts]
 prescreen-inspector = "inspector.server:cli"
+prescreen-server = "prescreen_server.app:cli"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
@@ -39,6 +40,8 @@ packages = [
     "prescreen_rulesets",
     "prescreen_rulesets.models",
     "prescreen_rulesets.prompt",
+    "prescreen_server",
+    "prescreen_server.routes",
 ]
 
 [tool.setuptools.package-dir]
@@ -48,6 +51,8 @@ prescreen_db = "src/prescreen_db"
 prescreen_rulesets = "src/prescreen_rulesets"
 "prescreen_rulesets.models" = "src/prescreen_rulesets/models"
 "prescreen_rulesets.prompt" = "src/prescreen_rulesets/prompt"
+prescreen_server = "src/prescreen_server"
+"prescreen_server.routes" = "src/prescreen_server/routes"
 
 [tool.setuptools.package-data]
 inspector = ["static/*", "static/**/*", "frontend/out/**/*"]

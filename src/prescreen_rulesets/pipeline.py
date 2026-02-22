@@ -135,6 +135,35 @@ class PrescreenPipeline:
         )
 
     # ==================================================================
+    # Session queries — proxy to engine
+    # ==================================================================
+
+    async def get_session(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> SessionInfo | None:
+        """Fetch session info by (user_id, session_id). Returns None if not found."""
+        return await self._engine.get_session(
+            db, user_id=user_id, session_id=session_id,
+        )
+
+    async def list_sessions(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[SessionInfo]:
+        """List sessions for a user, most recent first."""
+        return await self._engine.list_sessions(
+            db, user_id=user_id, limit=limit, offset=offset,
+        )
+
+    # ==================================================================
     # Step API
     # ==================================================================
 
