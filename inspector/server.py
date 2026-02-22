@@ -120,6 +120,15 @@ def create_app() -> FastAPI:
         available = [s for s in symptoms if s in available]
         return {"symptoms": available}
 
+    @app.get("/api/constants")
+    def get_constants() -> Dict[str, Any]:
+        """Return severity levels and departments for editor dropdowns."""
+        consts = load_constants_local()
+        return {
+            "severity_levels": consts["severity_levels"],
+            "departments": consts["departments"],
+        }
+
     @app.get("/api/er_symptoms")
     def list_er_symptoms() -> Dict[str, Any]:
         """Return symptom lists available in ER adult and pediatric checklists."""
