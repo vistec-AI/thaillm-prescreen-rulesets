@@ -441,6 +441,58 @@ def test_er_pediatric_checklist_department_requires_severity():
 
 
 # ===================================================================
+# ER early-exit sanity check
+#
+# When an ER checklist item effectively routes to Emergency severity
+# (sev003), the department must include Emergency Medicine (dept002).
+# An emergency patient being routed to a non-ER department (e.g.
+# Dermatology) would be a data error.
+# ===================================================================
+
+def test_er_emergency_severity_requires_er_department():
+    """If an ER item has Emergency severity (sev003), its department must include dept002.
+
+    This applies to both explicit overrides and the implicit default:
+    - Items WITHOUT overrides default to sev003 + dept002 (always valid,
+      no check needed since the schema forbids extra keys).
+    - Items WITH a severity override of sev003 must also route to dept002.
+      They may include additional departments, but dept002 must be present.
+    """
+    # --- Adult checklist: uses "min_severity" key ---
+    adult = _load_er_adult_checklist()
+    for symptom, items in adult.items():
+        for idx, item in enumerate(items):
+            # Skip items without severity override — they default to sev003/dept002
+            if "min_severity" not in item:
+                continue
+            label = f"er_adult_checklist[{symptom}][{idx}] ({item['qid']})"
+
+            effective_sev = item["min_severity"].get("id", "sev003")
+            if effective_sev == "sev003" and "department" in item:
+                dept_ids = [d["id"] for d in item["department"]]
+                assert "dept002" in dept_ids, (
+                    f"{label} has Emergency severity (sev003) but department "
+                    f"override {dept_ids} does not include Emergency Medicine (dept002)"
+                )
+
+    # --- Pediatric checklist: uses "severity" key ---
+    pediatric = _load_er_pediatric_checklist()
+    for symptom, items in pediatric.items():
+        for idx, item in enumerate(items):
+            if "severity" not in item:
+                continue
+            label = f"er_pediatric_checklist[{symptom}][{idx}] ({item['qid']})"
+
+            effective_sev = item["severity"].get("id", "sev003")
+            if effective_sev == "sev003" and "department" in item:
+                dept_ids = [d["id"] for d in item["department"]]
+                assert "dept002" in dept_ids, (
+                    f"{label} has Emergency severity (sev003) but department "
+                    f"override {dept_ids} does not include Emergency Medicine (dept002)"
+                )
+
+
+# ===================================================================
 # Cross-file consistency
 #
 # These tests check invariants that span multiple ER files to catch
