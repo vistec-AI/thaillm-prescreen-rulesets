@@ -130,6 +130,24 @@ export default function DemographicForm({
     onSubmit(result);
   };
 
+  /** Render a label with a red asterisk if the field is required */
+  const renderLabel = (field: RawDemographicField, displayLabel: string) => {
+    // from_yaml multi-select fields are never strictly required
+    const isRequired =
+      !field.optional && !(field.type === "from_yaml" && Array.isArray(field.values));
+    return (
+      <div className="flex items-baseline gap-0.5">
+        <EditableText
+          text={displayLabel}
+          onSave={(t) => onOverrideText(field.qid, t)}
+          as="label"
+          className="text-sm font-medium text-gray-700"
+        />
+        {isRequired && <span className="text-red-500 text-sm">*</span>}
+      </div>
+    );
+  };
+
   const renderField = (field: RawDemographicField) => {
     const displayLabel =
       textOverrides[field.qid]?.questionText ?? field.field_name_th;
@@ -142,14 +160,9 @@ export default function DemographicForm({
 
       return (
         <div key={field.qid} className="flex flex-col gap-1">
-          <EditableText
-            text={displayLabel}
-            onSave={(t) => onOverrideText(field.qid, t)}
-            as="label"
-            className="text-sm font-medium text-gray-700"
-          />
-          <span className="text-xs text-gray-400">{field.field_name}</span>
-          <div className="flex gap-2">
+          {renderLabel(field, displayLabel)}
+          <span className="text-xs text-gray-400 mobile-hide">{field.field_name}</span>
+          <div className="flex gap-2 dob-date-row">
             {/* Day */}
             <select
               value={dobParts.day}
@@ -195,13 +208,8 @@ export default function DemographicForm({
       const options = Array.isArray(field.values) ? field.values : [];
       return (
         <div key={field.qid} className="flex flex-col gap-1">
-          <EditableText
-            text={displayLabel}
-            onSave={(t) => onOverrideText(field.qid, t)}
-            as="label"
-            className="text-sm font-medium text-gray-700"
-          />
-          <span className="text-xs text-gray-400">{field.field_name}</span>
+          {renderLabel(field, displayLabel)}
+          <span className="text-xs text-gray-400 mobile-hide">{field.field_name}</span>
           <select
             value={String(values[field.key] ?? "")}
             onChange={(e) => handleChange(field.key, e.target.value)}
@@ -211,7 +219,7 @@ export default function DemographicForm({
                 : "border-gray-300"
             }`}
           >
-            <option value="">-- Select --</option>
+            <option value="">-- เลือก --</option>
             {options.map((opt) => (
               <option key={String(opt)} value={String(opt)}>
                 {String(opt)}
@@ -228,13 +236,8 @@ export default function DemographicForm({
     if (field.type === "float") {
       return (
         <div key={field.qid} className="flex flex-col gap-1">
-          <EditableText
-            text={displayLabel}
-            onSave={(t) => onOverrideText(field.qid, t)}
-            as="label"
-            className="text-sm font-medium text-gray-700"
-          />
-          <span className="text-xs text-gray-400">{field.field_name}</span>
+          {renderLabel(field, displayLabel)}
+          <span className="text-xs text-gray-400 mobile-hide">{field.field_name}</span>
           <input
             type="number"
             step="any"
@@ -280,13 +283,8 @@ export default function DemographicForm({
 
       return (
         <div key={field.qid} className="flex flex-col gap-1">
-          <EditableText
-            text={displayLabel}
-            onSave={(t) => onOverrideText(field.qid, t)}
-            as="label"
-            className="text-sm font-medium text-gray-700"
-          />
-          <span className="text-xs text-gray-400">{field.field_name}</span>
+          {renderLabel(field, displayLabel)}
+          <span className="text-xs text-gray-400 mobile-hide">{field.field_name}</span>
           <div className="max-h-32 overflow-y-auto border border-gray-300 rounded p-2 space-y-1">
             {options.map((opt) => {
               const key = optionKey(opt);
@@ -311,13 +309,8 @@ export default function DemographicForm({
     // Default: text input
     return (
       <div key={field.qid} className="flex flex-col gap-1">
-        <EditableText
-          text={displayLabel}
-          onSave={(t) => onOverrideText(field.qid, t)}
-          as="label"
-          className="text-sm font-medium text-gray-700"
-        />
-        <span className="text-xs text-gray-400">{field.field_name}</span>
+        {renderLabel(field, displayLabel)}
+        <span className="text-xs text-gray-400 mobile-hide">{field.field_name}</span>
         <input
           type="text"
           value={String(values[field.key] ?? "")}
@@ -337,16 +330,21 @@ export default function DemographicForm({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-800">Demographics</h3>
+      <h3 className="text-lg font-semibold text-gray-800">ข้อมูลผู้ป่วย</h3>
+      <p className="text-xs text-gray-400">
+        <span className="text-red-500">*</span> จำเป็นต้องกรอก
+      </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {fields.map(renderField)}
       </div>
-      <button
-        onClick={handleSubmit}
-        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm font-medium"
-      >
-        Next
-      </button>
+      <div className="sticky-submit">
+        <button
+          onClick={handleSubmit}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm font-medium"
+        >
+          ถัดไป
+        </button>
+      </div>
     </div>
   );
 }

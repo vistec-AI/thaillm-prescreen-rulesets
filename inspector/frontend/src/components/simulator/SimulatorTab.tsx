@@ -176,7 +176,7 @@ function SimulatorContent({
             onClick={sim.goBack}
             className="text-sm text-gray-500 hover:text-blue-500 transition-colors"
           >
-            ← Back
+            ← ย้อนกลับ
           </button>
         </div>
       )}

@@ -76,7 +76,7 @@ export default function EditableText({
     >
       {text}
       <svg
-        className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mobile-hide"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
