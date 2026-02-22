@@ -369,7 +369,7 @@ export function resolveErChecklistTermination(
         type: "terminated",
         departments: [{ id: deptId, name: deptMap.get(deptId) ?? deptId }],
         severity: { id: sevId, name: sevMap.get(sevId) ?? sevId },
-        reason: `ER checklist positive: ${item.qid}`,
+        reason: item.reason ?? `ER checklist positive: ${item.qid} (default response)`,
       };
     }
   }
@@ -385,6 +385,17 @@ export function buildErCriticalTermination(
   const deptMap = new Map(ruleData.departments.map((d) => [d.id, d.name]));
   const sevMap = new Map(ruleData.severity_levels.map((s) => [s.id, s.name]));
 
+  // Use custom reasons from YAML if available, else fall back to
+  // auto-generated format with qid identifiers.
+  const qidToItem = new Map(ruleData.er_critical.map((item) => [item.qid, item]));
+  const customReasons = positiveQids
+    .map((qid) => qidToItem.get(qid)?.reason)
+    .filter((r): r is string => !!r);
+  const reason =
+    customReasons.length > 0
+      ? customReasons.join("; ")
+      : `ER critical positive: ${positiveQids.join(", ")} (default response)`;
+
   return {
     type: "terminated",
     departments: [
@@ -397,6 +408,6 @@ export function buildErCriticalTermination(
       id: DEFAULT_ER_SEVERITY,
       name: sevMap.get(DEFAULT_ER_SEVERITY) ?? DEFAULT_ER_SEVERITY,
     },
-    reason: `ER critical positive: ${positiveQids.join(", ")}`,
+    reason,
   };
 }

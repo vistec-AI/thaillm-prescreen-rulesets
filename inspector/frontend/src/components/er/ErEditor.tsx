@@ -19,6 +19,7 @@ export default function ErEditor({ item, mode, onSave, onCancel }: Props) {
   const { loadConstants } = useApp();
 
   const [text, setText] = useState(item.raw.text as string || "");
+  const [reason, setReason] = useState(item.raw.reason as string || "");
   const [sevValue, setSevValue] = useState("");
   const [checkedDepts, setCheckedDepts] = useState<string[]>([]);
   const [consts, setConsts] = useState<ConstantsResponse | null>(null);
@@ -38,6 +39,7 @@ export default function ErEditor({ item, mode, onSave, onCancel }: Props) {
   // Initialize form values from item
   useEffect(() => {
     setText(item.raw.text as string || "");
+    setReason(item.raw.reason as string || "");
     const sevKey = mode === "er_adult" ? "min_severity" : "severity";
     const rawSev = item.raw[sevKey] as { id?: string } | undefined;
     setSevValue(rawSev?.id || "");
@@ -72,6 +74,10 @@ export default function ErEditor({ item, mode, onSave, onCancel }: Props) {
 
     // Build data object from form fields
     const obj: Record<string, unknown> = { qid: item.qid, text: text.trim() };
+    // Only include reason when non-empty to keep YAML clean
+    if (reason.trim()) {
+      obj.reason = reason.trim();
+    }
     if (!isSymptomMode) {
       if (sevValue) {
         const sevKey = mode === "er_adult" ? "min_severity" : "severity";
@@ -115,6 +121,18 @@ export default function ErEditor({ item, mode, onSave, onCancel }: Props) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={saving}
+        />
+      </div>
+
+      {/* Termination reason (shown for all modes) */}
+      <div className="mb-1.5">
+        <label className="text-xs font-semibold block mb-0.5">Termination Reason (optional)</label>
+        <textarea
+          className="w-full h-12 text-[13px] p-1.5 border border-gray-200 rounded"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          disabled={saving}
+          placeholder="Custom reason shown when this item triggers early termination"
         />
       </div>
 

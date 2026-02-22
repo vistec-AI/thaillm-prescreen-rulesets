@@ -27,6 +27,7 @@ export interface ErChecklistItem {
   severity_label: string;
   department: string[];
   department_labels: string[];
+  reason: string | null;
   raw: Record<string, unknown>;
   source: string;
 }

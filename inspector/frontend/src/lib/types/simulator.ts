@@ -87,12 +87,14 @@ export interface RawDemographicField {
 export interface RawErCriticalItem {
   qid: string;
   text: string;
+  reason?: string;
 }
 
 /** An ER checklist item (adult or pediatric) */
 export interface RawErChecklistItem {
   qid: string;
   text: string;
+  reason?: string;
   severity?: { id: string };
   min_severity?: { id: string };
   department?: Array<{ id: string }>;

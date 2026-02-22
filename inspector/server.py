@@ -491,6 +491,7 @@ def create_app() -> FastAPI:
                     "severity_label": default_sev_label,
                     "department": default_dept_ids,
                     "department_labels": default_dept_labels,
+                    "reason": q.get("reason"),
                     "raw": q,
                     "source": "er_symptom",
                 })
@@ -543,6 +544,7 @@ def create_app() -> FastAPI:
                 "severity_label": sev_label,
                 "department": d_ids,
                 "department_labels": d_labels,
+                "reason": q.get("reason"),
                 "raw": q,
                 "source": source,
             })

@@ -638,11 +638,23 @@ class PrescreenEngine:
         # Check for any positive critical items
         positive_qids = [qid for qid, ans in value.items() if ans is True]
         if positive_qids:
+            # Use custom reasons from YAML if available, else fall back to
+            # auto-generated format with qid identifiers.
+            qid_to_item = {item.qid: item for item in self._store.er_critical}
+            custom_reasons = [
+                qid_to_item[qid].reason
+                for qid in positive_qids
+                if qid in qid_to_item and qid_to_item[qid].reason
+            ]
+            reason = (
+                "; ".join(custom_reasons) if custom_reasons
+                else f"ER critical positive: {', '.join(positive_qids)} (default response)"
+            )
             return await self._terminate(
                 db, row,
                 departments=[DEFAULT_ER_DEPARTMENT],
                 severity=DEFAULT_ER_SEVERITY,
-                reason=f"ER critical positive: {', '.join(positive_qids)}",
+                reason=reason,
             )
 
         # All negative — advance to phase 2
@@ -694,11 +706,14 @@ class PrescreenEngine:
         if first_positive is not None:
             item, _ = first_positive
             dept, sev = self._resolve_er_item_result(item, pediatric=pediatric)
+            # Use the item's custom reason if provided, else fall back to
+            # auto-generated format with qid identifier.
+            reason = item.reason or f"ER checklist positive: {item.qid} (default response)"
             return await self._terminate(
                 db, row,
                 departments=[dept],
                 severity=sev,
-                reason=f"ER checklist positive: {item.qid}",
+                reason=reason,
             )
 
         # All negative — advance to phase 4 (OLDCARTS)

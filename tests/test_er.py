@@ -66,7 +66,7 @@ def test_er_symptom_schema():
         assert "text" in item, f"{label} missing 'text'"
 
         # --- No extra keys (critical symptoms are simple yes/no, no overrides) ---
-        allowed = {"qid", "text"}
+        allowed = {"qid", "text", "reason"}
         extra = set(item.keys()) - allowed
         assert not extra, f"{label} has unexpected keys: {extra}"
 
@@ -134,7 +134,7 @@ def test_er_adult_checklist_symptom_keys():
 def test_er_adult_checklist_schema():
     """Validate item schema: {qid, text} required; optional min_severity and department."""
     checklist = _load_er_adult_checklist()
-    _allowed_keys = {"qid", "text", "min_severity", "department"}
+    _allowed_keys = {"qid", "text", "min_severity", "department", "reason"}
 
     for symptom, items in checklist.items():
         assert isinstance(items, list), \
@@ -306,7 +306,7 @@ def test_er_pediatric_checklist_symptom_keys():
 def test_er_pediatric_checklist_schema():
     """Validate item schema: {qid, text} required; optional severity and department."""
     checklist = _load_er_pediatric_checklist()
-    _allowed_keys = {"qid", "text", "severity", "department"}
+    _allowed_keys = {"qid", "text", "severity", "department", "reason"}
 
     for symptom, items in checklist.items():
         assert isinstance(items, list), \
@@ -542,3 +542,38 @@ def test_er_no_qid_collision_across_files():
         f"QID collision between er_symptom and pediatric checklist: {overlap_sp}"
     assert not overlap_ap, \
         f"QID collision between adult and pediatric checklist: {overlap_ap}"
+
+
+# ===================================================================
+# Optional ``reason`` field validation
+#
+# ER items may carry an optional ``reason`` string that provides a
+# clinically meaningful termination reason.  When present it must be
+# a non-empty string.
+# ===================================================================
+
+def test_er_reason_field_is_string_when_present():
+    """If ``reason`` key exists on any ER item, it must be a non-empty string."""
+
+    # --- er_symptom.yaml (phase 1 — critical checks) ---
+    for idx, item in enumerate(_load_er_symptom()):
+        if "reason" in item:
+            label = f"er_symptom[{idx}] ({item['qid']})"
+            assert isinstance(item["reason"], str) and item["reason"].strip(), \
+                f"{label} reason must be a non-empty string"
+
+    # --- er_adult_checklist.yaml (phase 3 — adult) ---
+    for symptom, items in _load_er_adult_checklist().items():
+        for idx, item in enumerate(items):
+            if "reason" in item:
+                label = f"er_adult_checklist[{symptom}][{idx}] ({item['qid']})"
+                assert isinstance(item["reason"], str) and item["reason"].strip(), \
+                    f"{label} reason must be a non-empty string"
+
+    # --- er_pediatric_checklist.yaml (phase 3 — pediatric) ---
+    for symptom, items in _load_er_pediatric_checklist().items():
+        for idx, item in enumerate(items):
+            if "reason" in item:
+                label = f"er_pediatric_checklist[{symptom}][{idx}] ({item['qid']})"
+                assert isinstance(item["reason"], str) and item["reason"].strip(), \
+                    f"{label} reason must be a non-empty string"
