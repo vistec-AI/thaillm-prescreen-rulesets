@@ -49,10 +49,9 @@
       .er-table tr { cursor: pointer; transition: background 0.1s; }
       .er-table tbody tr:hover { background: #f0f6ff; }
       .er-table tbody tr.selected { background: #e0edff; }
-      /* Orange left border for override rows */
-      .er-table tbody tr.override td:first-child { border-left: 3px solid #ffb74d; }
-      /* Gray italic for default routing */
-      .er-table .default-routing { color: #999; font-style: italic; }
+      /* Severity-based row highlighting: red for Emergency, orange for Visit Urgently */
+      .er-table tbody tr.sev-emergency td:first-child { border-left: 3px solid #e57373; }
+      .er-table tbody tr.sev-urgent td:first-child { border-left: 3px solid #ffb74d; }
 
       /* --- Badges --- */
       .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; }
@@ -168,11 +167,23 @@
           <h4>Details</h4>
           <div id="er-details-content">Click a row to inspect its details.</div>
           <div id="er-editor" style="display:none; margin-top:8px;">
-            <div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">
-              <b>Raw Editor</b>
+            <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+              <b>Edit Question</b>
               <span id="er-editor-status" style="margin-left:auto;"></span>
             </div>
-            <textarea id="er-editor-text" style="width:100%; height:220px; font-family: ui-monospace, Menlo, monospace; font-size:12px;"></textarea>
+            <div style="margin-bottom:6px;">
+              <label style="font-size:12px; font-weight:600;">Question Text</label>
+              <textarea id="er-edit-text" style="width:100%; height:60px; font-size:13px; margin-top:2px;"></textarea>
+            </div>
+            <div id="er-edit-severity-group" style="margin-bottom:6px;">
+              <label style="font-size:12px; font-weight:600;">Severity</label>
+              <select id="er-edit-severity" style="width:100%; margin-top:2px;"></select>
+            </div>
+            <div id="er-edit-dept-group" style="margin-bottom:6px;">
+              <label style="font-size:12px; font-weight:600;">Department</label>
+              <div id="er-edit-depts" style="margin-top:2px; max-height:150px; overflow:auto; font-size:12px;"></div>
+            </div>
+            <div id="er-edit-errors" style="color:#c62828; font-size:12px; margin-bottom:6px;"></div>
             <div style="display:flex; gap:8px; margin-top:6px;">
               <button id="er-editor-save">Save</button>
               <button id="er-editor-cancel">Cancel</button>
@@ -509,6 +520,7 @@
       let erSelectedQid = null;    // currently selected row qid
       let erEditorCtx = null;      // {mode, symptom, qid, data}
       let erSymptomCache = null;   // cached /api/er_symptoms response
+      let constantsCache = null;   // cached /api/constants response (severity_levels, departments)
 
       /** Populate the ER symptom dropdown for the current sub-mode. */
       async function updateErSymptomDropdown() {
@@ -574,7 +586,9 @@
         tbody.innerHTML = '';
         items.forEach((item, idx) => {
           const tr = document.createElement('tr');
-          if (item.has_override) tr.classList.add('override');
+          // Severity-based row highlight: Emergency = red, Visit Urgently = orange
+          if (item.severity === 'sev003') tr.classList.add('sev-emergency');
+          else if (item.severity === 'sev002_5') tr.classList.add('sev-urgent');
           if (item.qid === erSelectedQid) tr.classList.add('selected');
           tr.dataset.qid = item.qid;
 
@@ -595,28 +609,17 @@
           tdText.textContent = item.text;
           tr.appendChild(tdText);
 
-          // Severity column
+          // Severity column — always show badge
           const tdSev = document.createElement('td');
           const sevSpan = document.createElement('span');
           sevSpan.className = 'badge ' + sevBadgeClass(item.severity);
           sevSpan.textContent = item.severity_label;
-          if (!item.has_override) {
-            // Default routing shown in gray italic
-            tdSev.classList.add('default-routing');
-            tdSev.textContent = item.severity_label;
-          } else {
-            tdSev.appendChild(sevSpan);
-          }
+          tdSev.appendChild(sevSpan);
           tr.appendChild(tdSev);
 
           // Department column
           const tdDept = document.createElement('td');
-          if (!item.has_override) {
-            tdDept.classList.add('default-routing');
-            tdDept.textContent = item.department_labels.join(', ');
-          } else {
-            tdDept.textContent = item.department_labels.join(', ');
-          }
+          tdDept.textContent = item.department_labels.join(', ');
           tr.appendChild(tdDept);
 
           tr.addEventListener('click', () => {
@@ -636,14 +639,8 @@
         const el = document.getElementById('er-details-content');
         const editor = document.getElementById('er-editor');
 
-        // Show editor pane in read-only mode
-        if (item?.raw) {
-          editor.style.display = 'block';
-          setErEditorDisabled(true);
-          document.getElementById('er-editor-text').value = JSON.stringify(item.raw, null, 2);
-        } else {
-          editor.style.display = 'none';
-        }
+        // Hide editor when selecting a new row (user must click Edit to open it)
+        editor.style.display = 'none';
         document.getElementById('er-editor-status').textContent = '';
 
         let html = '';
@@ -654,20 +651,16 @@
         html += `<div><b>Department</b>: ${escapeHtml(item.department_labels.join(', '))}`;
         html += ` <small>(${escapeHtml(item.department.join(', '))})</small></div>`;
 
-        if (item.has_override) {
-          html += `<div style="margin-top:4px; color:#e65100;"><b>Override</b>: This item has custom severity/department routing.</div>`;
-        } else {
-          html += `<div style="margin-top:4px; color:#999;"><i>Default routing: Emergency</i></div>`;
-        }
-
         html += `<div style="margin-top:8px;"><button id="er-edit-raw">Edit</button></div>`;
         el.innerHTML = html;
 
         document.getElementById('er-edit-raw').addEventListener('click', () => openErEditor(item));
       }
 
-      // --- ER editor ---
-      function openErEditor(item) {
+      // --- ER structured editor ---
+
+      /** Populate the structured editor form for an ER checklist item. */
+      async function openErEditor(item) {
         erEditorCtx = {
           mode: erModeSel.value,
           symptom: erSymptomSel.value || null,
@@ -675,21 +668,150 @@
           data: item.raw,
         };
         erSelectedQid = item.qid;
-        document.getElementById('er-editor-text').value = JSON.stringify(item.raw, null, 2);
+
+        // Populate question text
+        document.getElementById('er-edit-text').value = item.raw.text || '';
+        document.getElementById('er-edit-text').disabled = false;
+
+        const isSymptomMode = erEditorCtx.mode === 'er_symptom';
+        const sevGroup = document.getElementById('er-edit-severity-group');
+        const deptGroup = document.getElementById('er-edit-dept-group');
+
+        if (isSymptomMode) {
+          // er_symptom items only have {qid, text} — no severity/department editing
+          sevGroup.style.display = 'none';
+          deptGroup.style.display = 'none';
+        } else {
+          sevGroup.style.display = 'block';
+          deptGroup.style.display = 'block';
+          await populateErEditorDropdowns(item);
+        }
+
+        document.getElementById('er-edit-errors').innerHTML = '';
         document.getElementById('er-editor-status').textContent = '';
         document.getElementById('er-editor').style.display = 'block';
-        setErEditorDisabled(false);
+        document.getElementById('er-editor-save').disabled = false;
+        document.getElementById('er-editor-cancel').disabled = false;
+      }
+
+      /** Fetch constants (cached) and populate severity dropdown + department checkboxes. */
+      async function populateErEditorDropdowns(item) {
+        if (!constantsCache) {
+          try {
+            const { data } = await axios.get('/api/constants');
+            constantsCache = data;
+          } catch (e) {
+            console.error('Failed to fetch constants', e);
+            constantsCache = { severity_levels: [], departments: [] };
+          }
+        }
+        const consts = constantsCache;
+
+        // --- Severity dropdown ---
+        const sevSel = document.getElementById('er-edit-severity');
+        sevSel.innerHTML = '';
+        // "(Default)" = no override key in YAML → defaults to Emergency (sev003)
+        const defOpt = document.createElement('option');
+        defOpt.value = '';
+        defOpt.textContent = '(Default \u2014 Emergency)';
+        sevSel.appendChild(defOpt);
+        for (const sev of consts.severity_levels) {
+          const opt = document.createElement('option');
+          opt.value = sev.id;
+          opt.textContent = sev.name + ' (' + sev.id + ')';
+          sevSel.appendChild(opt);
+        }
+        // Set current value from the raw YAML data
+        const sevKey = erEditorCtx.mode === 'er_adult' ? 'min_severity' : 'severity';
+        sevSel.value = (item.raw[sevKey] && item.raw[sevKey].id) ? item.raw[sevKey].id : '';
+
+        // --- Department checkboxes ---
+        const deptContainer = document.getElementById('er-edit-depts');
+        deptContainer.innerHTML = '';
+        const currentDepts = item.raw.department ? item.raw.department.map(d => d.id) : [];
+        const hasOverride = Array.isArray(item.raw.department);
+
+        for (const dept of consts.departments) {
+          const lbl = document.createElement('label');
+          lbl.style.display = 'block';
+          lbl.style.padding = '1px 0';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.value = dept.id;
+          cb.name = 'er-dept';
+          cb.checked = hasOverride ? currentDepts.includes(dept.id) : false;
+          lbl.appendChild(cb);
+          lbl.appendChild(document.createTextNode(' ' + dept.name + ' (' + dept.id + ')'));
+          deptContainer.appendChild(lbl);
+        }
+        const note = document.createElement('div');
+        note.style.cssText = 'font-size:11px; color:#666; margin-top:4px;';
+        note.textContent = 'Leave all unchecked for default routing (Emergency Medicine).';
+        deptContainer.appendChild(note);
+      }
+
+      /** Client-side validation for the structured ER editor. */
+      function validateErEdit() {
+        const errors = [];
+        const text = document.getElementById('er-edit-text').value.trim();
+        if (!text) {
+          errors.push('Question text must not be empty.');
+        }
+
+        // Severity/department checks only apply to adult/pediatric modes
+        if (erEditorCtx && erEditorCtx.mode !== 'er_symptom') {
+          const sevValue = document.getElementById('er-edit-severity').value;
+          const checkedDepts = [...document.querySelectorAll('#er-edit-depts input[name="er-dept"]:checked')].map(cb => cb.value);
+
+          // Constraint: department override requires severity override
+          if (checkedDepts.length > 0 && !sevValue) {
+            errors.push('Department override requires a severity override. Select a severity or uncheck all departments.');
+          }
+
+          // Constraint: Emergency severity must include Emergency Medicine dept
+          const effectiveSev = sevValue || 'sev003';
+          if (effectiveSev === 'sev003' && checkedDepts.length > 0 && !checkedDepts.includes('dept002')) {
+            errors.push('Emergency severity (sev003) requires Emergency Medicine (dept002) in the department list.');
+          }
+        }
+        return errors;
       }
 
       async function saveErEditor() {
         if (!erEditorCtx) return;
         const status = document.getElementById('er-editor-status');
+        const errDiv = document.getElementById('er-edit-errors');
         status.textContent = '';
-        let obj;
-        try { obj = JSON.parse(document.getElementById('er-editor-text').value); }
-        catch (e) { status.textContent = 'Invalid JSON'; return; }
+        errDiv.innerHTML = '';
+
+        // --- Client-side validation ---
+        const errors = validateErEdit();
+        if (errors.length > 0) {
+          errDiv.innerHTML = errors.map(e => escapeHtml(e)).join('<br>');
+          return;
+        }
+
+        // --- Build data object from form fields ---
+        const obj = { qid: erEditorCtx.qid, text: document.getElementById('er-edit-text').value.trim() };
+
+        if (erEditorCtx.mode !== 'er_symptom') {
+          const sevValue = document.getElementById('er-edit-severity').value;
+          const checkedDepts = [...document.querySelectorAll('#er-edit-depts input[name="er-dept"]:checked')].map(cb => cb.value);
+
+          if (sevValue) {
+            // Adult uses "min_severity" key, pediatric uses "severity" key
+            const sevKey = erEditorCtx.mode === 'er_adult' ? 'min_severity' : 'severity';
+            obj[sevKey] = { id: sevValue };
+          }
+          if (checkedDepts.length > 0) {
+            obj.department = checkedDepts.map(id => ({ id }));
+          }
+        }
+
+        // --- POST to server ---
         const payload = { mode: erEditorCtx.mode, symptom: erEditorCtx.symptom, qid: erEditorCtx.qid, data: obj };
-        setErEditorDisabled(true);
+        document.getElementById('er-editor-save').disabled = true;
+        document.getElementById('er-editor-cancel').disabled = true;
         status.textContent = 'Saving and running tests...';
         try {
           showOverlay('Saving and running tests...');
@@ -701,7 +823,6 @@
             status.textContent = 'Saved';
             erSelectedQid = erEditorCtx.qid;
             await loadErChecklist();
-            // Re-render details for the same item using the fresh data
             if (erChecklistData) {
               const updated = erChecklistData.items.find(i => i.qid === erEditorCtx.qid);
               if (updated) renderErDetails(updated);
@@ -717,23 +838,17 @@
           alert('Save error:\n' + msg);
           status.textContent = 'Error';
         } finally {
-          setErEditorDisabled(false);
+          document.getElementById('er-editor-save').disabled = false;
+          document.getElementById('er-editor-cancel').disabled = false;
           hideOverlay();
         }
       }
 
       function cancelErEditor() {
-        if (erEditorCtx) document.getElementById('er-editor-text').value = JSON.stringify(erEditorCtx.data || {}, null, 2);
-        setErEditorDisabled(true);
+        document.getElementById('er-editor').style.display = 'none';
+        document.getElementById('er-edit-errors').innerHTML = '';
+        document.getElementById('er-editor-status').textContent = '';
         erEditorCtx = null;
-      }
-
-      function setErEditorDisabled(disabled) {
-        document.getElementById('er-editor-save').disabled = disabled;
-        document.getElementById('er-editor-cancel').disabled = disabled;
-        const ta = document.getElementById('er-editor-text');
-        ta.disabled = disabled; ta.readOnly = disabled;
-        ta.style.background = disabled ? '#f9f9f9' : 'white';
       }
 
       // --- ER event listeners ---
