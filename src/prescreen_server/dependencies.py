@@ -6,6 +6,7 @@ matching the SDK convention where engine/repository call ``flush()`` but
 never ``commit()``.
 """
 
+import hmac
 from typing import AsyncGenerator
 
 from fastapi import Header, HTTPException, Request
@@ -55,13 +56,33 @@ def get_store(request: Request) -> RulesetStore:
 # ------------------------------------------------------------------
 
 async def get_user_id(
+    request: Request,
     x_user_id: str | None = Header(None, alias="X-User-ID"),
+    x_proxy_secret: str | None = Header(None, alias="X-Proxy-Secret"),
 ) -> str:
     """Extract user identity from the ``X-User-ID`` header.
 
     Returns 401 if the header is missing — every session endpoint
     requires a known caller.
+
+    When ``TRUSTED_PROXY_SECRET`` is configured, the request must also
+    carry a matching ``X-Proxy-Secret`` header.  This proves the
+    ``X-User-ID`` was injected by a trusted API gateway and not forged
+    by an external client.
     """
     if not x_user_id:
         raise HTTPException(status_code=401, detail="X-User-ID header is required")
+
+    # --- Proxy-secret validation (opt-in via TRUSTED_PROXY_SECRET) ---
+    expected_secret: str | None = request.app.state.settings.trusted_proxy_secret
+    if expected_secret:
+        if not x_proxy_secret:
+            raise HTTPException(
+                status_code=403,
+                detail="X-Proxy-Secret header is required",
+            )
+        # Constant-time comparison to prevent timing side-channels.
+        if not hmac.compare_digest(x_proxy_secret, expected_secret):
+            raise HTTPException(status_code=403, detail="Invalid proxy secret")
+
     return x_user_id

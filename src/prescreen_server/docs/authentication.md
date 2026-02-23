@@ -8,7 +8,7 @@ Most endpoints require the `X-User-ID` header to identify the caller. This is no
 
 ```
 Client ──► API Gateway (auth) ──► Prescreen API
-                                  reads X-User-ID
+                                  reads X-User-ID + X-Proxy-Secret
 ```
 
 ## Which Endpoints Need It
@@ -82,6 +82,24 @@ curl -X POST "http://localhost:8080/api/v1/admin/cleanup/sessions?older_than_day
 | `X-Admin-Key` does not match | 403 |
 | Valid key | Request proceeds |
 
+## Trusted Proxy Secret — `TRUSTED_PROXY_SECRET`
+
+When the server is deployed behind an API gateway, set `TRUSTED_PROXY_SECRET` to a shared secret known only to the gateway. The gateway must send this value in every request as the `X-Proxy-Secret` header alongside `X-User-ID`.
+
+```bash
+export TRUSTED_PROXY_SECRET="my-shared-secret"
+```
+
+When `TRUSTED_PROXY_SECRET` is configured:
+
+| Scenario | Response |
+|----------|----------|
+| `X-Proxy-Secret` header missing | 403 |
+| `X-Proxy-Secret` does not match | 403 |
+| Valid secret | Request proceeds |
+
+When `TRUSTED_PROXY_SECRET` is **not** configured (default), the `X-Proxy-Secret` header is ignored and the server trusts `X-User-ID` as before. This is suitable for local development only.
+
 ## Production Recommendations
 
 In production, do **not** rely on the client to self-report `X-User-ID`. Instead:
@@ -89,8 +107,9 @@ In production, do **not** rely on the client to self-report `X-User-ID`. Instead
 1. Place an API gateway (e.g. Kong, AWS API Gateway, Nginx) in front of the Prescreen API
 2. The gateway authenticates the request (JWT, OAuth, API key, etc.)
 3. The gateway extracts the verified user identity and sets the `X-User-ID` header
-4. The Prescreen API trusts the header because it only accepts traffic from the gateway
+4. The gateway also sets `X-Proxy-Secret` to the shared secret
+5. Set `TRUSTED_PROXY_SECRET` on the Prescreen API so it rejects requests without a valid proxy secret
 
-This keeps the Prescreen API simple and stateless while delegating auth to the gateway.
+This keeps the Prescreen API simple and stateless while delegating auth to the gateway, and prevents direct unauthenticated access even if the API port is accidentally exposed.
 
 For admin endpoints, store the `ADMIN_API_KEY` securely (e.g. in a secrets manager) and only expose admin routes to internal networks or trusted operators.

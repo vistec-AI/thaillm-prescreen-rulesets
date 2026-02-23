@@ -7,12 +7,35 @@ import shlex
 import logging
 import os
 
-from fastapi import FastAPI, HTTPException, Request, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
 import yaml
 from fastapi.exceptions import RequestValidationError
+
+
+# ------------------------------------------------------------------
+# Optional write-protection — set INSPECTOR_WRITE_KEY to require an
+# API key for all POST (write) endpoints.  When unset the inspector
+# behaves as before (no auth on writes).
+# ------------------------------------------------------------------
+
+async def _require_write_key(
+    x_write_key: str | None = Header(None, alias="X-Write-Key"),
+) -> None:
+    """Reject write requests when ``INSPECTOR_WRITE_KEY`` is configured
+    and the caller does not supply a matching ``X-Write-Key`` header."""
+    expected = os.environ.get("INSPECTOR_WRITE_KEY")
+    if not expected:
+        # No key configured — allow all writes (local dev default).
+        return
+    if not x_write_key:
+        raise HTTPException(status_code=401, detail="X-Write-Key header is required")
+    # Constant-time comparison to avoid timing side-channels.
+    import hmac
+    if not hmac.compare_digest(x_write_key, expected):
+        raise HTTPException(status_code=403, detail="Invalid write key")
 
 from .loader import load_rules_local, load_er_rules_local, load_demographic_local, load_constants_local, find_repo_root
 from .graph import (
@@ -262,7 +285,7 @@ def create_app() -> FastAPI:
         def example() -> Dict[str, Any]:  # pragma: no cover - helper for error messages
             return {"source": "oldcarts", "symptom": "Headache", "qid": "hea_d_001", "data": {"qid": "hea_d_001"}}
 
-    @app.post("/api/update_question")
+    @app.post("/api/update_question", dependencies=[Depends(_require_write_key)])
     def update_question(req: UpdateQuestionRequest) -> Dict[str, Any]:
         """Update a single question in the YAML, validate with pytest, and rollback on failure.
 
@@ -387,7 +410,7 @@ def create_app() -> FastAPI:
         items = load_demographic_local()
         return {"items": items}
 
-    @app.post("/api/update_demographic")
+    @app.post("/api/update_demographic", dependencies=[Depends(_require_write_key)])
     def update_demographic(req: UpdateDemographicRequest) -> Dict[str, Any]:
         """Update a single demographic field in the YAML, validate with pytest, and rollback on failure.
 
@@ -554,7 +577,7 @@ def create_app() -> FastAPI:
     # ER Question Update — parallel to /api/update_question for OLDCARTS/OPD
     # ------------------------------------------------------------------
 
-    @app.post("/api/update_er_question")
+    @app.post("/api/update_er_question", dependencies=[Depends(_require_write_key)])
     def update_er_question(req: UpdateErQuestionRequest) -> Dict[str, Any]:
         """Update a single ER question in the YAML, validate with pytest, and rollback on failure.
 
@@ -658,13 +681,20 @@ def create_app() -> FastAPI:
 def cli() -> None:
     import uvicorn
     import webbrowser
-    url = "http://localhost:8000"
+
+    # Bind to localhost only by default to prevent unauthenticated
+    # network access to the write endpoints.  Set INSPECTOR_HOST=0.0.0.0
+    # explicitly if you need remote access (e.g. inside a container).
+    host = os.environ.get("INSPECTOR_HOST", "127.0.0.1")
+    port = int(os.environ.get("INSPECTOR_PORT", "8000"))
+
+    url = f"http://localhost:{port}"
     try:
         # Open browser shortly after server starts
         webbrowser.open_new_tab(url)
     except Exception:
         pass
-    uvicorn.run("inspector.server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("inspector.server:app", host=host, port=port, reload=True)
 
 
 # ASGI app export

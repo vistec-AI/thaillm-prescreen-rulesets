@@ -45,7 +45,7 @@ curl http://localhost:8080/api/v1/sessions/nonexistent/step \
 ```
 
 ```json
-{"detail": "Session not found: session_id=nonexistent"}
+{"detail": "Resource not found"}
 ```
 
 **Fix:** Create the session first with `POST /api/v1/sessions`.
@@ -62,7 +62,7 @@ curl -X POST http://localhost:8080/api/v1/sessions \
 ```
 
 ```json
-{"detail": "Session already exists for user_id=patient-1, session_id=sess-001"}
+{"detail": "Resource already exists"}
 ```
 
 **Fix:** Use a different `session_id`, or retrieve the existing session with `GET /api/v1/sessions/sess-001`.
@@ -79,10 +79,13 @@ curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step \
 ```
 
 ```json
-{"detail": "submit_answer is only valid during the rule_based stage"}
+{"detail": "Invalid request"}
 ```
 
 **Fix:** Check the step's `type` field. If it's `"llm_questions"`, use `POST /api/v1/sessions/{id}/llm-answers` instead.
+
+!!! note "Sanitized error messages"
+    Error responses return generic descriptions (`"Resource not found"`, `"Resource already exists"`, `"Invalid request"`) instead of exposing internal details like user IDs, session IDs, or pipeline stage names.  Full error details are logged server-side for debugging.
 
 ### Invalid Request Body (422)
 

@@ -5,6 +5,7 @@ must include an ``X-Admin-Key`` header whose value matches the configured
 key.  Returns 401 if missing, 403 if wrong.
 """
 
+import hmac
 import os
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
@@ -38,7 +39,8 @@ async def require_admin_key(
         )
     if not x_admin_key:
         raise HTTPException(status_code=401, detail="X-Admin-Key header is required")
-    if x_admin_key != expected:
+    # Constant-time comparison to prevent timing side-channels.
+    if not hmac.compare_digest(x_admin_key, expected):
         raise HTTPException(status_code=403, detail="Invalid admin key")
     return x_admin_key
 

@@ -32,6 +32,12 @@ class ServerSettings:
     # Admin API key — shared secret for admin endpoints (None = disabled)
     admin_api_key: str | None = None
 
+    # Trusted proxy secret — when set, every request that carries
+    # X-User-ID must also carry X-Proxy-Secret matching this value.
+    # This ensures the user identity header was injected by a trusted
+    # API gateway and not forged by an external client.
+    trusted_proxy_secret: str | None = None
+
 
 def load_settings() -> ServerSettings:
     """Build settings from ``SERVER_*`` environment variables."""
@@ -46,4 +52,5 @@ def load_settings() -> ServerSettings:
         log_level=os.getenv("SERVER_LOG_LEVEL", "INFO").upper(),
         session_ttl_days=int(os.getenv("SESSION_TTL_DAYS", "0")),
         admin_api_key=os.getenv("ADMIN_API_KEY") or None,
+        trusted_proxy_secret=os.getenv("TRUSTED_PROXY_SECRET") or None,
     )

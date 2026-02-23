@@ -139,8 +139,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 )
             return {"status": "ok"}
         except Exception as exc:
+            # Log the full exception server-side but return a generic
+            # message to the client to avoid leaking DB connection
+            # strings or internal topology details.
             logger.error("Health check failed: %s", exc)
-            return {"status": "error", "detail": str(exc)}
+            return {"status": "error", "detail": "Database connection failed"}
 
     # --- Mount all API routes ---
     register_routes(app)

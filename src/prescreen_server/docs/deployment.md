@@ -13,6 +13,7 @@
 | `SERVER_LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 | `SESSION_TTL_DAYS` | `0` | Default age threshold (days) for session cleanup. 0 = infinite (no automatic cleanup). |
 | `ADMIN_API_KEY` | (none) | Shared secret for admin endpoints. Admin endpoints are disabled when not set. |
+| `TRUSTED_PROXY_SECRET` | (none) | Shared secret between the API gateway and this server. When set, every request carrying `X-User-ID` must also carry a matching `X-Proxy-Secret` header. |
 
 ### Database Settings
 
@@ -142,9 +143,10 @@ Options:
 
 1. Set `SERVER_CORS_ORIGINS` to your specific frontend domains
 2. Place an API gateway in front for authentication (see [Authentication](authentication.md))
-3. Use a managed PostgreSQL instance with backups
-4. Set `SERVER_LOG_LEVEL=WARNING` to reduce log noise
-5. Configure the health check in your orchestrator
-6. Ensure the `v1/` rulesets directory is available (copied into the Docker image by default)
-7. Set `ADMIN_API_KEY` to enable admin cleanup endpoints
-8. Schedule `prescreen-cleanup` via cron or a job scheduler to prevent unbounded table growth
+3. **Set `TRUSTED_PROXY_SECRET`** so the server rejects requests without a valid gateway secret
+4. Use a managed PostgreSQL instance with backups
+5. Set `SERVER_LOG_LEVEL=WARNING` to reduce log noise
+6. Configure the health check in your orchestrator
+7. Ensure the `v1/` rulesets directory is available (copied into the Docker image by default)
+8. Set `ADMIN_API_KEY` to enable admin cleanup endpoints
+9. Schedule `prescreen-cleanup` via cron or a job scheduler to prevent unbounded table growth
