@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from prescreen_rulesets.models.session import SessionInfo
 from prescreen_rulesets.pipeline import PrescreenPipeline
 
+from prescreen_server.config import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT
 from prescreen_server.dependencies import get_db, get_pipeline, get_user_id
 
 router = APIRouter(tags=["sessions"])
@@ -109,7 +110,7 @@ async def list_sessions(
     user_id: str = Depends(get_user_id),
     db: AsyncSession = Depends(get_db),
     pipeline: PrescreenPipeline = Depends(get_pipeline),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
     offset: int = Query(0, ge=0),
 ) -> list[SessionInfo]:
     """List sessions for the current user, most recent first."""

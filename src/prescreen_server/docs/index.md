@@ -47,5 +47,6 @@ Client                          API Server
 ## Next Steps
 
 - [Getting Started](getting-started.md) — install, run, and make your first request
+- [Environment Variables](environment-variables.md) — full reference for all configuration variables
 - [Flow Walkthrough](flow-walkthrough.md) — understand the 6-phase prescreening flow
 - [API Reference](api-reference.md) — endpoint table and model shapes

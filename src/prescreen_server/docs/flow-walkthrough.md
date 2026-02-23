@@ -389,7 +389,7 @@ The patient selects a primary symptom and optionally one or more secondary sympt
 
 **Mode:** Bulk
 
-An age-appropriate checklist for the selected symptoms. The server automatically selects the **adult checklist** (age >= 15) or **pediatric checklist** (age < 15) based on the patient's date of birth. Like Phase 1, any positive answer can terminate the session early.
+An age-appropriate checklist for the selected symptoms. The server automatically selects the **adult checklist** (age >= `PEDIATRIC_AGE_THRESHOLD`) or **pediatric checklist** (age < `PEDIATRIC_AGE_THRESHOLD`) based on the patient's date of birth. The threshold defaults to **15 years** and is configurable via the [`PEDIATRIC_AGE_THRESHOLD`](environment-variables.md#medical-domain-thresholds) environment variable. Like Phase 1, any positive answer can terminate the session early.
 
 ### Example: GET step response (adult, Headache)
 
@@ -417,7 +417,7 @@ An age-appropriate checklist for the selected symptoms. The server automatically
 ```
 
 !!! note "Pediatric checklist"
-    For patients under 15, the qids use the prefix `emer_ped_` instead (e.g. `emer_ped_hea001`). The questions differ but the submission format is the same.
+    For patients younger than `PEDIATRIC_AGE_THRESHOLD` (default 15), the qids use the prefix `emer_ped_` instead (e.g. `emer_ped_hea001`). The questions differ but the submission format is the same.
 
 ### Example: Submit (all negative)
 

@@ -7,6 +7,13 @@ the values are typically overridden via env vars or a ``.env`` file.
 import os
 from dataclasses import dataclass, field
 
+# --- Pagination & cleanup defaults ---
+# Module-level constants read at import time so FastAPI Query() defaults
+# can reference them (Query defaults must be static at decoration time).
+DEFAULT_PAGE_LIMIT = int(os.getenv("DEFAULT_PAGE_LIMIT", "20"))
+MAX_PAGE_LIMIT = int(os.getenv("MAX_PAGE_LIMIT", "100"))
+DEFAULT_CLEANUP_DAYS = int(os.getenv("DEFAULT_CLEANUP_DAYS", "90"))
+
 
 @dataclass(frozen=True)
 class ServerSettings:

@@ -19,7 +19,7 @@ cd thaillm-prescreen-rulesets
 uv pip install -e .
 
 # Set up the database (requires a running PostgreSQL instance)
-export PG_HOST=localhost PG_PORT=5432 PG_USER=postgres PG_PASS=postgres PG_DB=prescreen
+export PG_HOST=localhost PG_PORT=5432 PG_USER=prescreen PG_PASSWORD=prescreen PG_DATABASE=prescreen
 
 # Run database migrations
 cd src/prescreen_db && uv run alembic upgrade head && cd ../..

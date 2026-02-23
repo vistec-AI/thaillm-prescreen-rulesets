@@ -2,30 +2,23 @@
 
 ## Environment Variables
 
-### Server Settings
+See the [Environment Variables](environment-variables.md) page for a comprehensive reference of every variable, including database connection pool tuning, medical thresholds, pagination defaults, and cleanup settings.
+
+The most important variables for deployment are:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SERVER_HOST` | `0.0.0.0` | Bind address |
 | `SERVER_PORT` | `8080` | Listen port |
-| `SERVER_CORS_ORIGINS` | `*` | Comma-separated allowed origins (e.g. `https://app.example.com,https://admin.example.com`) |
-| `SERVER_RULESET_DIR` | (auto) | Path to the `v1/` rulesets directory. Auto-detected from the repository root when not set. |
-| `SERVER_LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
-| `SESSION_TTL_DAYS` | `0` | Default age threshold (days) for session cleanup. 0 = infinite (no automatic cleanup). |
-| `ADMIN_API_KEY` | (none) | Shared secret for admin endpoints. Admin endpoints are disabled when not set. |
-| `TRUSTED_PROXY_SECRET` | (none) | Shared secret between the API gateway and this server. When set, every request carrying `X-User-ID` must also carry a matching `X-Proxy-Secret` header. |
-
-### Database Settings
-
-These are read by the `prescreen_db` package:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
+| `SERVER_CORS_ORIGINS` | `*` | Comma-separated allowed origins |
+| `SERVER_LOG_LEVEL` | `INFO` | Python logging level |
+| `ADMIN_API_KEY` | *(none)* | Shared secret for admin endpoints |
+| `TRUSTED_PROXY_SECRET` | *(none)* | Shared secret for API gateway |
 | `PG_HOST` | `localhost` | PostgreSQL host |
 | `PG_PORT` | `5432` | PostgreSQL port |
-| `PG_USER` | `postgres` | Database user |
-| `PG_PASS` | `postgres` | Database password |
-| `PG_DB` | `prescreen` | Database name |
+| `PG_USER` | `prescreen` | Database user |
+| `PG_PASSWORD` | `prescreen` | Database password |
+| `PG_DATABASE` | `prescreen` | Database name |
 
 ## Docker
 
@@ -38,9 +31,9 @@ docker build -t prescreen-server .
 docker run -p 8080:8080 \
   -e PG_HOST=host.docker.internal \
   -e PG_PORT=5432 \
-  -e PG_USER=postgres \
-  -e PG_PASS=postgres \
-  -e PG_DB=prescreen \
+  -e PG_USER=prescreen \
+  -e PG_PASSWORD=prescreen \
+  -e PG_DATABASE=prescreen \
   prescreen-server
 ```
 
@@ -127,7 +120,7 @@ Options:
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--days` | `$SESSION_TTL_DAYS` or `0` | Age threshold in days (0 = all matching sessions) |
+| `--days` | `$DEFAULT_CLEANUP_DAYS` or `90` | Age threshold in days (0 = all matching sessions) |
 | `--status` | `completed`, `terminated` | Session status filter (repeatable) |
 | `--hard` | off | Permanently DELETE instead of soft-delete |
 | `--purge-deleted` | off | Remove previously soft-deleted rows |

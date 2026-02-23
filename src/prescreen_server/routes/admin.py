@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from prescreen_db.repository import SessionRepository
 
+from prescreen_server.config import DEFAULT_CLEANUP_DAYS
 from prescreen_server.dependencies import get_db
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -64,7 +65,7 @@ _repo = SessionRepository()
 
 @router.post("/cleanup/sessions")
 async def cleanup_sessions(
-    older_than_days: int = Query(90, ge=0),
+    older_than_days: int = Query(DEFAULT_CLEANUP_DAYS, ge=0),
     status: list[str] | None = Query(None),
     hard: bool = Query(False),
     db: AsyncSession = Depends(get_db),

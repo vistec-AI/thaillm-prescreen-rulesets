@@ -21,7 +21,7 @@ This page provides a quick-reference endpoint table and key model shapes.
 |--------|------|------|-------------|
 | `POST` | `/api/v1/sessions` | `X-User-ID` | Create a new prescreening session. Body: `{"session_id": "...", "ruleset_version": "..."}`. Returns 201. |
 | `GET` | `/api/v1/sessions/{session_id}` | `X-User-ID` | Get session info. Returns 404 if not found. |
-| `GET` | `/api/v1/sessions` | `X-User-ID` | List sessions for the current user. Query params: `limit` (1-100, default 20), `offset` (default 0). |
+| `GET` | `/api/v1/sessions` | `X-User-ID` | List sessions for the current user. Query params: `limit` (1–`MAX_PAGE_LIMIT`, default `DEFAULT_PAGE_LIMIT`), `offset` (default 0). See [Environment Variables](environment-variables.md#pagination). |
 | `DELETE` | `/api/v1/sessions/{session_id}` | `X-User-ID` | Soft-delete a session. The row is retained but hidden from queries. Returns 204. |
 | `DELETE` | `/api/v1/sessions/{session_id}/permanent` | `X-User-ID` | Permanently delete a session (irreversible, for GDPR erasure). Returns 204. |
 
@@ -54,7 +54,7 @@ These endpoints require the `X-Admin-Key` header matching the `ADMIN_API_KEY` en
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/admin/cleanup/sessions` | `X-Admin-Key` | Bulk soft-delete or hard-delete old sessions. Query params: `older_than_days` (default 90), `status` (repeatable filter), `hard` (default false). |
+| `POST` | `/api/v1/admin/cleanup/sessions` | `X-Admin-Key` | Bulk soft-delete or hard-delete old sessions. Query params: `older_than_days` (default `DEFAULT_CLEANUP_DAYS`), `status` (repeatable filter), `hard` (default false). See [Environment Variables](environment-variables.md#session-cleanup). |
 | `POST` | `/api/v1/admin/cleanup/purge-deleted` | `X-Admin-Key` | Permanently remove soft-deleted rows. Query params: `older_than_days` (default 0 = all). |
 
 ## Key Response Shapes

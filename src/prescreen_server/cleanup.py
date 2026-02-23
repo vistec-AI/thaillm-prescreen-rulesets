@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 async def run_cleanup(
     *,
-    days: int = 90,
+    days: int = int(os.getenv("DEFAULT_CLEANUP_DAYS", "90")),
     status_filter: list[str] | None = None,
     hard: bool = False,
     purge_deleted: bool = False,
@@ -99,9 +99,10 @@ def cli() -> None:
     parser.add_argument(
         "--days",
         type=int,
-        default=int(os.getenv("SESSION_TTL_DAYS", "0")),
+        default=int(os.getenv("DEFAULT_CLEANUP_DAYS", os.getenv("SESSION_TTL_DAYS", "90"))),
         help=(
-            "Age threshold in days (default: $SESSION_TTL_DAYS or 0). "
+            "Age threshold in days (default: $DEFAULT_CLEANUP_DAYS, "
+            "falling back to $SESSION_TTL_DAYS, or 90). "
             "0 means no age filter — affects all matching sessions."
         ),
     )
