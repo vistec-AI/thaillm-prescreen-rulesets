@@ -19,7 +19,7 @@ Phase overview:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -502,10 +502,123 @@ class PrescreenEngine:
     # Internal: submit handlers
     # ==================================================================
 
+    def _validate_demographics(self, value: Any) -> None:
+        """Validate the phase 0 demographics payload.
+
+        Checks that ``value`` is a dict with correct types for each
+        demographic field.  Required fields must be present and non-None;
+        optional fields are skipped when absent but validated when present.
+        Extra keys (e.g. ``"age"``) are silently accepted for backward
+        compatibility.
+
+        Raises:
+            ValueError: with a descriptive message if any check fails.
+        """
+        if not isinstance(value, dict):
+            raise ValueError(
+                "Demographics value must be a dict, "
+                f"got {type(value).__name__}"
+            )
+
+        # Build a lookup of demographic field definitions keyed by field key
+        field_by_key = {f.key: f for f in self._store.demographics}
+
+        # Build a set of valid underlying disease names for from_yaml checks
+        valid_ud_names = {ud.name for ud in self._store.underlying_diseases}
+
+        for key, field in field_by_key.items():
+            is_present = key in value and value[key] is not None
+
+            # --- Required-field check ---
+            if not field.optional and not is_present:
+                raise ValueError(
+                    f"Missing required demographic field: '{key}'"
+                )
+
+            # Skip absent optional fields
+            if not is_present:
+                continue
+
+            val = value[key]
+            ftype = field.type
+
+            # --- datetime: must be ISO date string, not in the future ---
+            if ftype == "datetime":
+                if not isinstance(val, str):
+                    raise ValueError(
+                        f"Field '{key}' must be a date string (YYYY-MM-DD), "
+                        f"got {type(val).__name__}"
+                    )
+                try:
+                    parsed = date.fromisoformat(val)
+                except ValueError:
+                    raise ValueError(
+                        f"Field '{key}' has invalid date format: '{val}'. "
+                        "Expected YYYY-MM-DD"
+                    )
+                if parsed > date.today():
+                    raise ValueError(
+                        f"Field '{key}' must not be in the future: '{val}'"
+                    )
+
+            # --- enum: must be one of the allowed values ---
+            elif ftype == "enum":
+                allowed = field.values if isinstance(field.values, list) else []
+                if not isinstance(val, str):
+                    raise ValueError(
+                        f"Field '{key}' must be a string, "
+                        f"got {type(val).__name__}"
+                    )
+                if val not in allowed:
+                    raise ValueError(
+                        f"Field '{key}' must be one of {allowed}, "
+                        f"got '{val}'"
+                    )
+
+            # --- float: must be numeric (int or float, not bool), positive ---
+            elif ftype == "float":
+                # bool is a subclass of int in Python, so reject it explicitly
+                if isinstance(val, bool) or not isinstance(val, (int, float)):
+                    raise ValueError(
+                        f"Field '{key}' must be a number, "
+                        f"got {type(val).__name__}"
+                    )
+                if val <= 0:
+                    raise ValueError(
+                        f"Field '{key}' must be positive, got {val}"
+                    )
+
+            # --- from_yaml: must be a list of valid names ---
+            elif ftype == "from_yaml":
+                if not isinstance(val, list):
+                    raise ValueError(
+                        f"Field '{key}' must be a list, "
+                        f"got {type(val).__name__}"
+                    )
+                for item in val:
+                    if not isinstance(item, str):
+                        raise ValueError(
+                            f"Field '{key}' items must be strings, "
+                            f"got {type(item).__name__}"
+                        )
+                    if item not in valid_ud_names:
+                        raise ValueError(
+                            f"Field '{key}' contains unknown value: '{item}'"
+                        )
+
+            # --- str: must be a string if present ---
+            elif ftype == "str":
+                if not isinstance(val, str):
+                    raise ValueError(
+                        f"Field '{key}' must be a string, "
+                        f"got {type(val).__name__}"
+                    )
+
     async def _submit_demographics(
         self, db: AsyncSession, row: PrescreenSession, value: dict[str, Any]
     ) -> StepResult:
         """Process phase 0 demographics submission."""
+        self._validate_demographics(value)
         await self._repo.save_demographics(db, row, value)
         await self._repo.advance_phase(db, row, 1)
         return self._compute_step(row)
@@ -525,11 +638,23 @@ class PrescreenEngine:
         # Check for any positive critical items
         positive_qids = [qid for qid, ans in value.items() if ans is True]
         if positive_qids:
+            # Use custom reasons from YAML if available, else fall back to
+            # auto-generated format with qid identifiers.
+            qid_to_item = {item.qid: item for item in self._store.er_critical}
+            custom_reasons = [
+                qid_to_item[qid].reason
+                for qid in positive_qids
+                if qid in qid_to_item and qid_to_item[qid].reason
+            ]
+            reason = (
+                "; ".join(custom_reasons) if custom_reasons
+                else f"ER critical positive: {', '.join(positive_qids)} (default response)"
+            )
             return await self._terminate(
                 db, row,
                 departments=[DEFAULT_ER_DEPARTMENT],
                 severity=DEFAULT_ER_SEVERITY,
-                reason=f"ER critical positive: {', '.join(positive_qids)}",
+                reason=reason,
             )
 
         # All negative — advance to phase 2
@@ -581,11 +706,14 @@ class PrescreenEngine:
         if first_positive is not None:
             item, _ = first_positive
             dept, sev = self._resolve_er_item_result(item, pediatric=pediatric)
+            # Use the item's custom reason if provided, else fall back to
+            # auto-generated format with qid identifier.
+            reason = item.reason or f"ER checklist positive: {item.qid} (default response)"
             return await self._terminate(
                 db, row,
                 departments=[dept],
                 severity=sev,
-                reason=f"ER checklist positive: {item.qid}",
+                reason=reason,
             )
 
         # All negative — advance to phase 4 (OLDCARTS)

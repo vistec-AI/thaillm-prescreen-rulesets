@@ -9,10 +9,10 @@ session must have a result) via DB constraints.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from prescreen_db.models.enums import PipelineStage, SessionStatus
@@ -60,10 +60,14 @@ class SessionRepository:
     async def get_by_user_and_session(
         self, db: AsyncSession, user_id: str, session_id: str
     ) -> PrescreenSession | None:
-        """Fetch a session by the unique (user_id, session_id) pair."""
+        """Fetch a session by the unique (user_id, session_id) pair.
+
+        Excludes soft-deleted rows (deleted_at IS NOT NULL).
+        """
         stmt = select(PrescreenSession).where(
             PrescreenSession.user_id == user_id,
             PrescreenSession.session_id == session_id,
+            PrescreenSession.deleted_at.is_(None),
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
@@ -73,9 +77,9 @@ class SessionRepository:
     ) -> PrescreenSession | None:
         """Return the user's currently active session, if any.
 
-        "Active" means status is ``created`` or ``in_progress``.  If more
-        than one exists (shouldn't happen), the most recently created one
-        is returned.
+        "Active" means status is ``created`` or ``in_progress`` and the
+        row has not been soft-deleted.  If more than one exists (shouldn't
+        happen), the most recently created one is returned.
         """
         stmt = (
             select(PrescreenSession)
@@ -84,6 +88,7 @@ class SessionRepository:
                 PrescreenSession.status.in_(
                     [SessionStatus.CREATED, SessionStatus.IN_PROGRESS]
                 ),
+                PrescreenSession.deleted_at.is_(None),
             )
             .order_by(PrescreenSession.created_at.desc())
             .limit(1)
@@ -103,10 +108,16 @@ class SessionRepository:
         limit: int = 20,
         offset: int = 0,
     ) -> list[PrescreenSession]:
-        """List sessions for a user, most recent first."""
+        """List sessions for a user, most recent first.
+
+        Excludes soft-deleted rows (deleted_at IS NOT NULL).
+        """
         stmt = (
             select(PrescreenSession)
-            .where(PrescreenSession.user_id == user_id)
+            .where(
+                PrescreenSession.user_id == user_id,
+                PrescreenSession.deleted_at.is_(None),
+            )
             .order_by(PrescreenSession.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -285,3 +296,119 @@ class SessionRepository:
         session.updated_at = now
         await db.flush()
         return session
+
+    # ------------------------------------------------------------------
+    # Delete
+    # ------------------------------------------------------------------
+
+    async def soft_delete(
+        self, db: AsyncSession, session: PrescreenSession
+    ) -> PrescreenSession:
+        """Soft-delete a session by setting ``deleted_at`` to now.
+
+        The row remains in the database but is excluded from normal read
+        queries.  Raises ``ValueError`` if the session is already
+        soft-deleted (prevents accidental double-delete).
+        """
+        if session.deleted_at is not None:
+            raise ValueError(
+                f"Session already deleted: session_id={session.session_id}"
+            )
+        now = datetime.now(timezone.utc)
+        session.deleted_at = now
+        session.updated_at = now
+        await db.flush()
+        return session
+
+    async def hard_delete(
+        self, db: AsyncSession, session: PrescreenSession
+    ) -> None:
+        """Permanently remove a session row from the database.
+
+        This is irreversible.  Use for GDPR erasure or test cleanup.
+        """
+        await db.delete(session)
+        await db.flush()
+
+    async def bulk_purge_old_sessions(
+        self,
+        db: AsyncSession,
+        *,
+        older_than_days: int,
+        status_filter: list[str] | None = None,
+        hard: bool = False,
+    ) -> int:
+        """Bulk soft-delete or hard-delete sessions older than a threshold.
+
+        Uses ``completed_at`` as the age reference for completed/terminated
+        sessions, falling back to ``created_at`` for sessions that never
+        finished.  Only targets non-deleted rows.
+
+        Args:
+            older_than_days: sessions older than this many days are affected
+            status_filter: if provided, only affect sessions with these
+                status values (e.g. ``["completed", "terminated"]``)
+            hard: if True, permanently DELETE rows; if False, set deleted_at
+
+        Returns:
+            number of rows affected
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+
+        # Age reference: completed_at if set, otherwise created_at.
+        # We use COALESCE in raw SQL via a hybrid approach: filter on
+        # both columns with OR to keep it simple and index-friendly.
+        age_filter = (
+            (PrescreenSession.completed_at.isnot(None) & (PrescreenSession.completed_at < cutoff))
+            | (PrescreenSession.completed_at.is_(None) & (PrescreenSession.created_at < cutoff))
+        )
+
+        if hard:
+            stmt = (
+                delete(PrescreenSession)
+                .where(
+                    PrescreenSession.deleted_at.is_(None),
+                    age_filter,
+                )
+            )
+        else:
+            now = datetime.now(timezone.utc)
+            stmt = (
+                update(PrescreenSession)
+                .where(
+                    PrescreenSession.deleted_at.is_(None),
+                    age_filter,
+                )
+                .values(deleted_at=now, updated_at=now)
+            )
+
+        if status_filter:
+            stmt = stmt.where(PrescreenSession.status.in_(status_filter))
+
+        result = await db.execute(stmt)
+        await db.flush()
+        return result.rowcount
+
+    async def purge_soft_deleted(
+        self,
+        db: AsyncSession,
+        *,
+        older_than_days: int = 0,
+    ) -> int:
+        """Permanently DELETE rows that have been soft-deleted.
+
+        Args:
+            older_than_days: only purge rows whose ``deleted_at`` is older
+                than this many days ago.  Default 0 purges all soft-deleted.
+
+        Returns:
+            number of rows permanently removed
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+        stmt = delete(PrescreenSession).where(
+            PrescreenSession.deleted_at.isnot(None),
+            PrescreenSession.deleted_at < cutoff,
+        )
+        result = await db.execute(stmt)
+        await db.flush()
+        return result.rowcount

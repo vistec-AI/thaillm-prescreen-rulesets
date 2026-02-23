@@ -135,6 +135,69 @@ class PrescreenPipeline:
         )
 
     # ==================================================================
+    # Session queries — proxy to engine
+    # ==================================================================
+
+    async def get_session(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> SessionInfo | None:
+        """Fetch session info by (user_id, session_id). Returns None if not found."""
+        return await self._engine.get_session(
+            db, user_id=user_id, session_id=session_id,
+        )
+
+    async def list_sessions(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[SessionInfo]:
+        """List sessions for a user, most recent first."""
+        return await self._engine.list_sessions(
+            db, user_id=user_id, limit=limit, offset=offset,
+        )
+
+    # ==================================================================
+    # Session deletion
+    # ==================================================================
+
+    async def soft_delete_session(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> None:
+        """Soft-delete a session (sets deleted_at, hides from queries).
+
+        Raises:
+            ValueError: if the session does not exist for this user
+        """
+        row = await self._load_session(db, user_id, session_id)
+        await self._repo.soft_delete(db, row)
+
+    async def hard_delete_session(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> None:
+        """Permanently delete a session row (irreversible, for GDPR erasure).
+
+        Raises:
+            ValueError: if the session does not exist for this user
+        """
+        row = await self._load_session(db, user_id, session_id)
+        await self._repo.hard_delete(db, row)
+
+    # ==================================================================
     # Step API
     # ==================================================================
 
@@ -351,6 +414,10 @@ class PrescreenPipeline:
 
             await self._repo.set_pipeline_stage(db, row, PipelineStage.DONE)
 
+            # Include Q&A history even for early termination so consumers
+            # can see which questions/answers led to the ER redirect.
+            history = self._build_full_history(row)
+
             return PipelineResult(
                 departments=[
                     self._store.resolve_department(d)
@@ -364,6 +431,7 @@ class PrescreenPipeline:
                 diagnoses=[],
                 reason=result.get("reason") or row.termination_reason,
                 terminated_early=True,
+                history=history,
             )
 
         # COMPLETED — rule-based flow finished normally
@@ -431,7 +499,12 @@ class PrescreenPipeline:
         await db.flush()
 
     def _build_pipeline_result(self, row: PrescreenSession) -> PipelineResult:
-        """Construct a PipelineResult from the session's current state."""
+        """Construct a PipelineResult from the session's current state.
+
+        Includes the full Q&A history (rule-based + LLM) so that the final
+        result payload is self-contained — consumers don't need a second
+        request to reconstruct the conversation.
+        """
         result = row.result or {}
         dept_ids = result.get("departments") or []
         sev_id = result.get("severity")
@@ -462,12 +535,16 @@ class PrescreenPipeline:
             for d in raw_diagnoses
         ]
 
+        # Build full Q&A history: rule-based phases + LLM follow-ups
+        history = self._build_full_history(row)
+
         return PipelineResult(
             departments=departments,
             severity=severity,
             diagnoses=diagnoses,
             reason=result.get("reason") or row.termination_reason,
             terminated_early=(row.status == SessionStatus.TERMINATED),
+            history=history,
         )
 
     # ==================================================================
@@ -587,6 +664,44 @@ class PrescreenPipeline:
                         question_type=question.question_type,
                         phase=phase_num,
                     ))
+
+        return pairs
+
+    # ==================================================================
+    # Session history
+    # ==================================================================
+
+    async def get_history(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> list[QAPair]:
+        """Return the full Q&A history for a session.
+
+        Works at any point during the session — returns whatever has been
+        answered so far (rule-based phases + LLM follow-ups).
+        """
+        row = await self._load_session(db, user_id, session_id)
+        return self._build_full_history(row)
+
+    def _build_full_history(self, row: PrescreenSession) -> list[QAPair]:
+        """Combine rule-based Q&A pairs with LLM follow-up pairs.
+
+        Rule-based pairs come from ``_build_qa_pairs`` (phases 0-5).
+        LLM pairs come from ``row.llm_responses`` (stored after
+        ``submit_llm_answers``).
+        """
+        pairs = self._build_qa_pairs(row)
+
+        # Append LLM follow-up Q&A if any have been submitted
+        for resp in row.llm_responses or []:
+            pairs.append(QAPair(
+                question=resp["question"],
+                answer=resp["answer"],
+                source="llm_generated",
+            ))
 
         return pairs
 

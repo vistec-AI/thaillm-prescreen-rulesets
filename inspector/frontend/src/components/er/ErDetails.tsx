@@ -25,6 +25,11 @@ export default function ErDetails({ item, onEdit }: Props) {
         <b>Department</b>: {item.department_labels.join(", ")}{" "}
         <small className="text-gray-500">({item.department.join(", ")})</small>
       </div>
+      {item.reason && (
+        <div className="mb-1">
+          <b>Reason</b>: {item.reason}
+        </div>
+      )}
       <div className="mt-3">
         <button
           className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"

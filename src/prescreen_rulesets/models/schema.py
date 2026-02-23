@@ -115,6 +115,9 @@ class ERCriticalItem(BaseModel):
 
     qid: str
     text: str
+    # Optional custom reason shown when this item triggers early termination.
+    # If omitted, the engine auto-generates a technical reason string.
+    reason: Optional[str] = None
 
 
 class ERChecklistItem(BaseModel):
@@ -134,6 +137,9 @@ class ERChecklistItem(BaseModel):
     min_severity: Optional[dict] = None
     severity: Optional[dict] = None
     department: Optional[List[dict]] = None
+    # Optional custom reason shown when this item triggers early termination.
+    # If omitted, the engine auto-generates a technical reason string.
+    reason: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

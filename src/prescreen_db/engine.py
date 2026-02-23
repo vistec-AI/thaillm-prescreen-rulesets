@@ -4,6 +4,8 @@ The engine is created lazily on first call and reused across the process
 lifetime.  Call ``dispose_engine()`` during graceful shutdown.
 """
 
+import os
+
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -12,6 +14,11 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from prescreen_db.config import get_async_url
+
+# Connection pool tuning — overridable via PG_POOL_SIZE / PG_MAX_OVERFLOW
+# env vars so operators can scale the pool without code changes.
+_POOL_SIZE = int(os.getenv("PG_POOL_SIZE", "5"))
+_MAX_OVERFLOW = int(os.getenv("PG_MAX_OVERFLOW", "10"))
 
 # Module-level singleton so the entire app shares one connection pool.
 _engine: AsyncEngine | None = None
@@ -25,9 +32,8 @@ def get_engine() -> AsyncEngine:
         _engine = create_async_engine(
             get_async_url(),
             echo=False,
-            # Reasonable pool defaults; tune via env if needed later.
-            pool_size=5,
-            max_overflow=10,
+            pool_size=_POOL_SIZE,
+            max_overflow=_MAX_OVERFLOW,
         )
     return _engine
 

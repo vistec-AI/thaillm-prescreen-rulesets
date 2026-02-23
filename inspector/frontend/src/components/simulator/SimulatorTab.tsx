@@ -234,47 +234,30 @@ function SimulatorContent({
         </div>
       </div>
 
-      {/* Desktop view: 2-column layout */}
-      {viewMode === "desktop" && (
-        <div className="flex-1 flex gap-4 min-h-0">
-          {/* Main content */}
-          <div className="flex-1 overflow-y-auto pr-2">
-            <div className="max-w-2xl">
-              {simulationContent}
-            </div>
-          </div>
-
-          {/* History sidebar */}
-          <div className="w-64 flex-shrink-0 border-l border-gray-200 pl-4 overflow-y-auto">
-            <h4 className="text-sm font-semibold text-gray-600 mb-2">
-              Answer History
-            </h4>
-            <AnswerHistory history={sim.history} onGoBackTo={goBackTo} />
-          </div>
-        </div>
-      )}
-
-      {/* Mobile preview: phone frame + history sidebar */}
-      {viewMode === "mobile" && (
-        <div className="flex-1 flex gap-4 min-h-0">
-          <div className="flex-1 overflow-y-auto">
+      {/* Unified layout: MobileFrame always wraps the content so that
+          toggling between desktop/mobile never unmounts the form components
+          (which would reset their local state). The `active` prop on
+          MobileFrame controls whether the phone chrome is visible. */}
+      <div className="flex-1 flex gap-4 min-h-0">
+        <div className={`flex-1 overflow-y-auto ${viewMode === "desktop" ? "pr-2" : ""}`}>
+          {viewMode === "mobile" && (
             <p className="text-xs text-gray-400 text-center mb-2">
               iPhone 14 preview (393 x 852 pt) — check if text is overwhelming on mobile
             </p>
-            <MobileFrame>
-              {simulationContent}
-            </MobileFrame>
-          </div>
-
-          {/* History sidebar (kept outside the phone frame for usability) */}
-          <div className="w-64 flex-shrink-0 border-l border-gray-200 pl-4 overflow-y-auto">
-            <h4 className="text-sm font-semibold text-gray-600 mb-2">
-              Answer History
-            </h4>
-            <AnswerHistory history={sim.history} onGoBackTo={goBackTo} />
-          </div>
+          )}
+          <MobileFrame active={viewMode === "mobile"}>
+            {simulationContent}
+          </MobileFrame>
         </div>
-      )}
+
+        {/* History sidebar */}
+        <div className="w-64 flex-shrink-0 border-l border-gray-200 pl-4 overflow-y-auto">
+          <h4 className="text-sm font-semibold text-gray-600 mb-2">
+            Answer History
+          </h4>
+          <AnswerHistory history={sim.history} onGoBackTo={goBackTo} />
+        </div>
+      </div>
     </div>
   );
 }
