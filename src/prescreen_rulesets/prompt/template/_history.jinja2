@@ -1,0 +1,6 @@
+{% if history %}
+Previous answers:
+{% for pair in history %}
+- Q: {{ pair.question }} → A: {{ pair.answer }}
+{% endfor %}
+{% endif %}

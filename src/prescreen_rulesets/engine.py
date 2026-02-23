@@ -19,7 +19,7 @@ Phase overview:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,6 +62,30 @@ logger = logging.getLogger(__name__)
 # Key used in the responses JSONB to store the pending-qid queue for
 # sequential phases (4 OLDCARTS, 5 OPD).
 _PENDING_KEY = "__pending"
+
+
+def _demographic_answer_schema(field) -> dict:
+    """Map a DemographicField.type to a JSON-Schema-like dict.
+
+    Used to tell LLM players what format each demographic answer should have.
+    """
+    ftype = field.type
+    if ftype == "datetime":
+        return {"type": "string", "format": "date"}
+    elif ftype == "enum":
+        # enum fields always have a list of allowed string values
+        values = field.values if isinstance(field.values, list) else []
+        return {"type": "string", "enum": values}
+    elif ftype == "float":
+        return {"type": "number"}
+    elif ftype == "from_yaml":
+        # from_yaml fields may carry a list of values or just a file reference
+        if isinstance(field.values, list):
+            return {"type": "string", "enum": field.values}
+        return {"type": "string"}
+    else:
+        # str and any unknown types default to string
+        return {"type": "string"}
 
 
 class PrescreenEngine:
@@ -139,17 +163,20 @@ class PrescreenEngine:
         *,
         user_id: str,
         session_id: str,
-        qid: str,
+        qid: str | None = None,
         value: Any,
     ) -> StepResult:
         """Submit an answer for the current step and advance the session.
 
         For bulk phases (0-3), ``qid`` is a phase marker (e.g. "demographics",
         "er_critical", "symptoms", "er_checklist") and ``value`` is the
-        full batch payload.
+        full batch payload.  ``qid`` is ignored in these phases, so passing
+        ``None`` (the default) is fine.
 
-        For sequential phases (4-5), ``qid`` is the specific question ID
-        and ``value`` is the user's answer.
+        For sequential phases (4-5), ``qid`` identifies which question is
+        being answered.  If ``None``, the engine auto-derives it from the
+        current step (i.e. ``_compute_step(row).questions[0].qid``), which
+        is always the single question the engine last presented.
 
         Returns the next step after processing.
         """
@@ -165,7 +192,11 @@ class PrescreenEngine:
         elif phase == 3:
             return await self._submit_er_checklist(db, row, value)
         elif phase in (4, 5):
-            return await self._submit_sequential(db, row, qid, value)
+            # Auto-derive qid when the caller omits it — sequential phases
+            # present exactly one question at a time, so the current step's
+            # first question qid is always the right one.
+            resolved_qid = qid if qid is not None else self._derive_current_qid(row)
+            return await self._submit_sequential(db, row, resolved_qid, value)
         else:
             raise ValueError(f"Invalid phase: {phase}")
 
@@ -199,11 +230,15 @@ class PrescreenEngine:
     def _step_demographics(self) -> QuestionsStep:
         """Build the demographics step — present all demographic fields as questions."""
         questions = []
+        # Track required keys for the submission_schema object
+        required_keys: list[str] = []
+
         for field in self._store.demographics:
             payload = QuestionPayload(
                 qid=field.qid,
                 question=field.field_name_th,
                 question_type=field.type,
+                answer_schema=_demographic_answer_schema(field),
                 metadata={
                     "key": field.key,
                     "field_name": field.field_name,
@@ -217,30 +252,58 @@ class PrescreenEngine:
                 else:
                     # from_yaml: the values field is a filename reference
                     payload.metadata["values_source"] = field.values
+
+            if not field.optional:
+                required_keys.append(field.key)
+
             questions.append(payload)
+
+        # submission_schema: an object keyed by demographic field key
+        properties = {
+            f.key: _demographic_answer_schema(f)
+            for f in self._store.demographics
+        }
+        submission_schema = {
+            "type": "object",
+            "properties": properties,
+            "required": required_keys,
+        }
 
         return QuestionsStep(
             phase=0,
             phase_name=PHASE_NAMES[0],
             questions=questions,
+            submission_schema=submission_schema,
         )
 
     # --- Phase 1: ER Critical Screen ---
 
     def _step_er_critical(self) -> QuestionsStep:
         """Build the ER critical step — present all critical yes/no checks."""
+        # Every ER critical question is a boolean yes/no
+        boolean_schema = {"type": "boolean"}
         questions = [
             QuestionPayload(
                 qid=item.qid,
                 question=item.text,
                 question_type="yes_no",
+                answer_schema=boolean_schema,
             )
             for item in self._store.er_critical
         ]
+
+        # submission_schema: object keyed by qid → boolean
+        submission_schema = {
+            "type": "object",
+            "properties": {item.qid: boolean_schema for item in self._store.er_critical},
+            "required": [item.qid for item in self._store.er_critical],
+        }
+
         return QuestionsStep(
             phase=1,
             phase_name=PHASE_NAMES[1],
             questions=questions,
+            submission_schema=submission_schema,
         )
 
     # --- Phase 2: Symptom Selection ---
@@ -251,12 +314,21 @@ class PrescreenEngine:
             {"id": sym.name, "label": sym.name_th}
             for sym in self._store.nhso_symptoms.values()
         ]
+        symptom_ids = [sym.name for sym in self._store.nhso_symptoms.values()]
+
+        primary_schema = {"type": "string", "enum": symptom_ids}
+        secondary_schema = {
+            "type": "array",
+            "items": {"type": "string", "enum": symptom_ids},
+        }
+
         questions = [
             QuestionPayload(
                 qid="primary_symptom",
                 question="อาการหลัก",
                 question_type="single_select",
                 options=symptom_options,
+                answer_schema=primary_schema,
             ),
             QuestionPayload(
                 qid="secondary_symptoms",
@@ -264,12 +336,26 @@ class PrescreenEngine:
                 question_type="multi_select",
                 options=symptom_options,
                 metadata={"optional": True},
+                answer_schema=secondary_schema,
             ),
         ]
+
+        # submission_schema: object with primary_symptom (required) and
+        # secondary_symptoms (optional)
+        submission_schema = {
+            "type": "object",
+            "properties": {
+                "primary_symptom": primary_schema,
+                "secondary_symptoms": secondary_schema,
+            },
+            "required": ["primary_symptom"],
+        }
+
         return QuestionsStep(
             phase=2,
             phase_name=PHASE_NAMES[2],
             questions=questions,
+            submission_schema=submission_schema,
         )
 
     # --- Phase 3: ER Checklist ---
@@ -282,6 +368,7 @@ class PrescreenEngine:
         # Collect checklist items for primary + secondary symptoms
         symptoms = self._get_selected_symptoms(row)
         questions: list[QuestionPayload] = []
+        boolean_schema = {"type": "boolean"}
 
         for symptom in symptoms:
             items = self._store.get_er_checklist(symptom, pediatric=pediatric)
@@ -290,13 +377,22 @@ class PrescreenEngine:
                     qid=item.qid,
                     question=item.text,
                     question_type="yes_no",
+                    answer_schema=boolean_schema,
                     metadata={"symptom": symptom},
                 ))
+
+        # submission_schema: object keyed by qid → boolean
+        submission_schema = {
+            "type": "object",
+            "properties": {q.qid: boolean_schema for q in questions},
+            "required": [q.qid for q in questions],
+        }
 
         return QuestionsStep(
             phase=3,
             phase_name=PHASE_NAMES[3],
             questions=questions,
+            submission_schema=submission_schema,
         )
 
     # --- Phases 4/5: Sequential (OLDCARTS / OPD) ---
@@ -347,7 +443,15 @@ class PrescreenEngine:
         If we run out of pending → advance to next phase or complete.
         """
         answers = self._extract_answers(row)
-        demographics = row.demographics
+        demographics = dict(row.demographics or {})
+
+        # Ensure computed age is available for age_filter evaluation.
+        # Demographics may only contain date_of_birth (no explicit "age"
+        # key), so we derive it here to avoid silent age_filter failures.
+        if "age" not in demographics:
+            age = self._get_patient_age(row)
+            if age is not None:
+                demographics["age"] = age
 
         while pending:
             qid = pending.pop(0)
@@ -377,12 +481,14 @@ class PrescreenEngine:
                 # targets to pending — continue the loop
                 continue
 
-            # User-facing question — return it
+            # User-facing question — return it.  Sequential phases present
+            # exactly one question, so submission_schema == answer_schema.
             payload = self._question_to_payload(question)
             return QuestionsStep(
                 phase=row.current_phase,
                 phase_name=PHASE_NAMES[row.current_phase],
                 questions=[payload],
+                submission_schema=payload.answer_schema,
             )
 
         # Pending queue exhausted — advance to next phase
@@ -396,10 +502,123 @@ class PrescreenEngine:
     # Internal: submit handlers
     # ==================================================================
 
+    def _validate_demographics(self, value: Any) -> None:
+        """Validate the phase 0 demographics payload.
+
+        Checks that ``value`` is a dict with correct types for each
+        demographic field.  Required fields must be present and non-None;
+        optional fields are skipped when absent but validated when present.
+        Extra keys (e.g. ``"age"``) are silently accepted for backward
+        compatibility.
+
+        Raises:
+            ValueError: with a descriptive message if any check fails.
+        """
+        if not isinstance(value, dict):
+            raise ValueError(
+                "Demographics value must be a dict, "
+                f"got {type(value).__name__}"
+            )
+
+        # Build a lookup of demographic field definitions keyed by field key
+        field_by_key = {f.key: f for f in self._store.demographics}
+
+        # Build a set of valid underlying disease names for from_yaml checks
+        valid_ud_names = {ud.name for ud in self._store.underlying_diseases}
+
+        for key, field in field_by_key.items():
+            is_present = key in value and value[key] is not None
+
+            # --- Required-field check ---
+            if not field.optional and not is_present:
+                raise ValueError(
+                    f"Missing required demographic field: '{key}'"
+                )
+
+            # Skip absent optional fields
+            if not is_present:
+                continue
+
+            val = value[key]
+            ftype = field.type
+
+            # --- datetime: must be ISO date string, not in the future ---
+            if ftype == "datetime":
+                if not isinstance(val, str):
+                    raise ValueError(
+                        f"Field '{key}' must be a date string (YYYY-MM-DD), "
+                        f"got {type(val).__name__}"
+                    )
+                try:
+                    parsed = date.fromisoformat(val)
+                except ValueError:
+                    raise ValueError(
+                        f"Field '{key}' has invalid date format: '{val}'. "
+                        "Expected YYYY-MM-DD"
+                    )
+                if parsed > date.today():
+                    raise ValueError(
+                        f"Field '{key}' must not be in the future: '{val}'"
+                    )
+
+            # --- enum: must be one of the allowed values ---
+            elif ftype == "enum":
+                allowed = field.values if isinstance(field.values, list) else []
+                if not isinstance(val, str):
+                    raise ValueError(
+                        f"Field '{key}' must be a string, "
+                        f"got {type(val).__name__}"
+                    )
+                if val not in allowed:
+                    raise ValueError(
+                        f"Field '{key}' must be one of {allowed}, "
+                        f"got '{val}'"
+                    )
+
+            # --- float: must be numeric (int or float, not bool), positive ---
+            elif ftype == "float":
+                # bool is a subclass of int in Python, so reject it explicitly
+                if isinstance(val, bool) or not isinstance(val, (int, float)):
+                    raise ValueError(
+                        f"Field '{key}' must be a number, "
+                        f"got {type(val).__name__}"
+                    )
+                if val <= 0:
+                    raise ValueError(
+                        f"Field '{key}' must be positive, got {val}"
+                    )
+
+            # --- from_yaml: must be a list of valid names ---
+            elif ftype == "from_yaml":
+                if not isinstance(val, list):
+                    raise ValueError(
+                        f"Field '{key}' must be a list, "
+                        f"got {type(val).__name__}"
+                    )
+                for item in val:
+                    if not isinstance(item, str):
+                        raise ValueError(
+                            f"Field '{key}' items must be strings, "
+                            f"got {type(item).__name__}"
+                        )
+                    if item not in valid_ud_names:
+                        raise ValueError(
+                            f"Field '{key}' contains unknown value: '{item}'"
+                        )
+
+            # --- str: must be a string if present ---
+            elif ftype == "str":
+                if not isinstance(val, str):
+                    raise ValueError(
+                        f"Field '{key}' must be a string, "
+                        f"got {type(val).__name__}"
+                    )
+
     async def _submit_demographics(
         self, db: AsyncSession, row: PrescreenSession, value: dict[str, Any]
     ) -> StepResult:
         """Process phase 0 demographics submission."""
+        self._validate_demographics(value)
         await self._repo.save_demographics(db, row, value)
         await self._repo.advance_phase(db, row, 1)
         return self._compute_step(row)
@@ -419,11 +638,23 @@ class PrescreenEngine:
         # Check for any positive critical items
         positive_qids = [qid for qid, ans in value.items() if ans is True]
         if positive_qids:
+            # Use custom reasons from YAML if available, else fall back to
+            # auto-generated format with qid identifiers.
+            qid_to_item = {item.qid: item for item in self._store.er_critical}
+            custom_reasons = [
+                qid_to_item[qid].reason
+                for qid in positive_qids
+                if qid in qid_to_item and qid_to_item[qid].reason
+            ]
+            reason = (
+                "; ".join(custom_reasons) if custom_reasons
+                else f"ER critical positive: {', '.join(positive_qids)} (default response)"
+            )
             return await self._terminate(
                 db, row,
                 departments=[DEFAULT_ER_DEPARTMENT],
                 severity=DEFAULT_ER_SEVERITY,
-                reason=f"ER critical positive: {', '.join(positive_qids)}",
+                reason=reason,
             )
 
         # All negative — advance to phase 2
@@ -475,11 +706,14 @@ class PrescreenEngine:
         if first_positive is not None:
             item, _ = first_positive
             dept, sev = self._resolve_er_item_result(item, pediatric=pediatric)
+            # Use the item's custom reason if provided, else fall back to
+            # auto-generated format with qid identifier.
+            reason = item.reason or f"ER checklist positive: {item.qid} (default response)"
             return await self._terminate(
                 db, row,
                 departments=[dept],
                 severity=sev,
-                reason=f"ER checklist positive: {item.qid}",
+                reason=reason,
             )
 
         # All negative — advance to phase 4 (OLDCARTS)
@@ -509,7 +743,7 @@ class PrescreenEngine:
             logger.warning("No action determined for %s=%r, using pending queue", qid, value)
             # Fall through to resolve_next with existing pending
             pending = list(row.responses.get(_PENDING_KEY, []))
-            return self._resolve_and_persist(db, row, source, symptom, pending)
+            return await self._resolve_and_persist(db, row, source, symptom, pending)
 
         # Process the action
         pending = list(row.responses.get(_PENDING_KEY, []))
@@ -518,6 +752,12 @@ class PrescreenEngine:
         if result is not None:
             # Terminal action (terminate or opd/phase advance)
             if isinstance(result, TerminationStep):
+                # When the termination comes from a phase advance (e.g. OPD
+                # auto-eval chain terminated without user-facing questions),
+                # advance the session phase so the record correctly reflects
+                # that the next phase was processed.
+                if result.phase != row.current_phase:
+                    await self._repo.advance_phase(db, row, result.phase)
                 # Persist the termination
                 if result.type == "terminated":
                     dept_ids = [d["id"] for d in result.departments]
@@ -531,10 +771,23 @@ class PrescreenEngine:
                 else:
                     return await self._complete(db, row, result)
             elif isinstance(result, QuestionsStep):
-                # Phase advance — persist and return
-                if result.phase != row.current_phase:
+                # Phase advance (e.g. OPDAction from OLDCARTS → OPD).
+                if result.phase != phase:
                     await self._repo.advance_phase(db, row, result.phase)
-                # Save pending state
+                    # Re-derive the pending for the new phase by starting
+                    # from its first question.  _resolve_and_persist runs
+                    # the full auto-eval chain and saves the complete
+                    # pending queue (including remaining goto targets that
+                    # _build_advance_step computed locally but couldn't
+                    # persist).
+                    new_source = "oldcarts" if row.current_phase == 4 else "opd"
+                    first_qid = self._store.get_first_qid(
+                        new_source, row.primary_symptom,
+                    )
+                    return await self._resolve_and_persist(
+                        db, row, new_source, row.primary_symptom, [first_qid],
+                    )
+                # Same phase — save pending state as-is
                 await self._save_pending(db, row, pending)
                 return result
             return result
@@ -632,6 +885,29 @@ class PrescreenEngine:
             raise ValueError(f"Session not found: user_id={user_id}, session_id={session_id}")
         return row
 
+    def _derive_current_qid(self, row: PrescreenSession) -> str:
+        """Derive the current question ID from the session's step.
+
+        Used when callers omit ``qid`` during sequential phases (4-5).
+        The engine always presents exactly one question at a time in these
+        phases, so ``_compute_step(row).questions[0].qid`` is deterministic.
+
+        Raises:
+            ValueError: if the session is terminal or the step has no questions
+        """
+        step = self._compute_step(row)
+        if not isinstance(step, QuestionsStep):
+            raise ValueError(
+                "Cannot derive qid: session is terminal "
+                f"(status={row.status}, phase={row.current_phase})"
+            )
+        if not step.questions:
+            raise ValueError(
+                "Cannot derive qid: current step has no questions "
+                f"(phase={row.current_phase})"
+            )
+        return step.questions[0].qid
+
     async def _terminate(
         self,
         db: AsyncSession,
@@ -695,7 +971,14 @@ class PrescreenEngine:
         symptom: str,
         pending: list[str],
     ) -> StepResult:
-        """Resolve the next step and persist pending queue changes."""
+        """Resolve the next step and persist pending queue changes.
+
+        When the resolved step is a user-facing ``QuestionsStep``, the
+        presented question's qid is kept at the front of the saved pending
+        queue.  This is essential so that ``_derive_current_qid`` (which
+        re-computes the step from the persisted pending) derives the
+        *same* qid that was just presented — not the *next* one.
+        """
         step = self._resolve_next(row, source, symptom, pending)
 
         # If the step is a phase advance, persist it
@@ -704,6 +987,12 @@ class PrescreenEngine:
 
         # If it's a termination, persist it
         if isinstance(step, TerminationStep):
+            # When the termination comes from a phase advance (e.g. pending
+            # queue exhausted in OLDCARTS → OPD auto-eval chain terminates),
+            # advance the session phase so the record correctly reflects
+            # that the next phase was processed.
+            if step.phase != row.current_phase:
+                await self._repo.advance_phase(db, row, step.phase)
             if step.type == "terminated":
                 dept_ids = [d["id"] for d in step.departments]
                 sev_id = step.severity["id"] if step.severity else None
@@ -715,6 +1004,14 @@ class PrescreenEngine:
                 )
             else:
                 return await self._complete(db, row, step)
+
+        # Keep the currently-presented question in the pending queue so
+        # that _derive_current_qid can re-derive the same step.  The qid
+        # will be skipped on the *next* submit because it will then exist
+        # in the answers dict.
+        if isinstance(step, QuestionsStep) and step.questions:
+            current_qid = step.questions[0].qid
+            pending.insert(0, current_qid)
 
         # Save pending state
         await self._save_pending(db, row, pending)
@@ -881,11 +1178,20 @@ class PrescreenEngine:
             question_type=question.question_type,
         )
 
-        # Attach type-specific fields
+        # Attach type-specific fields and answer_schema
         if isinstance(question, (SingleSelectQuestion, ImageSelectQuestion)):
             payload.options = [{"id": o.id, "label": o.label} for o in question.options]
+            option_ids = [o.id for o in question.options]
+            payload.answer_schema = {"type": "string", "enum": option_ids}
+
         elif isinstance(question, (MultiSelectQuestion, ImageMultiSelectQuestion)):
             payload.options = [{"id": o.id, "label": o.label} for o in question.options]
+            option_ids = [o.id for o in question.options]
+            payload.answer_schema = {
+                "type": "array",
+                "items": {"type": "string", "enum": option_ids},
+            }
+
         elif isinstance(question, NumberRangeQuestion):
             payload.constraints = {
                 "min": question.min_value,
@@ -893,11 +1199,28 @@ class PrescreenEngine:
                 "step": question.step,
                 "default": question.default_value,
             }
+            payload.answer_schema = {
+                "type": "number",
+                "minimum": question.min_value,
+                "maximum": question.max_value,
+            }
+
         elif isinstance(question, FreeTextWithFieldQuestion):
             payload.fields = [
                 {"id": f.id, "label": f.label, "kind": f.kind}
                 for f in question.fields
             ]
+            # Build an object schema where each sub-field is a string property
+            properties = {f.id: {"type": "string"} for f in question.fields}
+            required = [f.id for f in question.fields]
+            payload.answer_schema = {
+                "type": "object",
+                "properties": properties,
+                "required": required,
+            }
+
+        elif isinstance(question, FreeTextQuestion):
+            payload.answer_schema = {"type": "string"}
 
         # Attach image if present
         if isinstance(question, (ImageSelectQuestion, ImageMultiSelectQuestion)):

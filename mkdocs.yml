@@ -1,0 +1,60 @@
+site_name: Prescreen API Guide
+site_description: Developer documentation for the ThaiLLM Prescreen API Server
+site_url: ""
+
+# Documentation source and build output
+docs_dir: src/prescreen_server/docs
+site_dir: src/prescreen_server/docs_site
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - content.tabs.link
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Authentication: authentication.md
+  - Environment Variables: environment-variables.md
+  - Flow Walkthrough: flow-walkthrough.md
+  - API Reference: api-reference.md
+  - Error Handling: error-handling.md
+  - Deployment: deployment.md
+  - Architecture: architecture.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - toc:
+      permalink: true

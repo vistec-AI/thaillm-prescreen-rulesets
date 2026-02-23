@@ -133,6 +133,10 @@ class PrescreenSession(Base):
     completed_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True), nullable=True
     )
+    # Soft-delete: NULL means live, non-null means soft-deleted at that time
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
 
     # --- Table-level constraints ---
     __table_args__ = (
@@ -172,18 +176,37 @@ class PrescreenSession(Base):
             postgresql_where=text("result IS NOT NULL"),
         ),
         # Partial unique index: at most one active session per user.
-        # "Active" means status is either 'created' or 'in_progress'.
+        # "Active" means status is either 'created' or 'in_progress'
+        # AND the row has not been soft-deleted.
         Index(
             "ix_active_user_session",
             "user_id",
             "session_id",
-            postgresql_where=text("status IN ('created', 'in_progress')"),
+            postgresql_where=text(
+                "status IN ('created', 'in_progress') AND deleted_at IS NULL"
+            ),
+        ),
+        # --- Soft-delete indexes ---
+        # Partial index on non-deleted sessions for the hot path
+        # (list/get queries filter on deleted_at IS NULL).
+        Index(
+            "ix_not_deleted_user",
+            "user_id",
+            "created_at",
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+        # Partial index on deleted_at for TTL purge queries.
+        Index(
+            "ix_deleted_at",
+            "deleted_at",
+            postgresql_where=text("deleted_at IS NOT NULL"),
         ),
     )
 
     def __repr__(self) -> str:
+        deleted = ", DELETED" if self.deleted_at else ""
         return (
             f"<PrescreenSession(id={self.id!s}, user={self.user_id!r}, "
             f"session={self.session_id!r}, status={self.status!r}, "
-            f"phase={self.current_phase})>"
+            f"phase={self.current_phase}{deleted})>"
         )

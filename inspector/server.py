@@ -7,14 +7,37 @@ import shlex
 import logging
 import os
 
-from fastapi import FastAPI, HTTPException, Request, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
 import yaml
 from fastapi.exceptions import RequestValidationError
 
-from .loader import load_rules_local, load_er_rules_local, load_constants_local, find_repo_root
+
+# ------------------------------------------------------------------
+# Optional write-protection — set INSPECTOR_WRITE_KEY to require an
+# API key for all POST (write) endpoints.  When unset the inspector
+# behaves as before (no auth on writes).
+# ------------------------------------------------------------------
+
+async def _require_write_key(
+    x_write_key: str | None = Header(None, alias="X-Write-Key"),
+) -> None:
+    """Reject write requests when ``INSPECTOR_WRITE_KEY`` is configured
+    and the caller does not supply a matching ``X-Write-Key`` header."""
+    expected = os.environ.get("INSPECTOR_WRITE_KEY")
+    if not expected:
+        # No key configured — allow all writes (local dev default).
+        return
+    if not x_write_key:
+        raise HTTPException(status_code=401, detail="X-Write-Key header is required")
+    # Constant-time comparison to avoid timing side-channels.
+    import hmac
+    if not hmac.compare_digest(x_write_key, expected):
+        raise HTTPException(status_code=403, detail="Invalid write key")
+
+from .loader import load_rules_local, load_er_rules_local, load_demographic_local, load_constants_local, find_repo_root
 from .graph import (
     build_oldcarts_graph,
     build_opd_graph,
@@ -44,8 +67,24 @@ class UpdateErQuestionRequest(BaseModel):
     data: Dict[str, Any]
 
 
+class UpdateDemographicRequest(BaseModel):
+    qid: str
+    data: Dict[str, Any]
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Prescreen Rules Inspector")
+
+    # ------------------------------------------------------------------
+    # CORS — allow the Next.js dev server (port 3000) to reach the API
+    # ------------------------------------------------------------------
+    from fastapi.middleware.cors import CORSMiddleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # Logger setup (propagates to uvicorn/root handlers)
     logger = logging.getLogger("inspector")
@@ -95,20 +134,72 @@ def create_app() -> FastAPI:
             "errors": exc.errors(),
         })
 
-    # Serve static assets
+    # ------------------------------------------------------------------
+    # Static file serving
+    # ------------------------------------------------------------------
+    # Prefer the Next.js static export (frontend/out/) over the legacy
+    # monolithic index.html (static/).  Both are kept so the old UI
+    # remains available as a fallback.
     static_dir = Path(__file__).parent / "static"
+    next_out_dir = Path(__file__).parent / "frontend" / "out"
+
+    # Legacy static assets at /static (brand images, etc.)
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
     # Serve image assets from v1/images
     images_dir = find_repo_root() / "v1" / "images"
     if images_dir.exists():
         app.mount("/assets", StaticFiles(directory=str(images_dir)), name="assets")
 
+    # Next.js build artifacts at /_next (JS/CSS chunks)
+    next_assets = next_out_dir / "_next"
+    if next_assets.exists():
+        app.mount("/_next", StaticFiles(directory=str(next_assets)), name="next_assets")
+
+    # Brand images at /brand (Next.js public/brand)
+    brand_dir = next_out_dir / "brand"
+    if brand_dir.exists():
+        app.mount("/brand", StaticFiles(directory=str(brand_dir)), name="brand")
+
     @app.get("/", response_class=HTMLResponse)
     def index() -> HTMLResponse:
-        index_html = static_dir / "index.html"
-        if not index_html.exists():
-            raise HTTPException(status_code=500, detail="Missing frontend index.html")
-        return HTMLResponse(index_html.read_text(encoding="utf-8"))
+        # Prefer Next.js static export
+        next_index = next_out_dir / "index.html"
+        if next_index.exists():
+            return HTMLResponse(next_index.read_text(encoding="utf-8"))
+        # Fall back to legacy monolithic index.html
+        legacy_index = static_dir / "index.html"
+        if legacy_index.exists():
+            return HTMLResponse(legacy_index.read_text(encoding="utf-8"))
+        raise HTTPException(status_code=500, detail="Missing frontend index.html")
+
+    # ------------------------------------------------------------------
+    # Simulator API — returns all rule data bundled into one payload
+    # ------------------------------------------------------------------
+
+    @app.get("/api/simulator_data")
+    def get_simulator_data() -> Dict[str, Any]:
+        """Return all rule data for the client-side simulator.
+
+        Bundles demographics, ER rules, OLDCARTS/OPD rules, and constants
+        into a single payload so the simulator can run entirely client-side
+        without additional API calls.
+        """
+        demo = load_demographic_local()
+        er = load_er_rules_local()
+        rules = load_rules_local()
+        consts = load_constants_local()
+        return {
+            "demographic": demo,
+            "er_critical": er["er_symptom"],
+            "er_adult": er["er_adult"],
+            "er_pediatric": er["er_pediatric"],
+            "oldcarts": rules["oldcarts"],
+            "opd": rules["opd"],
+            "nhso_symptoms": consts["nhso_symptoms"],
+            "severity_levels": consts["severity_levels"],
+            "departments": consts["departments"],
+        }
 
     @app.get("/api/symptoms")
     def list_symptoms() -> Dict[str, Any]:
@@ -159,7 +250,7 @@ def create_app() -> FastAPI:
     def _run_pytest() -> Dict[str, Any]:
         """Run pytest and return result dict."""
         root = find_repo_root()
-        cmd = "pytest -q tests/test_const_yaml.py tests/test_oldcarts.py tests/test_opd.py tests/test_er.py"
+        cmd = "pytest -q tests/test_const_yaml.py tests/test_demographic.py tests/test_oldcarts.py tests/test_opd.py tests/test_er.py"
         try:
             proc = subprocess.run(
                 shlex.split(cmd),
@@ -194,7 +285,7 @@ def create_app() -> FastAPI:
         def example() -> Dict[str, Any]:  # pragma: no cover - helper for error messages
             return {"source": "oldcarts", "symptom": "Headache", "qid": "hea_d_001", "data": {"qid": "hea_d_001"}}
 
-    @app.post("/api/update_question")
+    @app.post("/api/update_question", dependencies=[Depends(_require_write_key)])
     def update_question(req: UpdateQuestionRequest) -> Dict[str, Any]:
         """Update a single question in the YAML, validate with pytest, and rollback on failure.
 
@@ -310,6 +401,78 @@ def create_app() -> FastAPI:
         return _compute_graph(symptom, mode)
 
     # ------------------------------------------------------------------
+    # Demographic API — flat list of field definitions
+    # ------------------------------------------------------------------
+
+    @app.get("/api/demographic")
+    def get_demographic() -> Dict[str, Any]:
+        """Return demographic field definitions with resolved ``from_yaml`` values."""
+        items = load_demographic_local()
+        return {"items": items}
+
+    @app.post("/api/update_demographic", dependencies=[Depends(_require_write_key)])
+    def update_demographic(req: UpdateDemographicRequest) -> Dict[str, Any]:
+        """Update a single demographic field in the YAML, validate with pytest, and rollback on failure.
+
+        The flat list in ``demographic.yaml`` is searched by qid.  On success
+        returns ``{ok: true, version}``.  QID changes are rejected.
+        """
+        root = find_repo_root()
+        logger.info("update_demographic: qid=%s", req.qid)
+
+        # Enforce qid immutability
+        if isinstance(req.data, dict) and req.data.get("qid") not in (None, req.qid):
+            logger.warning("Attempt to change demographic qid from %s to %s", req.qid, req.data.get("qid"))
+            return {"ok": False, "error": "Changing qid is not allowed from the editor.", "field": "qid"}
+
+        if not isinstance(req.data, dict):
+            logger.warning("data is not an object: got %s", type(req.data).__name__)
+            return {"ok": False, "error": "data must be a JSON object", "received_type": type(req.data).__name__}
+
+        path = root / "v1" / "rules" / "demographic.yaml"
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing demographic rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+
+        if not isinstance(doc, list):
+            raise HTTPException(status_code=500, detail="demographic.yaml must be a list")
+
+        # Find the entry by qid
+        idx = None
+        for i, item in enumerate(doc):
+            if isinstance(item, dict) and item.get("qid") == req.qid:
+                idx = i
+                break
+        if idx is None:
+            raise HTTPException(status_code=404, detail=f"QID '{req.qid}' not found in demographic.yaml")
+
+        # Apply update (preserving qid)
+        new_item = dict(req.data)
+        new_item["qid"] = req.qid
+        doc[idx] = new_item
+
+        # Write tentative update
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        logger.debug("Wrote tentative demographic update for qid=%s", req.qid)
+
+        # Validate with pytest
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back demographic update for qid=%s", req.qid)
+            return result
+
+        logger.info("Demographic update succeeded for qid=%s", req.qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": "Saved to demographic.yaml and tests passed"}
+
+    # ------------------------------------------------------------------
     # ER Checklist API — flat table data instead of graph
     # ------------------------------------------------------------------
 
@@ -351,6 +514,7 @@ def create_app() -> FastAPI:
                     "severity_label": default_sev_label,
                     "department": default_dept_ids,
                     "department_labels": default_dept_labels,
+                    "reason": q.get("reason"),
                     "raw": q,
                     "source": "er_symptom",
                 })
@@ -403,6 +567,7 @@ def create_app() -> FastAPI:
                 "severity_label": sev_label,
                 "department": d_ids,
                 "department_labels": d_labels,
+                "reason": q.get("reason"),
                 "raw": q,
                 "source": source,
             })
@@ -412,7 +577,7 @@ def create_app() -> FastAPI:
     # ER Question Update — parallel to /api/update_question for OLDCARTS/OPD
     # ------------------------------------------------------------------
 
-    @app.post("/api/update_er_question")
+    @app.post("/api/update_er_question", dependencies=[Depends(_require_write_key)])
     def update_er_question(req: UpdateErQuestionRequest) -> Dict[str, Any]:
         """Update a single ER question in the YAML, validate with pytest, and rollback on failure.
 
@@ -516,13 +681,20 @@ def create_app() -> FastAPI:
 def cli() -> None:
     import uvicorn
     import webbrowser
-    url = "http://localhost:8000"
+
+    # Bind to localhost only by default to prevent unauthenticated
+    # network access to the write endpoints.  Set INSPECTOR_HOST=0.0.0.0
+    # explicitly if you need remote access (e.g. inside a container).
+    host = os.environ.get("INSPECTOR_HOST", "127.0.0.1")
+    port = int(os.environ.get("INSPECTOR_PORT", "8000"))
+
+    url = f"http://localhost:{port}"
     try:
         # Open browser shortly after server starts
         webbrowser.open_new_tab(url)
     except Exception:
         pass
-    uvicorn.run("inspector.server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("inspector.server:app", host=host, port=port, reload=True)
 
 
 # ASGI app export

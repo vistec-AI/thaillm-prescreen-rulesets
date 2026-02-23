@@ -133,6 +133,11 @@ class PipelineResult(BaseModel):
 
     Returned when the pipeline reaches the ``done`` stage — either after
     prediction runs or after early termination (ER redirect).
+
+    ``history`` contains the full chronological Q&A trail for the session,
+    including both rule-based and LLM-generated pairs.  Each entry carries
+    ``qid``, ``question_type``, ``question`` (text), ``answer``, ``phase``,
+    and ``source`` so consumers can reconstruct the entire conversation.
     """
 
     type: Literal["pipeline_result"] = "pipeline_result"
@@ -141,6 +146,10 @@ class PipelineResult(BaseModel):
     diagnoses: list[DiagnosisResult] = Field(default_factory=list)
     reason: str | None = None
     terminated_early: bool = False
+    history: list[QAPair] = Field(
+        default_factory=list,
+        description="Full Q&A history for the session (rule-based + LLM).",
+    )
 
 
 # Union for pipeline step dispatching — callers match on step.type.

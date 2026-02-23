@@ -37,7 +37,7 @@ from prescreen_rulesets.pipeline import PrescreenPipeline
 from prescreen_rulesets.ruleset import RulesetStore
 
 # Import mock infrastructure from test_engine
-from test_engine import MockRepository, MockSessionRow
+from test_engine import MockRepository, MockSessionRow, VALID_DEMOGRAPHICS
 
 
 # =====================================================================
@@ -191,7 +191,7 @@ async def _advance_to_phase(engine, mock_db, phase: int):
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="demographics",
-            value={"gender": "Male", "age": 30},
+            value=VALID_DEMOGRAPHICS,
         )
 
     if phase >= 2:
@@ -259,7 +259,7 @@ class TestRuleBasedProxy:
         step = await pipeline.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="demographics",
-            value={"gender": "Male", "age": 30},
+            value=VALID_DEMOGRAPHICS,
         )
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         assert step.phase == 1, "Should advance to phase 1"
@@ -285,7 +285,7 @@ class TestEarlyTermination:
         await pipeline.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="demographics",
-            value={"gender": "Male", "age": 30},
+            value=VALID_DEMOGRAPHICS,
         )
 
         # Submit ER critical with one positive
@@ -302,6 +302,11 @@ class TestEarlyTermination:
         assert result.terminated_early is True, "Should be terminated_early"
         assert result.diagnoses == [], "Early termination should have empty DDx"
         assert len(result.departments) > 0, "Should have at least one department"
+        # History should contain demographics (phase 0) + ER critical answers (phase 1)
+        assert len(result.history) > 0, "Early termination should still have history"
+        phases_in_history = {p.phase for p in result.history}
+        assert 0 in phases_in_history, "History should include demographics (phase 0)"
+        assert 1 in phases_in_history, "History should include ER critical (phase 1)"
 
     @pytest.mark.asyncio
     async def test_er_checklist_positive_returns_pipeline_result(
@@ -314,7 +319,7 @@ class TestEarlyTermination:
         # Advance through phases 0-2
         await pipeline.submit_answer(
             mock_db, user_id="u1", session_id="s1",
-            qid="demographics", value={"gender": "Male", "age": 30},
+            qid="demographics", value=VALID_DEMOGRAPHICS,
         )
         er_responses = {item.qid: False for item in store.er_critical}
         await pipeline.submit_answer(
@@ -509,6 +514,13 @@ class TestLLMAnswerSubmission:
         assert row.llm_responses is not None, "llm_responses should be stored"
         assert len(row.llm_responses) == 2, "Should have 2 LLM responses"
         assert len(result.diagnoses) == 2, "Should have diagnoses from predictor"
+        # History should include LLM Q&A pairs
+        llm_history = [p for p in result.history if p.source == "llm_generated"]
+        assert len(llm_history) == 2, (
+            f"Expected 2 LLM pairs in history, got {len(llm_history)}"
+        )
+        assert llm_history[0].question == "Q1?"
+        assert llm_history[0].answer == "ปวดมาก"
 
 
 # =====================================================================
@@ -583,6 +595,8 @@ class TestDoneStage:
         assert len(step.diagnoses) == 1, "Should have 1 diagnosis"
         assert step.diagnoses[0].disease_id == "d001"
         assert step.departments[0]["id"] == "dept001"
+        # History field should be present (may be empty if no answers recorded)
+        assert isinstance(step.history, list), "history should be a list"
 
 
 # =====================================================================
@@ -764,3 +778,344 @@ class TestQAPairBuilding:
         pairs = pipeline._build_qa_pairs(row)
         qids = [p.qid for p in pairs]
         assert "__pending" not in qids, "__pending should be excluded"
+
+
+# =====================================================================
+# Tests: QID auto-derivation (qid=None)
+# =====================================================================
+
+
+class TestQidAutoDerivation:
+    """Pipeline passes qid=None through to the engine correctly.
+
+    For bulk phases, qid is unused — omitting it should work.
+    For sequential phases, the engine auto-derives the qid.
+    """
+
+    @pytest.mark.asyncio
+    async def test_submit_answer_without_qid_bulk(self, pipeline, mock_db):
+        """Pipeline forwards qid=None for bulk phases without error."""
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+        # Phase 0: submit demographics without qid
+        step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 1, "Should advance to phase 1"
+
+    @pytest.mark.asyncio
+    async def test_submit_answer_without_qid_sequential(
+        self, pipeline, engine, mock_db,
+    ):
+        """Pipeline forwards qid=None for sequential phases; engine auto-derives."""
+        store = engine._store
+
+        # Advance through bulk phases to reach sequential
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=VALID_DEMOGRAPHICS,
+        )
+        er_responses = {item.qid: False for item in store.er_critical}
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms", value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_checklist", value=checklist_responses,
+        )
+
+        # Now in sequential phase — get the current step
+        step = await pipeline.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        if not isinstance(step, QuestionsStep):
+            # Tree auto-resolved to completion, nothing to test
+            return
+
+        # Submit without qid — pipeline passes None, engine auto-derives
+        first_q = step.questions[0]
+        if first_q.options:
+            answer = first_q.options[0]["id"]
+        else:
+            answer = "test answer"
+
+        next_step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=answer,
+        )
+        # Should get a valid step back (could be QuestionsStep, TerminationStep,
+        # or PipelineResult if the engine completed)
+        assert next_step is not None, "Expected a non-None step result"
+
+
+# =====================================================================
+# Tests: Multi-step sequential through pipeline (regression)
+# =====================================================================
+
+
+class TestPipelineMultiStepSequential:
+    """Full pipeline multi-step sequential test.
+
+    Regression test: verifies that submitting multiple sequential answers
+    through the pipeline (qid=None) produces distinct, correctly-ordered
+    questions and eventually transitions to LLM questioning or result.
+    """
+
+    @staticmethod
+    def _pick_answer(q):
+        """Pick a deterministic valid answer for a question payload."""
+        qtype = q.question_type
+        if qtype in ("single_select", "image_single_select"):
+            return q.options[0]["id"] if q.options else "unknown"
+        if qtype in ("multi_select", "image_multi_select"):
+            return [q.options[0]["id"]] if q.options else []
+        if qtype == "number_range":
+            c = q.constraints or {}
+            return (c.get("min", 0) + c.get("max", 10)) / 2
+        if qtype == "free_text_with_fields":
+            if q.fields:
+                return {f["id"]: "ไม่มี" for f in q.fields}
+            return "ไม่มี"
+        return "ไม่มี"
+
+    @pytest.mark.asyncio
+    async def test_full_sequential_flow_completes(
+        self, pipeline, engine, mock_db,
+    ):
+        """Drive the full sequential flow through the pipeline to completion."""
+        store = engine._store
+
+        # Advance through bulk phases
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics",
+            value=VALID_DEMOGRAPHICS,
+        )
+        er_responses = {item.qid: False for item in store.er_critical}
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms", value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_checklist", value=checklist_responses,
+        )
+
+        # Drive through all sequential questions
+        seen_qids = []
+        seq_count = 0
+        while isinstance(step, QuestionsStep):
+            q = step.questions[0]
+            seen_qids.append(q.qid)
+            answer = self._pick_answer(q)
+            step = await pipeline.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=answer,
+            )
+            seq_count += 1
+            # Safety limit to prevent infinite loops
+            assert seq_count < 50, (
+                f"Sequential loop exceeded 50 iterations — possible infinite loop"
+            )
+
+        # After sequential phase, pipeline should transition to LLM or result
+        assert isinstance(step, (LLMQuestionsStep, PipelineResult)), (
+            f"Expected LLMQuestionsStep or PipelineResult after sequential, "
+            f"got {type(step).__name__}"
+        )
+
+        # Verify all qids were unique (no question presented twice)
+        assert len(seen_qids) == len(set(seen_qids)), (
+            f"Duplicate qid in sequential flow: {seen_qids}"
+        )
+
+        # Should have answered at least 3 sequential questions for Headache
+        assert seq_count >= 3, (
+            f"Expected at least 3 sequential questions for Headache, got {seq_count}"
+        )
+
+
+# =====================================================================
+# Tests: Session history (get_history + PipelineResult.history)
+# =====================================================================
+
+
+class TestHistory:
+    """Verify Q&A history is returned correctly via get_history() and PipelineResult."""
+
+    @pytest.mark.asyncio
+    async def test_get_history_returns_pairs_mid_session(
+        self, pipeline, engine, mock_repo, mock_db,
+    ):
+        """get_history returns answered pairs even before session completes."""
+        store = engine._store
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+
+        # Submit demographics (phase 0)
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=VALID_DEMOGRAPHICS,
+        )
+
+        # History should already contain demographic entries
+        history = await pipeline.get_history(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert len(history) > 0, "Should have history after demographics"
+        assert all(p.phase == 0 for p in history), (
+            "Only phase 0 answers should be present"
+        )
+        assert all(p.source == "rule_based" for p in history), (
+            "All pairs should be rule_based"
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_history_grows_as_session_progresses(
+        self, pipeline, engine, mock_repo, mock_db,
+    ):
+        """History accumulates more entries as the session advances."""
+        store = engine._store
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+
+        # Phase 0
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=VALID_DEMOGRAPHICS,
+        )
+        count_after_phase0 = len(await pipeline.get_history(
+            mock_db, user_id="u1", session_id="s1",
+        ))
+
+        # Phase 1 (all negative)
+        er_responses = {item.qid: False for item in store.er_critical}
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        count_after_phase1 = len(await pipeline.get_history(
+            mock_db, user_id="u1", session_id="s1",
+        ))
+        assert count_after_phase1 > count_after_phase0, (
+            "History should grow after ER critical answers"
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_history_includes_llm_pairs(
+        self, pipeline, engine, mock_repo, mock_db,
+    ):
+        """get_history includes LLM Q&A after submit_llm_answers."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+
+        # Set up session in llm_questioning state with some rule-based data
+        row.status = SessionStatus.COMPLETED
+        row.current_phase = 5
+        row.primary_symptom = "Headache"
+        row.demographics = {"gender": "Male", "age": 30}
+        row.pipeline_stage = PipelineStage.LLM_QUESTIONING.value
+        row.llm_questions = ["Q1?", "Q2?"]
+        row.result = {
+            "departments": ["dept001"],
+            "severity": "sev001",
+            "reason": "OPD routing",
+        }
+
+        # Submit LLM answers
+        answers = [
+            LLMAnswer(question="Q1?", answer="Yes"),
+            LLMAnswer(question="Q2?", answer="No"),
+        ]
+        await pipeline.submit_llm_answers(
+            mock_db, user_id="u1", session_id="s1", answers=answers,
+        )
+
+        # History should include both rule-based and LLM pairs
+        history = await pipeline.get_history(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        llm_pairs = [p for p in history if p.source == "llm_generated"]
+        assert len(llm_pairs) == 2, (
+            f"Expected 2 LLM pairs in history, got {len(llm_pairs)}"
+        )
+        assert llm_pairs[0].question == "Q1?"
+        assert llm_pairs[0].answer == "Yes"
+
+    @pytest.mark.asyncio
+    async def test_history_entries_have_required_fields(
+        self, pipeline, engine, mock_repo, mock_db,
+    ):
+        """Each history entry has qid, question_type, question text, and answer."""
+        store = engine._store
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+
+        # Submit demographics
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=VALID_DEMOGRAPHICS,
+        )
+
+        history = await pipeline.get_history(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        for entry in history:
+            assert entry.question is not None, "question text should be present"
+            assert entry.answer is not None, "answer should be present"
+            assert entry.qid is not None, (
+                f"qid should be present for rule_based entry: {entry.question}"
+            )
+            assert entry.question_type is not None, (
+                f"question_type should be present for: {entry.qid}"
+            )
+            assert entry.phase is not None, (
+                f"phase should be present for: {entry.qid}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_pipeline_result_history_on_normal_completion(
+        self, pipeline_no_generator, engine, mock_repo, mock_db,
+    ):
+        """PipelineResult.history is populated on normal completion (no LLM)."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+
+        row.status = SessionStatus.COMPLETED
+        row.current_phase = 5
+        row.primary_symptom = "Headache"
+        row.demographics = {"gender": "Male", "age": 30}
+        row.result = {
+            "departments": ["dept001"],
+            "severity": "sev001",
+            "reason": "test",
+        }
+
+        term_step = TerminationStep(
+            type="completed", phase=5, departments=[], severity=None, reason="test",
+        )
+
+        result = await pipeline_no_generator._handle_rule_based_end(
+            mock_db, row, term_step,
+        )
+
+        assert isinstance(result, PipelineResult), "Expected PipelineResult"
+        assert isinstance(result.history, list), "history should be a list"
+        # At minimum, demographics should be in history
+        demo_pairs = [p for p in result.history if p.phase == 0]
+        assert len(demo_pairs) > 0, (
+            "PipelineResult.history should include demographics"
+        )
