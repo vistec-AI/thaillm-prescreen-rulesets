@@ -6,6 +6,11 @@ import type { ReactNode } from "react";
  * iPhone-shaped frame for previewing how the simulator UI looks on mobile.
  * Uses iPhone 14 logical dimensions (393 x 852 CSS pixels) with a
  * visual bezel, notch, and home indicator to approximate the real device.
+ *
+ * When `active` is false the decorative chrome is hidden and size constraints
+ * are removed, but the DOM tree structure stays identical so that React
+ * preserves the component instances (and therefore local state) of children
+ * when the user toggles between desktop and mobile views.
  */
 
 /* iPhone 14 logical viewport */
@@ -14,30 +19,32 @@ const SCREEN_H = 852;
 
 interface MobileFrameProps {
   children: ReactNode;
+  /** When false, chrome is hidden and content renders without size constraints. */
+  active?: boolean;
 }
 
-export default function MobileFrame({ children }: MobileFrameProps) {
+export default function MobileFrame({ children, active = true }: MobileFrameProps) {
   return (
-    <div className="flex justify-center py-4">
+    <div className={active ? "flex justify-center py-4" : ""}>
       {/* Device bezel */}
       <div
-        className="relative bg-gray-900 rounded-[3rem] shadow-2xl"
-        style={{
-          /* bezel padding around the screen */
-          width: SCREEN_W + 24,
-          padding: "12px",
-        }}
+        className={`relative ${active ? "bg-gray-900 rounded-[3rem] shadow-2xl" : ""}`}
+        style={active ? { width: SCREEN_W + 24, padding: "12px" } : undefined}
       >
         {/* Dynamic Island / notch */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-28 h-7 bg-gray-900 rounded-full z-10" />
+        <div
+          className={`absolute top-3 left-1/2 -translate-x-1/2 w-28 h-7 bg-gray-900 rounded-full z-10 ${active ? "" : "hidden"}`}
+        />
 
         {/* Screen area */}
         <div
-          className="relative bg-white rounded-[2.4rem] overflow-hidden"
-          style={{ width: SCREEN_W, height: SCREEN_H }}
+          className={`relative ${active ? "bg-white rounded-[2.4rem] overflow-hidden" : ""}`}
+          style={active ? { width: SCREEN_W, height: SCREEN_H } : undefined}
         >
           {/* Status bar (time, signal, battery) — decorative */}
-          <div className="sticky top-0 z-10 flex items-center justify-between px-8 pt-4 pb-1 bg-white/90 backdrop-blur-sm text-xs font-semibold text-gray-800">
+          <div
+            className={`sticky top-0 z-10 flex items-center justify-between px-8 pt-4 pb-1 bg-white/90 backdrop-blur-sm text-xs font-semibold text-gray-800 ${active ? "" : "hidden"}`}
+          >
             <span>9:41</span>
             <div className="flex items-center gap-1">
               {/* signal bars */}
@@ -64,16 +71,19 @@ export default function MobileFrame({ children }: MobileFrameProps) {
 
           {/* Scrollable content area — .mobile-preview triggers CSS overrides
               in globals.css so viewport-based Tailwind breakpoints (md:grid-cols-2)
-              collapse to single-column inside this narrow container. */}
+              collapse to single-column inside this narrow container.
+              In desktop mode the class is omitted and max-w-2xl constrains width. */}
           <div
-            className="mobile-preview overflow-y-auto px-4 pb-8"
-            style={{ height: SCREEN_H - 48 /* subtract status bar */ }}
+            className={active ? "mobile-preview overflow-y-auto px-4 pb-8" : "max-w-2xl"}
+            style={active ? { height: SCREEN_H - 48 /* subtract status bar */ } : undefined}
           >
             {children}
           </div>
 
           {/* Home indicator bar */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-gray-800 rounded-full opacity-30" />
+          <div
+            className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-gray-800 rounded-full opacity-30 ${active ? "" : "hidden"}`}
+          />
         </div>
       </div>
     </div>
