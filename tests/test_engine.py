@@ -200,6 +200,33 @@ class MockRepository:
         key = (session.user_id, session.session_id)
         self._sessions.pop(key, None)
 
+    async def revert_session_state(
+        self, db, session, *, target_phase,
+        clear_demographics=False, clear_symptoms=False,
+        clear_er_flags=False, response_qids_to_remove=None,
+        new_pending=None,
+    ):
+        """Revert session state — mirrors real repository's revert logic."""
+        session.current_phase = target_phase
+        if clear_demographics:
+            session.demographics = {}
+        if clear_symptoms:
+            session.primary_symptom = None
+            session.secondary_symptoms = None
+        if clear_er_flags:
+            session.er_flags = None
+        # Rebuild responses: remove specified qids + __pending
+        responses = dict(session.responses or {})
+        responses.pop("__pending", None)
+        if response_qids_to_remove:
+            for qid in response_qids_to_remove:
+                responses.pop(qid, None)
+        if new_pending is not None:
+            responses["__pending"] = new_pending
+        session.responses = responses
+        session.updated_at = datetime.now(timezone.utc)
+        return session
+
 
 # =====================================================================
 # Fixtures
@@ -1334,3 +1361,552 @@ class TestPhase0Validation:
         )
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         assert step.phase == 1, "Should advance to phase 1"
+
+
+# =====================================================================
+# Back-edit
+# =====================================================================
+
+
+class TestBackEdit:
+    """Tests for back_edit() — reverting to a previous phase or question."""
+
+    async def _setup_phase4(self, engine, mock_db):
+        """Create session and advance to phase 4 (OLDCARTS) with Headache."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics",
+            value=VALID_DEMOGRAPHICS,
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms",
+            value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_checklist", value=checklist_responses,
+        )
+        return step
+
+    # --- Validation tests ---
+
+    @pytest.mark.asyncio
+    async def test_rejects_terminated_session(self, engine, mock_db, mock_repo):
+        """back_edit raises ValueError on a terminated session."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.status = SessionStatus.TERMINATED
+        row.terminated_at_phase = 1
+        row.result = {"departments": ["dept002"], "severity": "sev003"}
+
+        with pytest.raises(ValueError, match="status"):
+            await engine.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=0,
+            )
+
+    @pytest.mark.asyncio
+    async def test_rejects_completed_session(self, engine, mock_db, mock_repo):
+        """back_edit raises ValueError on a completed session."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.status = SessionStatus.COMPLETED
+        row.result = {"departments": ["dept001"], "severity": "sev001"}
+
+        with pytest.raises(ValueError, match="status"):
+            await engine.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=0,
+            )
+
+    @pytest.mark.asyncio
+    async def test_rejects_later_phase(self, engine, mock_db):
+        """back_edit raises ValueError when target_phase > current_phase."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        # Session at phase 0 — cannot go to phase 2
+        with pytest.raises(ValueError, match="must be <="):
+            await engine.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=2,
+            )
+
+    @pytest.mark.asyncio
+    async def test_rejects_same_phase_without_qid(self, engine, mock_db):
+        """back_edit raises ValueError when target_phase == current_phase without target_qid."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        # At phase 1 — cannot back-edit to phase 1 without target_qid
+        with pytest.raises(ValueError, match="equals current_phase"):
+            await engine.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=1,
+            )
+
+    @pytest.mark.asyncio
+    async def test_rejects_qid_on_bulk_phase(self, engine, mock_db):
+        """back_edit raises ValueError when target_qid is provided for bulk phase."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        with pytest.raises(ValueError, match="only valid for phases 4-5"):
+            await engine.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=0,
+                target_qid="some_qid",
+            )
+
+    @pytest.mark.asyncio
+    async def test_rejects_nonexistent_qid(self, engine, mock_db):
+        """back_edit raises ValueError when target_qid is not in responses."""
+        step = await self._setup_phase4(engine, mock_db)
+        if not isinstance(step, QuestionsStep):
+            pytest.skip("Tree auto-resolved")
+
+        with pytest.raises(ValueError, match="not found in session responses"):
+            await engine.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=4,
+                target_qid="nonexistent_qid_xyz",
+            )
+
+    @pytest.mark.asyncio
+    async def test_rejects_invalid_phase_number(self, engine, mock_db):
+        """back_edit raises ValueError for target_phase outside 0-5."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        with pytest.raises(ValueError, match="must be 0-5"):
+            await engine.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=6,
+            )
+        with pytest.raises(ValueError, match="must be 0-5"):
+            await engine.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=-1,
+            )
+
+    # --- Phase-level back-edit tests ---
+
+    @pytest.mark.asyncio
+    async def test_back_to_phase0_returns_demographics(self, engine, mock_db, mock_repo):
+        """Back-edit to phase 0 returns demographics step with previous values."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        # Now at phase 1 — go back to phase 0
+        step = await engine.back_edit(
+            mock_db, user_id="u1", session_id="s1",
+            target_phase=0,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 0, "Should be at phase 0"
+        assert step.phase_name == "Demographics", "Phase name should be Demographics"
+
+        # Verify session state was cleared
+        row = mock_repo._sessions[("u1", "s1")]
+        assert row.current_phase == 0, "current_phase should be 0"
+        assert row.demographics == {}, "demographics should be cleared"
+
+    @pytest.mark.asyncio
+    async def test_back_to_phase0_has_previous_values(self, engine, mock_db, mock_repo):
+        """Back-edit to phase 0 injects previous_value in question metadata."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        step = await engine.back_edit(
+            mock_db, user_id="u1", session_id="s1",
+            target_phase=0,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        # At least one question should have previous_value set
+        has_previous = any(
+            q.metadata and q.metadata.get("previous_value") is not None
+            for q in step.questions
+        )
+        assert has_previous, "At least one question should have previous_value in metadata"
+
+    @pytest.mark.asyncio
+    async def test_back_to_phase1_clears_later_data(self, engine, mock_db, mock_repo):
+        """Back-edit to phase 1 clears symptoms, ER flags, and phase 1+ responses."""
+        step = await self._setup_phase4(engine, mock_db)
+        row = mock_repo._sessions[("u1", "s1")]
+
+        # Verify symptoms were set before back-edit
+        assert row.primary_symptom == "Headache", "Should have primary_symptom before back-edit"
+
+        step = await engine.back_edit(
+            mock_db, user_id="u1", session_id="s1",
+            target_phase=1,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 1, "Should be at phase 1"
+
+        # Verify later data was cleared
+        assert row.primary_symptom is None, "primary_symptom should be cleared"
+        assert row.secondary_symptoms is None, "secondary_symptoms should be cleared"
+        assert row.er_flags is None, "er_flags should be cleared"
+        assert row.current_phase == 1, "current_phase should be 1"
+
+    @pytest.mark.asyncio
+    async def test_back_to_phase2_keeps_er_critical(self, engine, mock_db, mock_repo):
+        """Back-edit to phase 2 keeps phase 1 ER critical responses intact."""
+        step = await self._setup_phase4(engine, mock_db)
+        row = mock_repo._sessions[("u1", "s1")]
+        store = engine._store
+
+        # Check that ER critical responses exist before back-edit
+        er_qids = {item.qid for item in store.er_critical}
+        had_er_responses = any(qid in row.responses for qid in er_qids)
+        assert had_er_responses, "Should have ER critical responses before back-edit"
+
+        step = await engine.back_edit(
+            mock_db, user_id="u1", session_id="s1",
+            target_phase=2,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 2, "Should be at phase 2"
+
+        # ER critical responses should still exist
+        still_has_er = any(qid in row.responses for qid in er_qids)
+        assert still_has_er, "ER critical responses should be preserved"
+
+        # Symptoms should be cleared (phase 2+ data)
+        assert row.primary_symptom is None, "primary_symptom should be cleared"
+
+    @pytest.mark.asyncio
+    async def test_back_to_phase3_keeps_symptoms(self, engine, mock_db, mock_repo):
+        """Back-edit to phase 3 keeps symptoms but clears ER flags."""
+        step = await self._setup_phase4(engine, mock_db)
+        row = mock_repo._sessions[("u1", "s1")]
+
+        step = await engine.back_edit(
+            mock_db, user_id="u1", session_id="s1",
+            target_phase=3,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 3, "Should be at phase 3"
+        # Symptoms should still exist (set in phase 2)
+        assert row.primary_symptom == "Headache", (
+            "primary_symptom should be preserved when going back to phase 3"
+        )
+        assert row.er_flags is None, "er_flags should be cleared"
+
+    # --- Forward flow after back-edit ---
+
+    @pytest.mark.asyncio
+    async def test_submit_answer_works_after_back_edit(self, engine, mock_db, mock_repo):
+        """Submitting an answer works correctly after back-edit."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        # Advance to phase 1
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        # Back-edit to phase 0
+        await engine.back_edit(
+            mock_db, user_id="u1", session_id="s1",
+            target_phase=0,
+        )
+        # Re-submit demographics — should advance to phase 1 again
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep after re-submit"
+        assert step.phase == 1, "Should advance to phase 1 after re-submitting demographics"
+
+    # --- Qid-level back-edit in sequential phases ---
+
+    @pytest.mark.asyncio
+    async def test_qid_back_edit_in_sequential_phase(self, engine, mock_db, mock_repo):
+        """Back-edit to a specific qid in phase 4 returns that question."""
+        step = await self._setup_phase4(engine, mock_db)
+        if not isinstance(step, QuestionsStep):
+            pytest.skip("OLDCARTS tree auto-resolved — no sequential questions to test")
+
+        row = mock_repo._sessions[("u1", "s1")]
+
+        # Submit a few sequential answers to build up responses
+        answered_qids = []
+        for _ in range(3):
+            if not isinstance(step, QuestionsStep):
+                break
+            q = step.questions[0]
+            answered_qids.append(q.qid)
+            if q.options:
+                answer = q.options[0]["id"]
+            else:
+                answer = "test"
+            step = await engine.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=answer,
+            )
+
+        if len(answered_qids) < 2:
+            pytest.skip("Not enough sequential questions to test qid-level back-edit")
+
+        # Go back to the first answered qid
+        target = answered_qids[0]
+        step = await engine.back_edit(
+            mock_db, user_id="u1", session_id="s1",
+            target_phase=row.current_phase,
+            target_qid=target,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        # The returned step should present the target question (or a question
+        # after it if auto-eval resolves the target)
+        assert step.phase in (4, 5), f"Expected phase 4 or 5, got {step.phase}"
+
+        # The target qid should no longer be in responses (it was removed)
+        assert target not in row.responses, (
+            f"Target qid {target} should be removed from responses"
+        )
+
+
+# =====================================================================
+# Step-back (go back one step automatically)
+# =====================================================================
+
+
+class TestStepBack:
+    """Tests for step_back() — automatically going back one step."""
+
+    async def _setup_phase4(self, engine, mock_db):
+        """Create session and advance to phase 4 (OLDCARTS) with Headache."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics",
+            value=VALID_DEMOGRAPHICS,
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms",
+            value={"primary_symptom": "Headache"},
+        )
+        checklist_items = store.get_er_checklist("Headache", pediatric=False)
+        checklist_responses = {item.qid: False for item in checklist_items}
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_checklist", value=checklist_responses,
+        )
+        return step
+
+    def _pick_answer(self, q):
+        """Pick a deterministic valid answer for a question payload."""
+        qtype = q.question_type
+        if qtype in ("single_select", "image_single_select"):
+            return q.options[0]["id"] if q.options else "unknown"
+        if qtype in ("multi_select", "image_multi_select"):
+            return [q.options[0]["id"]] if q.options else []
+        if qtype == "number_range":
+            c = q.constraints or {}
+            return (c.get("min", 0) + c.get("max", 10)) / 2
+        if qtype == "free_text_with_fields":
+            if q.fields:
+                return {f["id"]: "ไม่มี" for f in q.fields}
+            return "ไม่มี"
+        return "ไม่มี"
+
+    # --- Error cases ---
+
+    @pytest.mark.asyncio
+    async def test_step_back_from_phase0_raises(self, engine, mock_db):
+        """step_back raises ValueError when already at phase 0."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        with pytest.raises(ValueError, match="already at the first step"):
+            await engine.step_back(
+                mock_db, user_id="u1", session_id="s1",
+            )
+
+    @pytest.mark.asyncio
+    async def test_step_back_on_terminated_session_raises(
+        self, engine, mock_db, mock_repo,
+    ):
+        """step_back raises ValueError on a terminated session."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.status = SessionStatus.TERMINATED
+        row.terminated_at_phase = 1
+        row.result = {"departments": ["dept002"], "severity": "sev003"}
+
+        with pytest.raises(ValueError, match="status"):
+            await engine.step_back(
+                mock_db, user_id="u1", session_id="s1",
+            )
+
+    @pytest.mark.asyncio
+    async def test_step_back_on_completed_session_raises(
+        self, engine, mock_db, mock_repo,
+    ):
+        """step_back raises ValueError on a completed session."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.status = SessionStatus.COMPLETED
+        row.result = {"departments": ["dept001"], "severity": "sev001"}
+
+        with pytest.raises(ValueError, match="status"):
+            await engine.step_back(
+                mock_db, user_id="u1", session_id="s1",
+            )
+
+    # --- Bulk phase transitions ---
+
+    @pytest.mark.asyncio
+    async def test_step_back_from_phase1_returns_phase0(self, engine, mock_db):
+        """step_back from phase 1 returns phase 0 demographics."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        step = await engine.step_back(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 0, "Should go back to phase 0"
+        assert step.phase_name == "Demographics"
+
+    @pytest.mark.asyncio
+    async def test_step_back_from_phase2_returns_phase1(self, engine, mock_db):
+        """step_back from phase 2 returns phase 1 ER critical."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        step = await engine.step_back(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 1, "Should go back to phase 1"
+        assert step.phase_name == "ER Critical Screen"
+
+    @pytest.mark.asyncio
+    async def test_step_back_from_phase3_returns_phase2(self, engine, mock_db):
+        """step_back from phase 3 returns phase 2 symptom selection."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_DEMOGRAPHICS,
+        )
+        store = engine._store
+        er_responses = {item.qid: False for item in store.er_critical}
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms",
+            value={"primary_symptom": "Headache"},
+        )
+        step = await engine.step_back(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 2, "Should go back to phase 2"
+        assert step.phase_name == "Symptom Selection"
+
+    # --- Phase 4 transitions ---
+
+    @pytest.mark.asyncio
+    async def test_step_back_from_phase4_no_answers_returns_phase3(
+        self, engine, mock_db, mock_repo,
+    ):
+        """step_back from phase 4 with no OLDCARTS answers returns phase 3."""
+        step = await self._setup_phase4(engine, mock_db)
+        if not isinstance(step, QuestionsStep):
+            pytest.skip("OLDCARTS tree auto-resolved")
+
+        # We're at phase 4 but haven't answered any questions yet.
+        # However, _setup_phase4 may have auto-resolved some questions
+        # during the phase transition.  Check if any OLDCARTS responses
+        # exist; if not, step_back should go to phase 3.
+        row = mock_repo._sessions[("u1", "s1")]
+        store = engine._store
+        oldcarts_qids = set(store.oldcarts.get("Headache", {}).keys())
+        has_answers = any(
+            qid in row.responses and isinstance(row.responses[qid], dict)
+            and "answered_at" in row.responses[qid]
+            for qid in oldcarts_qids
+        )
+
+        if has_answers:
+            pytest.skip("Setup auto-answered some OLDCARTS questions")
+
+        step = await engine.step_back(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 3, "Should go back to phase 3"
+
+    @pytest.mark.asyncio
+    async def test_step_back_from_phase4_after_answering_returns_last_qid(
+        self, engine, mock_db, mock_repo,
+    ):
+        """step_back from phase 4 after answering returns the last answered OLDCARTS question."""
+        step = await self._setup_phase4(engine, mock_db)
+        if not isinstance(step, QuestionsStep):
+            pytest.skip("OLDCARTS tree auto-resolved")
+
+        # Answer a few sequential questions
+        answered_qids = []
+        for _ in range(3):
+            if not isinstance(step, QuestionsStep):
+                break
+            q = step.questions[0]
+            answered_qids.append(q.qid)
+            answer = self._pick_answer(q)
+            step = await engine.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=answer,
+            )
+
+        if len(answered_qids) < 2:
+            pytest.skip("Not enough sequential questions to test step_back")
+
+        # step_back should revert to the last answered question
+        row = mock_repo._sessions[("u1", "s1")]
+        last_answered = answered_qids[-1]
+
+        step = await engine.step_back(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase in (4, 5), f"Expected phase 4 or 5, got {step.phase}"
+
+        # The last answered qid should have been removed from responses
+        assert last_answered not in row.responses, (
+            f"Last answered qid {last_answered} should be removed from responses"
+        )
