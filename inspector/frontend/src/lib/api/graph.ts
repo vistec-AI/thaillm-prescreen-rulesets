@@ -25,3 +25,21 @@ export async function updateQuestion(payload: {
   const { data } = await api.post<MutationResult>("/api/update_question", payload);
   return data;
 }
+
+export async function addQuestion(payload: {
+  source: string;
+  symptom: string;
+  data: Record<string, unknown>;
+}): Promise<MutationResult> {
+  const { data } = await api.post<MutationResult>("/api/add_question", payload);
+  return data;
+}
+
+export async function deleteQuestion(payload: {
+  source: string;
+  symptom: string;
+  qid: string;
+}): Promise<MutationResult> {
+  const { data } = await api.post<MutationResult>("/api/delete_question", payload);
+  return data;
+}

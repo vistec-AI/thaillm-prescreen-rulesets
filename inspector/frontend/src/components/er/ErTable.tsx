@@ -7,17 +7,25 @@ interface Props {
   items: ErChecklistItem[];
   selectedQid: string | null;
   onSelect: (item: ErChecklistItem) => void;
+  onAdd: () => void;
 }
 
-export default function ErTable({ items, selectedQid, onSelect }: Props) {
-  if (items.length === 0) {
-    return (
-      <div className="text-center text-gray-400 py-8">No items for this symptom.</div>
-    );
-  }
-
+export default function ErTable({ items, selectedQid, onSelect, onAdd }: Props) {
   return (
     <div className="overflow-auto border border-gray-200">
+      {/* Action bar above the table */}
+      <div className="flex items-center justify-between bg-gray-50 px-2 py-1.5 border-b border-gray-200">
+        <span className="text-xs text-gray-500">{items.length} item(s)</span>
+        <button
+          className="px-2.5 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+          onClick={onAdd}
+        >
+          + Add Item
+        </button>
+      </div>
+      {items.length === 0 ? (
+        <div className="text-center text-gray-400 py-8">No items for this symptom.</div>
+      ) : (
       <table className="w-full border-collapse text-[13px]">
         <thead className="sticky top-0 z-[1]">
           <tr>
@@ -60,6 +68,7 @@ export default function ErTable({ items, selectedQid, onSelect }: Props) {
           })}
         </tbody>
       </table>
+      )}
     </div>
   );
 }

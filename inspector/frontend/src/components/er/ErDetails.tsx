@@ -6,9 +6,10 @@ import Badge from "../shared/Badge";
 interface Props {
   item: ErChecklistItem;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-export default function ErDetails({ item, onEdit }: Props) {
+export default function ErDetails({ item, onEdit, onDelete }: Props) {
   return (
     <div>
       <div className="mb-1">
@@ -30,12 +31,18 @@ export default function ErDetails({ item, onEdit }: Props) {
           <b>Reason</b>: {item.reason}
         </div>
       )}
-      <div className="mt-3">
+      <div className="mt-3 flex gap-2">
         <button
           className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
           onClick={onEdit}
         >
           Edit
+        </button>
+        <button
+          className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+          onClick={onDelete}
+        >
+          Delete
         </button>
       </div>
     </div>

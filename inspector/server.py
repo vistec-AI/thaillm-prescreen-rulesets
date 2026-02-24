@@ -72,6 +72,38 @@ class UpdateDemographicRequest(BaseModel):
     data: Dict[str, Any]
 
 
+class AddDemographicRequest(BaseModel):
+    data: Dict[str, Any]
+
+
+class DeleteDemographicRequest(BaseModel):
+    qid: str
+
+
+class AddErQuestionRequest(BaseModel):
+    mode: str                              # er_symptom | er_adult | er_pediatric
+    symptom: Optional[str] = None          # required for adult/pediatric
+    data: Dict[str, Any]
+
+
+class DeleteErQuestionRequest(BaseModel):
+    mode: str                              # er_symptom | er_adult | er_pediatric
+    symptom: Optional[str] = None          # required for adult/pediatric
+    qid: str
+
+
+class AddQuestionRequest(BaseModel):
+    source: Literal["oldcarts", "opd"]
+    symptom: str
+    data: Dict[str, Any]
+
+
+class DeleteQuestionRequest(BaseModel):
+    source: Literal["oldcarts", "opd"]
+    symptom: str
+    qid: str
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Prescreen Rules Inspector")
 
@@ -368,7 +400,114 @@ def create_app() -> FastAPI:
             return last_error
         logger.info("QID not found: symptom=%s qid=%s source=%s", req.symptom, req.qid, req.source)
         raise HTTPException(status_code=404, detail=f"QID '{req.qid}' not found under symptom '{req.symptom}' in selected source")
-        
+
+    @app.post("/api/add_question", dependencies=[Depends(_require_write_key)])
+    def add_question(req: AddQuestionRequest) -> Dict[str, Any]:
+        """Append a new question to an OLDCARTS or OPD YAML file under the given symptom.
+
+        The ``data`` dict must include a unique ``qid``.  The question is appended
+        to the end of the symptom's question list.  Validates with pytest and rolls
+        back on failure.
+        """
+        root = find_repo_root()
+
+        if not isinstance(req.data, dict):
+            return {"ok": False, "error": "data must be a JSON object"}
+
+        new_qid = req.data.get("qid")
+        if not new_qid or not isinstance(new_qid, str) or not new_qid.strip():
+            return {"ok": False, "error": "data.qid is required and must be a non-empty string."}
+
+        logger.info("add_question: source=%s symptom=%s qid=%s", req.source, req.symptom, new_qid)
+
+        path = root / "v1" / "rules" / f"{req.source}.yaml"
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original) or {}
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+
+        if not isinstance(doc, dict):
+            raise HTTPException(status_code=500, detail=f"{req.source}.yaml must be a dict")
+
+        if req.symptom not in doc:
+            raise HTTPException(status_code=404, detail=f"Symptom '{req.symptom}' not found in {req.source}.yaml")
+
+        entries = doc[req.symptom] or []
+
+        # Reject duplicate qids
+        if any(isinstance(q, dict) and q.get("qid") == new_qid for q in entries):
+            return {"ok": False, "error": f"QID '{new_qid}' already exists under '{req.symptom}' in {req.source}.yaml."}
+
+        entries.append(dict(req.data))
+        doc[req.symptom] = entries
+
+        # Write tentative update
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        logger.debug("Wrote tentative add to %s (symptom=%s qid=%s)", path, req.symptom, new_qid)
+
+        # Validate with pytest
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back add in %s for qid=%s", path, new_qid)
+            return result
+
+        logger.info("Add succeeded in %s for qid=%s", path, new_qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": f"Added to {req.source}.yaml and tests passed"}
+
+    @app.post("/api/delete_question", dependencies=[Depends(_require_write_key)])
+    def delete_question(req: DeleteQuestionRequest) -> Dict[str, Any]:
+        """Remove a question by qid from an OLDCARTS or OPD YAML file, validate, and rollback on failure."""
+        root = find_repo_root()
+        logger.info("delete_question: source=%s symptom=%s qid=%s", req.source, req.symptom, req.qid)
+
+        path = root / "v1" / "rules" / f"{req.source}.yaml"
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original) or {}
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+
+        if not isinstance(doc, dict):
+            raise HTTPException(status_code=500, detail=f"{req.source}.yaml must be a dict")
+
+        if req.symptom not in doc:
+            raise HTTPException(status_code=404, detail=f"Symptom '{req.symptom}' not found in {req.source}.yaml")
+
+        entries = doc[req.symptom] or []
+        new_entries = [q for q in entries if not (isinstance(q, dict) and q.get("qid") == req.qid)]
+        if len(new_entries) == len(entries):
+            raise HTTPException(
+                status_code=404,
+                detail=f"QID '{req.qid}' not found under symptom '{req.symptom}' in {req.source}.yaml",
+            )
+
+        doc[req.symptom] = new_entries
+
+        # Write tentative update
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        logger.debug("Wrote tentative delete to %s (symptom=%s qid=%s)", path, req.symptom, req.qid)
+
+        # Validate with pytest
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back delete in %s for qid=%s", path, req.qid)
+            return result
+
+        logger.info("Delete succeeded in %s for qid=%s", path, req.qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": f"Deleted from {req.source}.yaml and tests passed"}
 
     def _compute_graph(symptom: str, mode: str) -> Dict[str, Any]:
         """Build a Cytoscape graph for OLDCARTS / OPD modes only."""
@@ -471,6 +610,100 @@ def create_app() -> FastAPI:
         logger.info("Demographic update succeeded for qid=%s", req.qid)
         ver = version()
         return {"ok": True, "version": ver, "message": "Saved to demographic.yaml and tests passed"}
+
+    @app.post("/api/add_demographic", dependencies=[Depends(_require_write_key)])
+    def add_demographic(req: AddDemographicRequest) -> Dict[str, Any]:
+        """Append a new demographic field to demographic.yaml, validate, and rollback on failure.
+
+        The ``data`` dict must include a unique ``qid``.  Returns ``{ok: true, version}``
+        on success.
+        """
+        root = find_repo_root()
+
+        if not isinstance(req.data, dict):
+            return {"ok": False, "error": "data must be a JSON object"}
+
+        new_qid = req.data.get("qid")
+        if not new_qid or not isinstance(new_qid, str) or not new_qid.strip():
+            return {"ok": False, "error": "data.qid is required and must be a non-empty string."}
+
+        logger.info("add_demographic: qid=%s", new_qid)
+
+        path = root / "v1" / "rules" / "demographic.yaml"
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing demographic rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+
+        if not isinstance(doc, list):
+            raise HTTPException(status_code=500, detail="demographic.yaml must be a list")
+
+        # Reject duplicate qids
+        existing_qids = {item.get("qid") for item in doc if isinstance(item, dict)}
+        if new_qid in existing_qids:
+            return {"ok": False, "error": f"QID '{new_qid}' already exists in demographic.yaml."}
+
+        doc.append(dict(req.data))
+
+        # Write tentative update
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        logger.debug("Wrote tentative demographic add for qid=%s", new_qid)
+
+        # Validate with pytest
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back demographic add for qid=%s", new_qid)
+            return result
+
+        logger.info("Demographic add succeeded for qid=%s", new_qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": "Added to demographic.yaml and tests passed"}
+
+    @app.post("/api/delete_demographic", dependencies=[Depends(_require_write_key)])
+    def delete_demographic(req: DeleteDemographicRequest) -> Dict[str, Any]:
+        """Remove a demographic field by qid from demographic.yaml, validate, and rollback on failure."""
+        root = find_repo_root()
+        logger.info("delete_demographic: qid=%s", req.qid)
+
+        path = root / "v1" / "rules" / "demographic.yaml"
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing demographic rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+
+        if not isinstance(doc, list):
+            raise HTTPException(status_code=500, detail="demographic.yaml must be a list")
+
+        # Find and remove the entry by qid
+        new_doc = [item for item in doc if not (isinstance(item, dict) and item.get("qid") == req.qid)]
+        if len(new_doc) == len(doc):
+            raise HTTPException(status_code=404, detail=f"QID '{req.qid}' not found in demographic.yaml")
+
+        # Write tentative update
+        path.write_text(yaml.safe_dump(new_doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        logger.debug("Wrote tentative demographic delete for qid=%s", req.qid)
+
+        # Validate with pytest
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back demographic delete for qid=%s", req.qid)
+            return result
+
+        logger.info("Demographic delete succeeded for qid=%s", req.qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": "Deleted from demographic.yaml and tests passed"}
 
     # ------------------------------------------------------------------
     # ER Checklist API — flat table data instead of graph
@@ -674,6 +907,151 @@ def create_app() -> FastAPI:
         logger.info("ER update succeeded in %s for qid=%s", path, req.qid)
         ver = version()
         return {"ok": True, "version": ver, "message": f"Saved to {path.name} and tests passed"}
+
+    @app.post("/api/add_er_question", dependencies=[Depends(_require_write_key)])
+    def add_er_question(req: AddErQuestionRequest) -> Dict[str, Any]:
+        """Append a new ER question to the appropriate YAML file, validate, and rollback on failure.
+
+        The ``data`` dict must include a unique ``qid``.  For ``er_adult`` / ``er_pediatric``
+        modes, ``symptom`` is required and the item is appended under that symptom key.
+        """
+        root = find_repo_root()
+
+        if not isinstance(req.data, dict):
+            return {"ok": False, "error": "data must be a JSON object"}
+
+        new_qid = req.data.get("qid")
+        if not new_qid or not isinstance(new_qid, str) or not new_qid.strip():
+            return {"ok": False, "error": "data.qid is required and must be a non-empty string."}
+
+        logger.info("add_er_question: mode=%s symptom=%s qid=%s", req.mode, req.symptom, new_qid)
+
+        # Determine which YAML file
+        er_dir = root / "v1" / "rules" / "er"
+        if req.mode == "er_symptom":
+            path = er_dir / "er_symptom.yaml"
+        elif req.mode == "er_adult":
+            if not req.symptom:
+                raise HTTPException(status_code=400, detail="symptom is required for er_adult mode")
+            path = er_dir / "er_adult_checklist.yaml"
+        elif req.mode == "er_pediatric":
+            if not req.symptom:
+                raise HTTPException(status_code=400, detail="symptom is required for er_pediatric mode")
+            path = er_dir / "er_pediatric_checklist.yaml"
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown ER mode: {req.mode}")
+
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing ER rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+
+        new_item = dict(req.data)
+
+        if req.mode == "er_symptom":
+            # Flat list — check for duplicate qid then append
+            entries = doc if isinstance(doc, list) else []
+            if any(isinstance(q, dict) and q.get("qid") == new_qid for q in entries):
+                return {"ok": False, "error": f"QID '{new_qid}' already exists in {path.name}."}
+            entries.append(new_item)
+            doc = entries
+        else:
+            # Symptom-keyed dict — append under the symptom key
+            if not isinstance(doc, dict):
+                raise HTTPException(status_code=500, detail=f"{path.name} must be a dict")
+            if req.symptom not in doc:
+                raise HTTPException(status_code=404, detail=f"Symptom '{req.symptom}' not found in {path.name}")
+            entries = doc[req.symptom] or []
+            if any(isinstance(q, dict) and q.get("qid") == new_qid for q in entries):
+                return {"ok": False, "error": f"QID '{new_qid}' already exists under '{req.symptom}' in {path.name}."}
+            entries.append(new_item)
+            doc[req.symptom] = entries
+
+        # Write tentative update
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        logger.debug("Wrote tentative ER add to %s (mode=%s qid=%s)", path, req.mode, new_qid)
+
+        # Validate with pytest
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back ER add in %s for qid=%s", path, new_qid)
+            return result
+
+        logger.info("ER add succeeded in %s for qid=%s", path, new_qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": f"Added to {path.name} and tests passed"}
+
+    @app.post("/api/delete_er_question", dependencies=[Depends(_require_write_key)])
+    def delete_er_question(req: DeleteErQuestionRequest) -> Dict[str, Any]:
+        """Remove an ER question by qid from the appropriate YAML file, validate, and rollback on failure."""
+        root = find_repo_root()
+        logger.info("delete_er_question: mode=%s symptom=%s qid=%s", req.mode, req.symptom, req.qid)
+
+        # Determine which YAML file
+        er_dir = root / "v1" / "rules" / "er"
+        if req.mode == "er_symptom":
+            path = er_dir / "er_symptom.yaml"
+        elif req.mode == "er_adult":
+            if not req.symptom:
+                raise HTTPException(status_code=400, detail="symptom is required for er_adult mode")
+            path = er_dir / "er_adult_checklist.yaml"
+        elif req.mode == "er_pediatric":
+            if not req.symptom:
+                raise HTTPException(status_code=400, detail="symptom is required for er_pediatric mode")
+            path = er_dir / "er_pediatric_checklist.yaml"
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown ER mode: {req.mode}")
+
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing ER rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+
+        if req.mode == "er_symptom":
+            # Flat list — filter out the item
+            entries = doc if isinstance(doc, list) else []
+            new_entries = [q for q in entries if not (isinstance(q, dict) and q.get("qid") == req.qid)]
+            if len(new_entries) == len(entries):
+                raise HTTPException(status_code=404, detail=f"QID '{req.qid}' not found in {path.name}")
+            doc = new_entries
+        else:
+            # Symptom-keyed dict
+            if not isinstance(doc, dict) or req.symptom not in doc:
+                raise HTTPException(status_code=404, detail=f"Symptom '{req.symptom}' not found in {path.name}")
+            entries = doc[req.symptom] or []
+            new_entries = [q for q in entries if not (isinstance(q, dict) and q.get("qid") == req.qid)]
+            if len(new_entries) == len(entries):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"QID '{req.qid}' not found under symptom '{req.symptom}' in {path.name}",
+                )
+            doc[req.symptom] = new_entries
+
+        # Write tentative update
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        logger.debug("Wrote tentative ER delete to %s (mode=%s qid=%s)", path, req.mode, req.qid)
+
+        # Validate with pytest
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back ER delete in %s for qid=%s", path, req.qid)
+            return result
+
+        logger.info("ER delete succeeded in %s for qid=%s", path, req.qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": f"Deleted from {path.name} and tests passed"}
 
     return app
 
