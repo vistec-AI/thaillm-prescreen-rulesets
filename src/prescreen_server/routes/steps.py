@@ -37,6 +37,17 @@ class SubmitAnswerRequest(BaseModel):
     value: Any
 
 
+class BackEditRequest(BaseModel):
+    """Body for POST /sessions/{session_id}/back-edit.
+
+    ``target_phase`` is the phase to revert to (0-5).
+    ``target_qid`` is optional — only for phases 4-5, to jump to a specific
+    question within the sequential phase.
+    """
+    target_phase: int
+    target_qid: str | None = None
+
+
 # ------------------------------------------------------------------
 # Endpoints
 # ------------------------------------------------------------------
@@ -80,4 +91,45 @@ async def submit_answer(
         session_id=session_id,
         qid=body.qid,
         value=body.value,
+    )
+
+
+@router.post("/sessions/{session_id}/back-edit")
+async def back_edit(
+    session_id: str,
+    body: BackEditRequest,
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+    pipeline: PrescreenPipeline = Depends(get_pipeline),
+) -> PipelineStep:
+    """Revert to a previous phase or question within a phase.
+
+    Only valid during the ``rule_based`` pipeline stage.  Returns the
+    step at the reverted position.  For bulk phases (0-3), ``target_qid``
+    is not needed.  For sequential phases (4-5), ``target_qid`` allows
+    jumping to a specific previously-answered question.
+    """
+    return await pipeline.back_edit(
+        db,
+        user_id=user_id,
+        session_id=session_id,
+        target_phase=body.target_phase,
+        target_qid=body.target_qid,
+    )
+
+
+@router.post("/sessions/{session_id}/step-back")
+async def step_back(
+    session_id: str,
+    user_id: str = Depends(get_user_id),
+    db: AsyncSession = Depends(get_db),
+    pipeline: PrescreenPipeline = Depends(get_pipeline),
+) -> PipelineStep:
+    """Go back one step — the engine determines the previous step automatically.
+
+    No request body needed.  Only valid during the ``rule_based`` pipeline
+    stage.  Returns 400 if already at the first step (phase 0).
+    """
+    return await pipeline.step_back(
+        db, user_id=user_id, session_id=session_id,
     )

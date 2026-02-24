@@ -1119,3 +1119,183 @@ class TestHistory:
         assert len(demo_pairs) > 0, (
             "PipelineResult.history should include demographics"
         )
+
+
+# =====================================================================
+# Tests: Back-edit through pipeline
+# =====================================================================
+
+
+class TestBackEditPipeline:
+    """Pipeline back_edit() delegates to engine and enforces stage guard."""
+
+    @pytest.mark.asyncio
+    async def test_back_edit_delegates_to_engine(
+        self, pipeline, engine, mock_db,
+    ):
+        """back_edit proxies to engine during rule_based stage."""
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+        # Advance to phase 1
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=VALID_DEMOGRAPHICS,
+        )
+        # Back-edit to phase 0
+        step = await pipeline.back_edit(
+            mock_db, user_id="u1", session_id="s1",
+            target_phase=0,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 0, "Should revert to phase 0"
+
+    @pytest.mark.asyncio
+    async def test_back_edit_rejects_llm_questioning_stage(
+        self, pipeline, engine, mock_repo, mock_db,
+    ):
+        """back_edit raises ValueError when pipeline_stage is llm_questioning."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.pipeline_stage = "llm_questioning"
+
+        with pytest.raises(ValueError, match="rule_based"):
+            await pipeline.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=0,
+            )
+
+    @pytest.mark.asyncio
+    async def test_back_edit_rejects_done_stage(
+        self, pipeline, engine, mock_repo, mock_db,
+    ):
+        """back_edit raises ValueError when pipeline_stage is done."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.pipeline_stage = "done"
+
+        with pytest.raises(ValueError, match="rule_based"):
+            await pipeline.back_edit(
+                mock_db, user_id="u1", session_id="s1",
+                target_phase=0,
+            )
+
+    @pytest.mark.asyncio
+    async def test_back_edit_then_resubmit_advances_normally(
+        self, pipeline, engine, mock_db,
+    ):
+        """After back-edit, resubmitting advances the session normally."""
+        store = engine._store
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+
+        # Advance to phase 2
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=VALID_DEMOGRAPHICS,
+        )
+        er_responses = {item.qid: False for item in store.er_critical}
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+
+        # Back to phase 1
+        step = await pipeline.back_edit(
+            mock_db, user_id="u1", session_id="s1",
+            target_phase=1,
+        )
+        assert step.phase == 1, "Should be at phase 1 after back-edit"
+
+        # Re-submit ER critical (all negative) — should advance to phase 2
+        step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 2, "Should advance to phase 2 after re-submit"
+
+
+# =====================================================================
+# Tests: Step-back through pipeline
+# =====================================================================
+
+
+class TestStepBackPipeline:
+    """Pipeline step_back() delegates to engine and enforces stage guard."""
+
+    @pytest.mark.asyncio
+    async def test_step_back_delegates_to_engine(
+        self, pipeline, engine, mock_db,
+    ):
+        """step_back proxies to engine during rule_based stage."""
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+        # Advance to phase 1
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=VALID_DEMOGRAPHICS,
+        )
+        # Step back — should go to phase 0
+        step = await pipeline.step_back(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 0, "Should revert to phase 0"
+
+    @pytest.mark.asyncio
+    async def test_step_back_rejects_llm_questioning_stage(
+        self, pipeline, engine, mock_repo, mock_db,
+    ):
+        """step_back raises ValueError when pipeline_stage is llm_questioning."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.pipeline_stage = "llm_questioning"
+
+        with pytest.raises(ValueError, match="rule_based"):
+            await pipeline.step_back(
+                mock_db, user_id="u1", session_id="s1",
+            )
+
+    @pytest.mark.asyncio
+    async def test_step_back_rejects_done_stage(
+        self, pipeline, engine, mock_repo, mock_db,
+    ):
+        """step_back raises ValueError when pipeline_stage is done."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.pipeline_stage = "done"
+
+        with pytest.raises(ValueError, match="rule_based"):
+            await pipeline.step_back(
+                mock_db, user_id="u1", session_id="s1",
+            )
+
+    @pytest.mark.asyncio
+    async def test_step_back_then_resubmit_advances_normally(
+        self, pipeline, engine, mock_db,
+    ):
+        """After step_back, resubmitting advances the session normally."""
+        store = engine._store
+        await pipeline.create_session(mock_db, user_id="u1", session_id="s1")
+
+        # Advance to phase 2
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=VALID_DEMOGRAPHICS,
+        )
+        er_responses = {item.qid: False for item in store.er_critical}
+        await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+
+        # Step back (phase 2 → phase 1)
+        step = await pipeline.step_back(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert step.phase == 1, "Should be at phase 1 after step_back"
+
+        # Re-submit ER critical → should advance to phase 2
+        step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
+        assert step.phase == 2, "Should advance to phase 2 after re-submit"

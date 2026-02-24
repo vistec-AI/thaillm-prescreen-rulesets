@@ -209,6 +209,61 @@ class SessionRepository:
         return session
 
     # ------------------------------------------------------------------
+    # Update — back-edit (revert to earlier phase)
+    # ------------------------------------------------------------------
+
+    async def revert_session_state(
+        self,
+        db: AsyncSession,
+        session: PrescreenSession,
+        *,
+        target_phase: int,
+        clear_demographics: bool = False,
+        clear_symptoms: bool = False,
+        clear_er_flags: bool = False,
+        response_qids_to_remove: set[str] | None = None,
+        new_pending: list[str] | None = None,
+    ) -> PrescreenSession:
+        """Revert a session to a previous phase by clearing data from later phases.
+
+        This is a thin mutation layer — the engine decides *what* to clear
+        and passes the instructions here.  The repository just executes them.
+
+        Args:
+            target_phase: the phase to revert to (0-5)
+            clear_demographics: if True, reset demographics to empty dict
+            clear_symptoms: if True, clear primary_symptom and secondary_symptoms
+            clear_er_flags: if True, reset er_flags to None
+            response_qids_to_remove: set of qid keys to remove from responses JSONB
+            new_pending: if provided, set the ``__pending`` queue to this value;
+                if None, the ``__pending`` key is removed entirely
+        """
+        session.current_phase = target_phase
+
+        if clear_demographics:
+            session.demographics = {}
+        if clear_symptoms:
+            session.primary_symptom = None
+            session.secondary_symptoms = None
+        if clear_er_flags:
+            session.er_flags = None
+
+        # --- Rebuild responses JSONB: remove specified qids + __pending ---
+        responses = dict(session.responses or {})
+        # Always remove __pending — we either set a new one or clear it
+        responses.pop("__pending", None)
+        if response_qids_to_remove:
+            for qid in response_qids_to_remove:
+                responses.pop(qid, None)
+        if new_pending is not None:
+            responses["__pending"] = new_pending
+        session.responses = responses
+
+        session.updated_at = datetime.now(timezone.utc)
+        await db.flush()
+        return session
+
+    # ------------------------------------------------------------------
     # Update — terminal states
     # ------------------------------------------------------------------
 
