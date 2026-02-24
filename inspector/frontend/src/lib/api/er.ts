@@ -25,3 +25,21 @@ export async function updateErQuestion(payload: {
   const { data } = await api.post<MutationResult>("/api/update_er_question", payload);
   return data;
 }
+
+export async function addErQuestion(payload: {
+  mode: string;
+  symptom: string | null;
+  data: Record<string, unknown>;
+}): Promise<MutationResult> {
+  const { data } = await api.post<MutationResult>("/api/add_er_question", payload);
+  return data;
+}
+
+export async function deleteErQuestion(payload: {
+  mode: string;
+  symptom: string | null;
+  qid: string;
+}): Promise<MutationResult> {
+  const { data } = await api.post<MutationResult>("/api/delete_er_question", payload);
+  return data;
+}

@@ -7,7 +7,9 @@ import type { DemographicItem } from "@/lib/types";
 const FIELD_TYPES = ["datetime", "enum", "float", "from_yaml", "str"] as const;
 
 interface Props {
-  item: DemographicItem;
+  item: DemographicItem | null;
+  /** When true the editor creates a new entry instead of editing an existing one. */
+  isNew?: boolean;
   onSave: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
 }
@@ -16,13 +18,16 @@ interface Props {
  * Structured form editor for demographic items.
  * Replaces the raw JSON editor with typed fields for key, field_name,
  * field_name_th, type, optional, and type-specific value editing.
+ * When ``isNew`` is true the QID field is editable so the user can choose a
+ * unique identifier for the new entry.
  */
-export default function DemographicEditor({ item, onSave, onCancel }: Props) {
-  const [key, setKey] = useState(item.key);
-  const [fieldName, setFieldName] = useState(item.field_name);
-  const [fieldNameTh, setFieldNameTh] = useState(item.field_name_th);
-  const [type, setType] = useState<DemographicItem["type"]>(item.type);
-  const [optional, setOptional] = useState(item.optional ?? false);
+export default function DemographicEditor({ item, isNew, onSave, onCancel }: Props) {
+  const [qid, setQid] = useState(item?.qid ?? "");
+  const [key, setKey] = useState(item?.key ?? "");
+  const [fieldName, setFieldName] = useState(item?.field_name ?? "");
+  const [fieldNameTh, setFieldNameTh] = useState(item?.field_name_th ?? "");
+  const [type, setType] = useState<DemographicItem["type"]>(item?.type ?? "str");
+  const [optional, setOptional] = useState(item?.optional ?? false);
   // For enum type: editable list of string values
   const [enumValues, setEnumValues] = useState<string[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -31,13 +36,14 @@ export default function DemographicEditor({ item, onSave, onCancel }: Props) {
 
   // Re-initialize form when the selected item changes
   useEffect(() => {
-    setKey(item.key);
-    setFieldName(item.field_name);
-    setFieldNameTh(item.field_name_th);
-    setType(item.type);
-    setOptional(item.optional ?? false);
+    setQid(item?.qid ?? "");
+    setKey(item?.key ?? "");
+    setFieldName(item?.field_name ?? "");
+    setFieldNameTh(item?.field_name_th ?? "");
+    setType(item?.type ?? "str");
+    setOptional(item?.optional ?? false);
     // Populate enum values from the item if it's an enum type
-    if (item.type === "enum" && Array.isArray(item.values)) {
+    if (item?.type === "enum" && Array.isArray(item.values)) {
       setEnumValues(item.values.map(String));
     } else {
       setEnumValues([]);
@@ -48,6 +54,7 @@ export default function DemographicEditor({ item, onSave, onCancel }: Props) {
 
   const validate = (): string[] => {
     const errs: string[] = [];
+    if (isNew && !qid.trim()) errs.push("QID must not be empty.");
     if (!key.trim()) errs.push("Key must not be empty.");
     if (!fieldName.trim()) errs.push("Field Name must not be empty.");
     if (!fieldNameTh.trim()) errs.push("Field Name (TH) must not be empty.");
@@ -67,7 +74,7 @@ export default function DemographicEditor({ item, onSave, onCancel }: Props) {
 
     // Build the data object matching the YAML schema
     const obj: Record<string, unknown> = {
-      qid: item.qid,
+      qid: isNew ? qid.trim() : item!.qid,
       key: key.trim(),
       field_name: fieldName.trim(),
       field_name_th: fieldNameTh.trim(),
@@ -80,7 +87,7 @@ export default function DemographicEditor({ item, onSave, onCancel }: Props) {
       obj.values = enumValues.filter((v) => v.trim()).map((v) => v.trim());
     } else if (type === "from_yaml") {
       // Send back the original path string, not the resolved array
-      obj.values = item.values_path || "";
+      obj.values = item?.values_path || "";
     }
 
     setSaving(true);
@@ -108,14 +115,25 @@ export default function DemographicEditor({ item, onSave, onCancel }: Props) {
   return (
     <div className="mt-2">
       <div className="flex items-center gap-1.5 mb-1.5">
-        <b className="text-sm">Edit Demographic Item</b>
+        <b className="text-sm">{isNew ? "Add Demographic Item" : "Edit Demographic Item"}</b>
         {status && <span className="ml-auto text-xs text-gray-500">{status}</span>}
       </div>
 
-      {/* QID — read-only */}
+      {/* QID — editable when creating, read-only when editing */}
       <div className="mb-1.5">
         <label className="text-xs font-semibold block mb-0.5">QID</label>
-        <code className="text-xs bg-gray-50 px-1.5 py-0.5 rounded block">{item.qid}</code>
+        {isNew ? (
+          <input
+            type="text"
+            className="w-full border border-gray-200 rounded px-2 py-1 text-sm font-mono"
+            value={qid}
+            onChange={(e) => setQid(e.target.value)}
+            disabled={saving}
+            placeholder="e.g. demo_new_field"
+          />
+        ) : (
+          <code className="text-xs bg-gray-50 px-1.5 py-0.5 rounded block">{item!.qid}</code>
+        )}
       </div>
 
       {/* Key */}
@@ -221,7 +239,7 @@ export default function DemographicEditor({ item, onSave, onCancel }: Props) {
       )}
 
       {/* from_yaml source path — read-only */}
-      {type === "from_yaml" && item.values_path && (
+      {type === "from_yaml" && item?.values_path && (
         <div className="mb-1.5">
           <label className="text-xs font-semibold block mb-0.5">Source Path</label>
           <code className="text-xs bg-gray-50 px-1.5 py-0.5 rounded block break-all">

@@ -8,6 +8,7 @@ interface Props {
   onModeChange: (m: string) => void;
   onLoad: () => void;
   onReset: () => void;
+  onAdd: () => void;
 }
 
 export default function GraphToolbar({
@@ -18,6 +19,7 @@ export default function GraphToolbar({
   onModeChange,
   onLoad,
   onReset,
+  onAdd,
 }: Props) {
   return (
     <div className="flex gap-2 items-center flex-wrap pb-1.5">
@@ -52,6 +54,9 @@ export default function GraphToolbar({
       </button>
       <button className="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300" onClick={onReset}>
         Reset view
+      </button>
+      <button className="px-2.5 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700" onClick={onAdd}>
+        + Add Question
       </button>
       <span className="text-xs text-gray-500 ml-1">Node colors: terminate=red, opd=blue, others=gray.</span>
     </div>
