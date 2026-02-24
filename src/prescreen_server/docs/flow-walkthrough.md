@@ -30,7 +30,7 @@ The session's `pipeline_stage` field tracks the macro-stage:
 
 | Stage | What's happening | Valid operations |
 |-------|-----------------|-----------------|
-| `rule_based` | Phases 0-5 questions | `GET /step`, `POST /step`, `GET /history` |
+| `rule_based` | Phases 0-5 questions | `GET /step`, `POST /step`, `POST /back-edit`, `POST /step-back`, `GET /history` |
 | `llm_questioning` | LLM follow-up questions | `GET /step`, `POST /llm-answers`, `GET /history` |
 | `done` | Final result available | `GET /step` (returns cached result with history), `GET /history` |
 
@@ -843,6 +843,132 @@ When the OPD tree reaches a terminal node, the rule-based engine is complete:
 
 - If a **generator** is configured, the pipeline transitions to `llm_questioning`
 - Otherwise, the pipeline returns a `pipeline_result` directly
+
+---
+
+## Back-Edit (Revert to Earlier Step)
+
+During the `rule_based` pipeline stage, you can jump back to any previous phase (or to a specific question within sequential phases 4-5) using the back-edit endpoint. This is useful when the patient wants to correct an earlier answer.
+
+!!! note "Rule-based stage only"
+    Back-edit is only valid during the `rule_based` pipeline stage. Once the session transitions to `llm_questioning` or `done`, back-edit is no longer available.
+
+### What gets cleared
+
+When you back-edit to a target phase, all data from that phase onward is cleared:
+
+| Target Phase | What is cleared |
+|-------------|----------------|
+| Phase 0 | Demographics, symptoms, ER flags, all responses |
+| Phase 1 | Symptoms, ER flags, all responses from phase 1 onward |
+| Phase 2 | Symptoms, ER flags, all responses from phase 2 onward |
+| Phase 3 | ER flags, all responses from phase 3 onward |
+| Phase 4 | All OLDCARTS + OPD responses |
+| Phase 5 | All OPD responses |
+
+### Bulk phase back-edit (phases 0-3)
+
+=== "curl"
+
+    ```bash
+    # Back to phase 1 (ER Critical Screen) from any later phase
+    curl -X POST http://localhost:8080/api/v1/sessions/sess-001/back-edit \
+      -H "Content-Type: application/json" \
+      -H "X-User-ID: patient-1" \
+      -d '{"target_phase": 1}'
+    ```
+
+=== "Python"
+
+    ```python
+    step = client.post(
+        "/api/v1/sessions/sess-001/back-edit",
+        json={"target_phase": 1},
+        headers=headers,
+    ).json()
+    ```
+
+The response is a `QuestionsStep` at the target phase. For bulk phases, question metadata includes `previous_value` with the patient's earlier answer:
+
+```json
+{
+  "type": "questions",
+  "phase": 1,
+  "phase_name": "ER Critical Screen",
+  "questions": [
+    {
+      "qid": "emer_critical_001",
+      "question": "คนไข้มีอาการหมดสติ เรียกไม่รู้สึกตัวหรือไม่?",
+      "question_type": "yes_no",
+      "metadata": {"previous_value": false}
+    }
+  ]
+}
+```
+
+### Sequential qid-level back-edit (phases 4-5)
+
+For sequential phases, you can jump back to a specific previously-answered question by providing `target_qid`:
+
+=== "curl"
+
+    ```bash
+    # Back to a specific question in OLDCARTS
+    curl -X POST http://localhost:8080/api/v1/sessions/sess-001/back-edit \
+      -H "Content-Type: application/json" \
+      -H "X-User-ID: patient-1" \
+      -d '{"target_phase": 4, "target_qid": "hea_o_002"}'
+    ```
+
+=== "Python"
+
+    ```python
+    step = client.post(
+        "/api/v1/sessions/sess-001/back-edit",
+        json={"target_phase": 4, "target_qid": "hea_o_002"},
+        headers=headers,
+    ).json()
+    ```
+
+The target qid and all subsequently-answered questions are removed from the session. The engine re-presents the target question so the patient can re-answer it.
+
+### Step-back (go back one step)
+
+If you just want to go back one step without specifying a target phase or qid, use the step-back endpoint. The engine automatically determines the previous step:
+
+=== "curl"
+
+    ```bash
+    curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step-back \
+      -H "X-User-ID: patient-1"
+    ```
+
+=== "Python"
+
+    ```python
+    step = client.post(
+        "/api/v1/sessions/sess-001/step-back",
+        headers=headers,
+    ).json()
+    ```
+
+No request body is needed. The response is the same `QuestionsStep` as back-edit.
+
+**Step-back logic by current state:**
+
+| Current state | Goes back to |
+|---|---|
+| Phase 1 | Phase 0 (Demographics) |
+| Phase 2 | Phase 1 (ER Critical) |
+| Phase 3 | Phase 2 (Symptom Selection) |
+| Phase 4, has answered questions | Last answered OLDCARTS question |
+| Phase 4, no answered questions | Phase 3 (ER Checklist) |
+| Phase 5, has answered OPD questions | Last answered OPD question |
+| Phase 5, no OPD answers | Last answered OLDCARTS question (or Phase 3 if none) |
+| Phase 0 | Error — already at first step (400) |
+
+!!! tip "When to use step-back vs back-edit"
+    Use **step-back** (`POST /step-back`) when building a simple "Back" button — the engine handles the navigation logic. Use **back-edit** (`POST /back-edit`) when you need to jump to a specific phase or question (e.g. from a session overview or timeline UI).
 
 ---
 

@@ -201,6 +201,389 @@ class PrescreenEngine:
             raise ValueError(f"Invalid phase: {phase}")
 
     # ==================================================================
+    # Step-back API
+    # ==================================================================
+
+    async def step_back(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> StepResult:
+        """Go back one step — automatically determines the previous step.
+
+        Computes the "previous step" from the current session state and
+        delegates to :meth:`back_edit`.  This is a convenience wrapper
+        that frees integrators from needing to know the internal
+        phase/qid of the previous question.
+
+        Only valid when the session is ``created`` or ``in_progress``.
+
+        Returns:
+            The step at the previous position (same shape as back_edit).
+
+        Raises:
+            ValueError: if the session is terminal or already at the
+                first step (phase 0 with no prior answers).
+        """
+        row = await self._load_session(db, user_id, session_id)
+
+        # Validate session status — must be active
+        if row.status not in (SessionStatus.CREATED, SessionStatus.IN_PROGRESS):
+            raise ValueError(
+                f"Cannot step back: session status is '{row.status.value}', "
+                f"expected 'created' or 'in_progress'"
+            )
+
+        target_phase, target_qid = self._resolve_previous_step(row)
+
+        return await self.back_edit(
+            db,
+            user_id=user_id,
+            session_id=session_id,
+            target_phase=target_phase,
+            target_qid=target_qid,
+        )
+
+    def _resolve_previous_step(
+        self, row: PrescreenSession
+    ) -> tuple[int, str | None]:
+        """Compute (target_phase, target_qid) for going back one step.
+
+        Decision table:
+          - Phase 0: error — already at first step
+          - Phase 1: go to phase 0
+          - Phase 2: go to phase 1
+          - Phase 3: go to phase 2
+          - Phase 4 with answered OLDCARTS questions: go to last answered OLDCARTS qid
+          - Phase 4 with no answered OLDCARTS questions: go to phase 3
+          - Phase 5 with answered OPD questions: go to last answered OPD qid
+          - Phase 5 with no OPD answers but has OLDCARTS answers: go to last OLDCARTS qid
+          - Phase 5 with no OPD or OLDCARTS answers: go to phase 3
+
+        Returns:
+            (target_phase, target_qid) — target_qid is None for bulk phases.
+
+        Raises:
+            ValueError: if already at the first step (phase 0).
+        """
+        phase = row.current_phase
+
+        if phase == 0:
+            raise ValueError("Cannot step back: already at the first step (phase 0)")
+
+        # Bulk phases 1-3: simply go to the previous phase
+        if phase in (1, 2, 3):
+            return (phase - 1, None)
+
+        symptom = row.primary_symptom
+
+        if phase == 4:
+            # Check for answered OLDCARTS questions
+            if symptom:
+                oldcarts_qids = set(self._store.oldcarts.get(symptom, {}).keys())
+                last_qid = self._find_last_answered_qid(row, oldcarts_qids)
+                if last_qid is not None:
+                    return (4, last_qid)
+            # No OLDCARTS answers yet — go back to phase 3
+            return (3, None)
+
+        if phase == 5:
+            # First check for answered OPD questions
+            if symptom:
+                opd_qids = set(self._store.opd.get(symptom, {}).keys())
+                last_opd_qid = self._find_last_answered_qid(row, opd_qids)
+                if last_opd_qid is not None:
+                    return (5, last_opd_qid)
+
+                # No OPD answers — check for OLDCARTS answers
+                oldcarts_qids = set(self._store.oldcarts.get(symptom, {}).keys())
+                last_oldcarts_qid = self._find_last_answered_qid(row, oldcarts_qids)
+                if last_oldcarts_qid is not None:
+                    return (4, last_oldcarts_qid)
+
+            # No OPD or OLDCARTS answers — go back to phase 3
+            return (3, None)
+
+        raise ValueError(f"Invalid phase: {phase}")
+
+    def _find_last_answered_qid(
+        self, row: PrescreenSession, tree_qids: set[str]
+    ) -> str | None:
+        """Find the most recently answered qid among ``tree_qids``.
+
+        Looks at the ``answered_at`` timestamp in each response entry
+        and returns the qid with the latest timestamp.  Returns ``None``
+        if no qids from ``tree_qids`` have been answered.
+        """
+        latest_qid: str | None = None
+        latest_time: str = ""
+
+        for qid in tree_qids:
+            entry = row.responses.get(qid)
+            if entry is None:
+                continue
+            # Response entries are stored as {value, answered_at} dicts
+            if isinstance(entry, dict) and "answered_at" in entry:
+                answered_at = entry["answered_at"]
+                if answered_at > latest_time:
+                    latest_time = answered_at
+                    latest_qid = qid
+
+        return latest_qid
+
+    # ==================================================================
+    # Back-edit API
+    # ==================================================================
+
+    async def back_edit(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+        target_phase: int,
+        target_qid: str | None = None,
+    ) -> StepResult:
+        """Revert the session to a previous phase (or question within a phase).
+
+        Allows integrators to jump back to any earlier step during the
+        rule-based pipeline stage.  Clears responses and state from the
+        target phase onward, then returns the restored step.
+
+        For bulk phases (0-3), only ``target_phase`` is needed — the entire
+        phase is re-presented.  For sequential phases (4-5), an optional
+        ``target_qid`` allows jumping to a specific question within the phase.
+
+        Args:
+            target_phase: the phase to revert to (0-5)
+            target_qid: for phases 4-5, jump to a specific question.
+                Must be a qid that was previously answered in the session.
+
+        Returns:
+            The step at the reverted position (same shape as get_current_step).
+
+        Raises:
+            ValueError: if the session is terminal, target is invalid, or
+                target_qid is not found in prior responses.
+        """
+        row = await self._load_session(db, user_id, session_id)
+
+        # --- Validation ---
+        if row.status not in (SessionStatus.CREATED, SessionStatus.IN_PROGRESS):
+            raise ValueError(
+                f"Cannot back-edit: session status is '{row.status.value}', "
+                f"expected 'created' or 'in_progress'"
+            )
+
+        if target_phase < 0 or target_phase > 5:
+            raise ValueError(
+                f"target_phase must be 0-5, got {target_phase}"
+            )
+
+        # target_qid is only valid for sequential phases (4-5)
+        if target_qid is not None and target_phase not in (4, 5):
+            raise ValueError(
+                f"target_qid is only valid for phases 4-5, "
+                f"got target_phase={target_phase}"
+            )
+
+        # Must go to an earlier phase, OR same phase with target_qid for
+        # intra-phase back-edit in sequential phases
+        if target_phase > row.current_phase:
+            raise ValueError(
+                f"target_phase ({target_phase}) must be <= current_phase "
+                f"({row.current_phase})"
+            )
+        if target_phase == row.current_phase and target_qid is None:
+            raise ValueError(
+                f"target_phase ({target_phase}) equals current_phase — "
+                f"provide target_qid for intra-phase back-edit in phases 4-5"
+            )
+
+        # If target_qid is provided, verify it exists in prior responses
+        if target_qid is not None:
+            if target_qid not in row.responses or target_qid.startswith("__"):
+                raise ValueError(
+                    f"target_qid '{target_qid}' not found in session responses"
+                )
+
+        # --- Snapshot previous values for bulk phases (pre-population) ---
+        # For bulk phases 0-3, capture the current values so the UI can
+        # pre-fill the form with the patient's previous answers.
+        previous_values: dict[str, Any] = {}
+        if target_phase == 0:
+            previous_values = dict(row.demographics or {})
+        elif target_phase == 1:
+            # Collect ER critical answers from responses
+            for item in self._store.er_critical:
+                resp = row.responses.get(item.qid)
+                if resp is not None:
+                    val = resp["value"] if isinstance(resp, dict) and "value" in resp else resp
+                    previous_values[item.qid] = val
+        elif target_phase == 2:
+            if row.primary_symptom:
+                previous_values["primary_symptom"] = row.primary_symptom
+            if row.secondary_symptoms:
+                previous_values["secondary_symptoms"] = row.secondary_symptoms
+        elif target_phase == 3:
+            previous_values = dict(row.er_flags or {})
+
+        # --- Compute what to clear ---
+        params = self._compute_back_edit_params(row, target_phase, target_qid)
+
+        # --- Apply the revert ---
+        await self._repo.revert_session_state(db, row, **params)
+
+        # --- Compute and return the restored step ---
+        step = self._compute_step(row)
+
+        # Inject previous_value into question metadata for bulk phases so
+        # UIs can pre-fill forms with the patient's earlier answers.
+        if previous_values and isinstance(step, QuestionsStep):
+            for q in step.questions:
+                prev = previous_values.get(
+                    q.metadata.get("key") if q.metadata and "key" in q.metadata else q.qid
+                )
+                if prev is not None:
+                    if q.metadata is None:
+                        q.metadata = {}
+                    q.metadata["previous_value"] = prev
+
+        return step
+
+    def _compute_back_edit_params(
+        self,
+        row: PrescreenSession,
+        target_phase: int,
+        target_qid: str | None,
+    ) -> dict:
+        """Determine which data to clear when reverting to target_phase.
+
+        Returns a dict of kwargs for ``repo.revert_session_state()``.
+
+        Clearing strategy by target_phase:
+          - Phase 0: clear everything (demographics, symptoms, er_flags, all responses)
+          - Phase 1: keep demographics; clear symptoms, er_flags, all phase 1+ responses
+          - Phase 2: keep demographics + phase 1 responses; clear symptoms, er_flags, phase 2+ responses
+          - Phase 3: keep demographics + symptoms + phase 1-2 responses; clear er_flags, phase 3+ responses
+          - Phase 4: keep all bulk data; clear phase 4+ responses and __pending
+          - Phase 5: keep all bulk data + phase 4 responses; clear phase 5 responses and __pending
+
+        For qid-level back-edit (phases 4-5), remove the target qid and
+        all qids answered after it, then rebuild the __pending queue
+        starting from the target qid.
+        """
+        # Collect qid sets by phase for removal
+        er_critical_qids = {item.qid for item in self._store.er_critical}
+        symptom = row.primary_symptom
+
+        # Phase 3 ER checklist qids (need symptom + age info)
+        er_checklist_qids: set[str] = set()
+        if symptom:
+            age = self._get_patient_age(row)
+            pediatric = age is not None and age < PEDIATRIC_AGE_THRESHOLD
+            symptoms = self._get_selected_symptoms(row)
+            for sym in symptoms:
+                items = self._store.get_er_checklist(sym, pediatric=pediatric)
+                er_checklist_qids.update(item.qid for item in items)
+
+        # Phase 4/5 qids from decision trees
+        oldcarts_qids: set[str] = set()
+        opd_qids: set[str] = set()
+        if symptom:
+            oldcarts_qids = set(self._store.oldcarts.get(symptom, {}).keys())
+            opd_qids = set(self._store.opd.get(symptom, {}).keys())
+
+        # Determine qids to remove and flags to clear
+        qids_to_remove: set[str] = set()
+        clear_demographics = False
+        clear_symptoms = False
+        clear_er_flags = False
+        new_pending: list[str] | None = None
+
+        if target_phase == 0:
+            clear_demographics = True
+            clear_symptoms = True
+            clear_er_flags = True
+            # Remove all response qids
+            qids_to_remove = {
+                k for k in row.responses if not k.startswith("__")
+            }
+
+        elif target_phase == 1:
+            clear_symptoms = True
+            clear_er_flags = True
+            # Remove phase 1+ qids
+            qids_to_remove = (
+                er_critical_qids | er_checklist_qids | oldcarts_qids | opd_qids
+            )
+
+        elif target_phase == 2:
+            clear_symptoms = True
+            clear_er_flags = True
+            # Remove phase 2+ qids (keep phase 1 ER critical responses)
+            qids_to_remove = er_checklist_qids | oldcarts_qids | opd_qids
+
+        elif target_phase == 3:
+            clear_er_flags = True
+            # Remove phase 3+ qids
+            qids_to_remove = er_checklist_qids | oldcarts_qids | opd_qids
+
+        elif target_phase == 4:
+            # Remove phase 4+ qids
+            qids_to_remove = oldcarts_qids | opd_qids
+
+        elif target_phase == 5:
+            # Remove phase 5 qids only
+            qids_to_remove = opd_qids
+
+        # --- Qid-level back-edit for phases 4-5 ---
+        if target_qid is not None and target_phase in (4, 5):
+            # Find all qids answered at or after the target qid (by timestamp)
+            target_entry = row.responses.get(target_qid, {})
+            target_time = (
+                target_entry.get("answered_at", "")
+                if isinstance(target_entry, dict)
+                else ""
+            )
+
+            # Determine which tree we're working with
+            tree_qids = oldcarts_qids if target_phase == 4 else opd_qids
+            source = "oldcarts" if target_phase == 4 else "opd"
+
+            # Collect qids answered at or after target_qid
+            qids_to_remove = set()
+            for qid in tree_qids:
+                if qid == target_qid:
+                    qids_to_remove.add(qid)
+                    continue
+                entry = row.responses.get(qid, {})
+                if isinstance(entry, dict) and entry.get("answered_at", "") >= target_time:
+                    qids_to_remove.add(qid)
+
+            # Also remove OPD qids if we're going back to phase 4
+            if target_phase == 4:
+                qids_to_remove |= opd_qids
+
+            # Rebuild the __pending queue starting from target_qid
+            new_pending = [target_qid]
+
+        # Only intersect with qids actually present in responses
+        existing_qids = {k for k in row.responses if not k.startswith("__")}
+        qids_to_remove &= existing_qids
+
+        return {
+            "target_phase": target_phase,
+            "clear_demographics": clear_demographics,
+            "clear_symptoms": clear_symptoms,
+            "clear_er_flags": clear_er_flags,
+            "response_qids_to_remove": qids_to_remove if qids_to_remove else None,
+            "new_pending": new_pending,
+        }
+
+    # ==================================================================
     # Internal: compute current step (read-only)
     # ==================================================================
 

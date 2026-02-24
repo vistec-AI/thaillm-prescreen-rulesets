@@ -31,6 +31,8 @@ This page provides a quick-reference endpoint table and key model shapes.
 |--------|------|------|-------------|
 | `GET` | `/api/v1/sessions/{session_id}/step` | `X-User-ID` | Get the current step. Response type depends on pipeline stage. |
 | `POST` | `/api/v1/sessions/{session_id}/step` | `X-User-ID` | Submit an answer. Body: `{"qid": "...", "value": ...}`. `qid` is optional. |
+| `POST` | `/api/v1/sessions/{session_id}/back-edit` | `X-User-ID` | Revert to a previous phase or question. Body: `{"target_phase": N, "target_qid": "..."}`. `target_qid` optional, only for phases 4-5. |
+| `POST` | `/api/v1/sessions/{session_id}/step-back` | `X-User-ID` | Go back one step automatically. No request body needed — the engine determines the previous step. Returns 400 if already at phase 0. |
 
 ### LLM
 
@@ -149,6 +151,24 @@ Returned by admin cleanup endpoints.
 ```
 
 The `action` field is one of `"soft_delete"`, `"hard_delete"`, or `"purge_soft_deleted"`.
+
+### BackEditRequest
+
+Body for `POST /sessions/{session_id}/back-edit`.
+
+```json
+{
+  "target_phase": 1,
+  "target_qid": null
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `target_phase` | `int` | Yes | Phase to revert to (0-5). Must be less than current phase, or equal for intra-phase back-edit in phases 4-5. |
+| `target_qid` | `string \| null` | No | For phases 4-5 only: jump to a specific previously-answered question within the phase. |
+
+The response is a `QuestionsStep` at the reverted position. For bulk phases (0-3), question metadata includes `previous_value` with the patient's earlier answer to help UIs pre-fill forms.
 
 ### Error Response
 

@@ -321,6 +321,72 @@ class PrescreenPipeline:
 
         return self._build_pipeline_result(row)
 
+    async def back_edit(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+        target_phase: int,
+        target_qid: str | None = None,
+    ) -> PipelineStep:
+        """Revert to a previous phase or question during the rule-based stage.
+
+        Only valid when ``pipeline_stage`` is ``rule_based``.  Delegates
+        to the engine's ``back_edit()`` method.
+
+        Raises:
+            ValueError: if the session is not in the ``rule_based`` stage
+        """
+        row = await self._load_session(db, user_id, session_id)
+        stage = row.pipeline_stage
+
+        if stage != PipelineStage.RULE_BASED.value:
+            raise ValueError(
+                f"back_edit is only valid during rule_based stage, "
+                f"but session is in '{stage}'"
+            )
+
+        return await self._engine.back_edit(
+            db,
+            user_id=user_id,
+            session_id=session_id,
+            target_phase=target_phase,
+            target_qid=target_qid,
+        )
+
+    async def step_back(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+    ) -> PipelineStep:
+        """Go back one step — automatically determines the previous step.
+
+        Convenience wrapper around :meth:`back_edit` that computes the
+        target phase and qid from the current session state.  No request
+        body needed — the engine figures out where to go.
+
+        Only valid when ``pipeline_stage`` is ``rule_based``.
+
+        Raises:
+            ValueError: if the session is not in the ``rule_based`` stage,
+                or if already at the first step (phase 0)
+        """
+        row = await self._load_session(db, user_id, session_id)
+        stage = row.pipeline_stage
+
+        if stage != PipelineStage.RULE_BASED.value:
+            raise ValueError(
+                f"step_back is only valid during rule_based stage, "
+                f"but session is in '{stage}'"
+            )
+
+        return await self._engine.step_back(
+            db, user_id=user_id, session_id=session_id,
+        )
+
     async def get_llm_prompt(
         self,
         db: AsyncSession,
