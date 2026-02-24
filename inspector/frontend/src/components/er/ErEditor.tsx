@@ -5,7 +5,9 @@ import type { ErChecklistItem, ConstantsResponse } from "@/lib/types";
 import { useApp } from "@/lib/context/AppContext";
 
 interface Props {
-  item: ErChecklistItem;
+  item: ErChecklistItem | null;
+  /** When true the editor creates a new entry instead of editing an existing one. */
+  isNew?: boolean;
   mode: string;
   onSave: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
@@ -14,12 +16,15 @@ interface Props {
 /**
  * Structured ER editor: text textarea + severity dropdown + department
  * checkboxes.  For ``er_symptom`` mode only the text is editable.
+ * When ``isNew`` is true the QID field is editable so the user can choose a
+ * unique identifier for the new entry.
  */
-export default function ErEditor({ item, mode, onSave, onCancel }: Props) {
+export default function ErEditor({ item, isNew, mode, onSave, onCancel }: Props) {
   const { loadConstants } = useApp();
 
-  const [text, setText] = useState(item.raw.text as string || "");
-  const [reason, setReason] = useState(item.raw.reason as string || "");
+  const [qid, setQid] = useState(item?.qid ?? "");
+  const [text, setText] = useState((item?.raw?.text as string) || "");
+  const [reason, setReason] = useState((item?.raw?.reason as string) || "");
   const [sevValue, setSevValue] = useState("");
   const [checkedDepts, setCheckedDepts] = useState<string[]>([]);
   const [consts, setConsts] = useState<ConstantsResponse | null>(null);
@@ -38,12 +43,13 @@ export default function ErEditor({ item, mode, onSave, onCancel }: Props) {
 
   // Initialize form values from item
   useEffect(() => {
-    setText(item.raw.text as string || "");
-    setReason(item.raw.reason as string || "");
+    setQid(item?.qid ?? "");
+    setText((item?.raw?.text as string) || "");
+    setReason((item?.raw?.reason as string) || "");
     const sevKey = mode === "er_adult" ? "min_severity" : "severity";
-    const rawSev = item.raw[sevKey] as { id?: string } | undefined;
+    const rawSev = item?.raw?.[sevKey] as { id?: string } | undefined;
     setSevValue(rawSev?.id || "");
-    const rawDept = item.raw.department as Array<{ id: string }> | undefined;
+    const rawDept = item?.raw?.department as Array<{ id: string }> | undefined;
     setCheckedDepts(Array.isArray(rawDept) ? rawDept.map((d) => d.id) : []);
     setErrors([]);
     setStatus("");
@@ -51,6 +57,7 @@ export default function ErEditor({ item, mode, onSave, onCancel }: Props) {
 
   const validate = (): string[] => {
     const errs: string[] = [];
+    if (isNew && !qid.trim()) errs.push("QID must not be empty.");
     if (!text.trim()) errs.push("Question text must not be empty.");
     if (!isSymptomMode) {
       if (checkedDepts.length > 0 && !sevValue) {
@@ -73,7 +80,7 @@ export default function ErEditor({ item, mode, onSave, onCancel }: Props) {
     setErrors([]);
 
     // Build data object from form fields
-    const obj: Record<string, unknown> = { qid: item.qid, text: text.trim() };
+    const obj: Record<string, unknown> = { qid: isNew ? qid.trim() : item!.qid, text: text.trim() };
     // Only include reason when non-empty to keep YAML clean
     if (reason.trim()) {
       obj.reason = reason.trim();
@@ -109,9 +116,24 @@ export default function ErEditor({ item, mode, onSave, onCancel }: Props) {
   return (
     <div className="mt-2">
       <div className="flex items-center gap-1.5 mb-1.5">
-        <b className="text-sm">Edit Question</b>
+        <b className="text-sm">{isNew ? "Add Question" : "Edit Question"}</b>
         {status && <span className="ml-auto text-xs text-gray-500">{status}</span>}
       </div>
+
+      {/* QID — editable when creating, not shown when editing (shown in details) */}
+      {isNew && (
+        <div className="mb-1.5">
+          <label className="text-xs font-semibold block mb-0.5">QID</label>
+          <input
+            type="text"
+            className="w-full border border-gray-200 rounded px-2 py-1 text-sm font-mono"
+            value={qid}
+            onChange={(e) => setQid(e.target.value)}
+            disabled={saving}
+            placeholder="e.g. emer_critical_012"
+          />
+        </div>
+      )}
 
       {/* Question text */}
       <div className="mb-1.5">

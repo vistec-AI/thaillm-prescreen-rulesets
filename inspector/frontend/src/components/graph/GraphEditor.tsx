@@ -43,7 +43,9 @@ const ON_SUBMIT_TYPES = new Set([
 const NEXT_ACTION_TYPES = new Set(["multi_select", "image_multi_select"]);
 
 interface Props {
-  data: GraphNodeData;
+  data: GraphNodeData | null;
+  /** When true the editor creates a new question instead of editing an existing one. */
+  isNew?: boolean;
   onSave: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
   /** Available QIDs for searchable dropdowns — forwarded to all sub-editors. */
@@ -68,14 +70,18 @@ function defaultAction(): ActionObj {
  * The question_type is editable — the backend runs pytest after save and
  * rolls back if the new type is invalid or incompatible.
  */
-export default function GraphEditor({ data, onSave, onCancel, availableQids = [] }: Props) {
-  const raw = data.raw ?? (data as unknown as Record<string, unknown>);
-  const source = data.source || "";
+export default function GraphEditor({ data, isNew, onSave, onCancel, availableQids = [] }: Props) {
+  const raw = data?.raw ?? (data as unknown as Record<string, unknown>) ?? {};
+  const source = data?.source || "";
 
+  // Editable QID (only used in add mode)
+  const [qid, setQid] = useState(data?.id || "");
+  // Editable source (only used in add mode — "oldcarts" or "opd")
+  const [newSource, setNewSource] = useState<"oldcarts" | "opd">("oldcarts");
   // Editable question text (separate from raw clone)
-  const [question, setQuestion] = useState(data.label || "");
+  const [question, setQuestion] = useState(data?.label || "");
   // Editable question type
-  const [qType, setQType] = useState(data.type || "");
+  const [qType, setQType] = useState(data?.type || "free_text");
   // Deep clone of raw data for type-specific field editing
   const [rawClone, setRawClone] = useState<Record<string, unknown>>(() => deepClone(raw));
   const [errors, setErrors] = useState<string[]>([]);
@@ -84,15 +90,18 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
 
   // Re-initialize when the selected node changes
   useEffect(() => {
-    setQuestion(data.label || "");
-    setQType(data.type || "");
-    setRawClone(deepClone(data.raw ?? (data as unknown as Record<string, unknown>)));
+    setQid(data?.id || "");
+    setQuestion(data?.label || "");
+    setQType(data?.type || (isNew ? "free_text" : ""));
+    setRawClone(deepClone(data?.raw ?? (data as unknown as Record<string, unknown>) ?? {}));
     setErrors([]);
     setStatus("");
-  }, [data]);
+  }, [data, isNew]);
 
   // Available question types based on source
-  const questionTypes = source === "opd" ? OPD_QUESTION_TYPES : OLDCARTS_QUESTION_TYPES;
+  // In add mode, use the selected newSource; in edit mode, use the node's source
+  const effectiveSource = isNew ? newSource : source;
+  const questionTypes = effectiveSource === "opd" ? OPD_QUESTION_TYPES : OLDCARTS_QUESTION_TYPES;
 
   // --- Helpers to read/write nested rawClone fields ---
 
@@ -171,6 +180,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
 
   const validate = (): string[] => {
     const errs: string[] = [];
+    if (isNew && !qid.trim()) errs.push("QID must not be empty.");
     if (!question.trim()) errs.push("Question text must not be empty.");
     if (!qType) errs.push("Question type must be selected.");
     return errs;
@@ -186,12 +196,19 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
     }
     setErrors([]);
 
-    // Merge question text and question type back into the raw clone
+    // Merge question text and question type back into the raw clone.
+    // For new items, include the qid and the chosen source.
     const obj: Record<string, unknown> = {
       ...rawClone,
+      qid: isNew ? qid.trim() : data!.id,
       question: question.trim(),
       question_type: qType,
     };
+    // Attach the chosen source for new items so the parent handler knows
+    // which YAML file to target.
+    if (isNew) {
+      (obj as Record<string, unknown>).__source = newSource;
+    }
 
     setSaving(true);
     setStatus("Saving and running tests...");
@@ -214,7 +231,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
         value={getOnSubmit()}
         onChange={setOnSubmit}
         disabled={saving}
-        source={source}
+        source={effectiveSource}
         availableQids={availableQids}
       />
     </div>
@@ -369,7 +386,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
         onChange={setOptions}
         hasPerOptionAction={true}
         disabled={saving}
-        source={source}
+        source={effectiveSource}
         availableQids={availableQids}
       />
     </div>
@@ -384,7 +401,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
           onChange={setOptions}
           hasPerOptionAction={false}
           disabled={saving}
-          source={source}
+          source={effectiveSource}
           availableQids={availableQids}
         />
       </div>
@@ -394,7 +411,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
           value={getNextAction()}
           onChange={setNextAction}
           disabled={saving}
-          source={source}
+          source={effectiveSource}
           availableQids={availableQids}
         />
       </div>
@@ -403,7 +420,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
 
   const renderImageSingleSelect = () => (
     <div className="space-y-1.5">
-      {data.image && (
+      {data?.image && (
         <div>
           <label className="text-xs font-semibold block mb-0.5">Image</label>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -421,7 +438,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
           onChange={setOptions}
           hasPerOptionAction={true}
           disabled={saving}
-          source={source}
+          source={effectiveSource}
           availableQids={availableQids}
         />
       </div>
@@ -430,7 +447,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
 
   const renderImageMultiSelect = () => (
     <div className="space-y-1.5">
-      {data.image && (
+      {data?.image && (
         <div>
           <label className="text-xs font-semibold block mb-0.5">Image</label>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -448,7 +465,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
           onChange={setOptions}
           hasPerOptionAction={false}
           disabled={saving}
-          source={source}
+          source={effectiveSource}
           availableQids={availableQids}
         />
       </div>
@@ -458,7 +475,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
           value={getNextAction()}
           onChange={setNextAction}
           disabled={saving}
-          source={source}
+          source={effectiveSource}
           availableQids={availableQids}
         />
       </div>
@@ -472,7 +489,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
         options={getOptions() as AgeOptionObj[]}
         onChange={(opts) => setOptions(opts as OptionObj[])}
         disabled={saving}
-        source={source}
+        source={effectiveSource}
         availableQids={availableQids}
       />
     </div>
@@ -485,7 +502,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
         options={getOptions() as GenderOptionObj[]}
         onChange={(opts) => setOptions(opts as OptionObj[])}
         disabled={saving}
-        source={source}
+        source={effectiveSource}
         availableQids={availableQids}
       />
     </div>
@@ -497,7 +514,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
       defaultAction={getDefault()}
       onChange={handleRulesChange}
       disabled={saving}
-      source={source}
+      source={effectiveSource}
       availableQids={availableQids}
     />
   );
@@ -536,15 +553,42 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
   return (
     <div className="mt-2">
       <div className="flex items-center gap-1.5 mb-1.5">
-        <b className="text-sm">Edit Question</b>
+        <b className="text-sm">{isNew ? "Add Question" : "Edit Question"}</b>
         {status && <span className="ml-auto text-xs text-gray-500">{status}</span>}
       </div>
 
-      {/* QID — read-only */}
+      {/* QID — editable when creating, read-only when editing */}
       <div className="mb-1.5">
         <label className="text-xs font-semibold block mb-0.5">QID</label>
-        <code className="text-xs bg-gray-50 px-1.5 py-0.5 rounded block">{data.id}</code>
+        {isNew ? (
+          <input
+            type="text"
+            className="w-full border border-gray-200 rounded px-2 py-1 text-sm font-mono"
+            value={qid}
+            onChange={(e) => setQid(e.target.value)}
+            disabled={saving}
+            placeholder="e.g. hea_d_new01"
+          />
+        ) : (
+          <code className="text-xs bg-gray-50 px-1.5 py-0.5 rounded block">{data!.id}</code>
+        )}
       </div>
+
+      {/* Source selector — only shown in add mode */}
+      {isNew && (
+        <div className="mb-1.5">
+          <label className="text-xs font-semibold block mb-0.5">Source</label>
+          <select
+            className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+            value={newSource}
+            onChange={(e) => setNewSource(e.target.value as "oldcarts" | "opd")}
+            disabled={saving}
+          >
+            <option value="oldcarts">OLDCARTS</option>
+            <option value="opd">OPD</option>
+          </select>
+        </div>
+      )}
 
       {/* Question text — editable textarea */}
       <div className="mb-1.5">
@@ -575,7 +619,7 @@ export default function GraphEditor({ data, onSave, onCancel, availableQids = []
           )}
         </select>
         <div className="text-[11px] text-gray-400 mt-0.5">
-          {source === "opd" ? "OPD" : "OLDCARTS"} — tests will validate compatibility on save.
+          {effectiveSource === "opd" ? "OPD" : "OLDCARTS"} — tests will validate compatibility on save.
         </div>
       </div>
 

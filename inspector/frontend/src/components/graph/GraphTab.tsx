@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useApp } from "@/lib/context/AppContext";
 import type { GraphResponse, GraphNodeData } from "@/lib/types";
-import { fetchSymptoms, fetchGraph, updateQuestion } from "@/lib/api/graph";
+import { fetchSymptoms, fetchGraph, updateQuestion, addQuestion, deleteQuestion } from "@/lib/api/graph";
 import DetailsPanel from "../shared/DetailsPanel";
 import GraphToolbar from "./GraphToolbar";
 import GraphEditor from "./GraphEditor";
@@ -19,6 +19,8 @@ export default function GraphTab() {
   const [graphData, setGraphData] = useState<GraphResponse | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNodeData | null>(null);
   const [editing, setEditing] = useState(false);
+  /** When true the editor is in "add new" mode instead of editing an existing node. */
+  const [adding, setAdding] = useState(false);
 
   const cyRef = useRef<CytoscapeCanvasRef>(null);
 
@@ -90,22 +92,26 @@ export default function GraphTab() {
   const handleNodeTap = useCallback((nodeData: GraphNodeData) => {
     setSelectedNode(nodeData);
     setEditing(false);
+    setAdding(false);
     setIsEditing(false);
   }, [setIsEditing]);
 
   const handleBackgroundTap = useCallback(() => {
     setSelectedNode(null);
     setEditing(false);
+    setAdding(false);
     setIsEditing(false);
   }, [setIsEditing]);
 
   const handleEdit = () => {
     setEditing(true);
+    setAdding(false);
     setIsEditing(true);
   };
 
   const handleCancel = () => {
     setEditing(false);
+    setAdding(false);
     setIsEditing(false);
   };
 
@@ -124,6 +130,79 @@ export default function GraphTab() {
         alert("Save failed. Tests failed or validation error.\n" + detail);
         return;
       }
+      setEditing(false);
+      setIsEditing(false);
+      await loadGraph();
+      await triggerValidation();
+    } finally {
+      hideOverlay();
+    }
+  };
+
+  // --- Add new question ---
+  const handleAdd = () => {
+    if (!symptom) {
+      alert("Please select a symptom first.");
+      return;
+    }
+    setSelectedNode(null);
+    setEditing(false);
+    setAdding(true);
+    setIsEditing(true);
+  };
+
+  const handleAddSave = async (obj: Record<string, unknown>) => {
+    // Extract the __source flag set by GraphEditor in add mode
+    const chosenSource = (obj.__source as string) || "oldcarts";
+    // Remove the transient flag before sending to the API
+    const { __source, ...data } = obj;
+    void __source; // suppress unused variable lint
+
+    showOverlay("Adding and running tests...");
+    try {
+      const res = await addQuestion({
+        source: chosenSource,
+        symptom: symptomRef.current,
+        data,
+      });
+      if (!res.ok) {
+        const detail = (res.error || "") + (res.stdout || "") + (res.stderr || "");
+        alert("Add failed. Tests failed or validation error.\n" + detail);
+        return;
+      }
+      setAdding(false);
+      setIsEditing(false);
+      await loadGraph();
+      await triggerValidation();
+    } finally {
+      hideOverlay();
+    }
+  };
+
+  // --- Delete question ---
+  const handleDelete = async () => {
+    if (!selectedNode) return;
+    const src = selectedNode.source;
+    if (!src) {
+      alert("Cannot determine source (oldcarts/opd) for this node. Try selecting a specific mode (not combined).");
+      return;
+    }
+    if (!confirm(`Delete question "${selectedNode.id}" from ${src}.yaml?\n\nThis will remove it and run tests to validate.`)) {
+      return;
+    }
+    showOverlay("Deleting and running tests...");
+    try {
+      const res = await deleteQuestion({
+        source: src,
+        symptom: symptomRef.current,
+        qid: selectedNode.id,
+      });
+      if (!res.ok) {
+        const detail = (res.error || "") + (res.stdout || "") + (res.stderr || "");
+        alert("Delete failed. Tests failed or validation error.\n" + detail);
+        return;
+      }
+      setSelectedNode(null);
       setEditing(false);
       setIsEditing(false);
       await loadGraph();
@@ -166,6 +245,7 @@ export default function GraphTab() {
         onModeChange={handleModeChange}
         onLoad={handleLoad}
         onReset={() => cyRef.current?.resetView()}
+        onAdd={handleAdd}
       />
 
       <div className="flex-1 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px] 2xl:grid-cols-[minmax(0,1fr)_480px] gap-3 min-h-0">
@@ -178,7 +258,15 @@ export default function GraphTab() {
 
         <DetailsPanel>
           <h4 className="text-base font-semibold m-0 mb-2">Details</h4>
-          {!selectedNode ? (
+          {adding ? (
+            <GraphEditor
+              data={null}
+              isNew
+              onSave={handleAddSave}
+              onCancel={handleCancel}
+              availableQids={availableQids}
+            />
+          ) : !selectedNode ? (
             <div className="text-gray-400 text-sm">Click a node to inspect its details.</div>
           ) : editing ? (
             <GraphEditor
@@ -188,7 +276,7 @@ export default function GraphTab() {
               availableQids={availableQids}
             />
           ) : (
-            <GraphDetails data={selectedNode} onEdit={handleEdit} />
+            <GraphDetails data={selectedNode} onEdit={handleEdit} onDelete={handleDelete} />
           )}
         </DetailsPanel>
       </div>

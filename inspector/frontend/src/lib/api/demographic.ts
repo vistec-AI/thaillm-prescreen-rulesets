@@ -16,3 +16,21 @@ export async function updateDemographic(
   });
   return data;
 }
+
+export async function addDemographic(
+  payload: Record<string, unknown>,
+): Promise<MutationResult> {
+  const { data } = await api.post<MutationResult>("/api/add_demographic", {
+    data: payload,
+  });
+  return data;
+}
+
+export async function deleteDemographic(
+  qid: string,
+): Promise<MutationResult> {
+  const { data } = await api.post<MutationResult>("/api/delete_demographic", {
+    qid,
+  });
+  return data;
+}

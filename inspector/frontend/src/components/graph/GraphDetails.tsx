@@ -5,6 +5,7 @@ import type { GraphNodeData } from "@/lib/types";
 interface Props {
   data: GraphNodeData;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
 function escapeHtml(s: unknown): string {
@@ -20,7 +21,7 @@ function formatDeptList(dept: unknown): string {
   return list.map((d) => (typeof d === "object" && d !== null && "id" in d ? (d as { id: string }).id : String(d))).join(", ");
 }
 
-export default function GraphDetails({ data: d, onEdit }: Props) {
+export default function GraphDetails({ data: d, onEdit, onDelete }: Props) {
   return (
     <div className="text-sm">
       <div><b>QID</b>: {d.id}</div>
@@ -105,12 +106,18 @@ export default function GraphDetails({ data: d, onEdit }: Props) {
         </div>
       )}
 
-      <div className="mt-3">
+      <div className="mt-3 flex gap-2">
         <button
           className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
           onClick={onEdit}
         >
           Edit
+        </button>
+        <button
+          className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+          onClick={onDelete}
+        >
+          Delete
         </button>
       </div>
     </div>
