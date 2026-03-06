@@ -508,8 +508,8 @@ pipeline = PrescreenPipeline(engine, store, generator=..., predictor=...)
     "departments": [{"id": "dept004", "name": "Internal Medicine", ...}],
     "severity": {"id": "sev002", "name": "Visit Hospital / Clinic", ...},
     "diagnoses": [
-        {"disease_id": "d042", "confidence": 0.82},
-        {"disease_id": "d015", "confidence": 0.45},
+        {"disease_id": "d042"},
+        {"disease_id": "d015"},
     ],
     "reason": "...",              # termination reason if applicable
     "terminated_early": False,    # True if ER early exit
@@ -596,8 +596,8 @@ from prescreen_rulesets import PredictionResult, DiagnosisResult
 
 result = PredictionResult(
     diagnoses=[
-        DiagnosisResult(disease_id="d042", confidence=0.82),
-        DiagnosisResult(disease_id="d015", confidence=0.45),
+        DiagnosisResult(disease_id="d042"),
+        DiagnosisResult(disease_id="d015"),
     ],
     departments=["dept004"],     # Internal Medicine
     severity="sev002",           # Visit Hospital / Clinic
@@ -661,7 +661,7 @@ class MyPredictionHead(PredictionModule):
 
         return PredictionResult(
             diagnoses=[
-                DiagnosisResult(disease_id=d["id"], confidence=d["score"])
+                DiagnosisResult(disease_id=d["id"])
                 for d in output["diseases"]
             ],
             departments=output["departments"],   # e.g. ["dept004"]

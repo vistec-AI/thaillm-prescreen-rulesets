@@ -24,6 +24,7 @@ from prescreen_rulesets.models.question import Question, question_mapper
 from prescreen_rulesets.models.schema import (
     DemographicField,
     DepartmentConst,
+    Disease,
     ERChecklistItem,
     ERCriticalItem,
     NHSOSymptom,
@@ -91,12 +92,17 @@ class RulesetStore:
         self.severity_levels: dict[str, SeverityConst] = {}
         self.nhso_symptoms: dict[str, NHSOSymptom] = {}
         self.underlying_diseases: list[UnderlyingDisease] = []
+        self.diseases: dict[str, Disease] = {}
         self.demographics: list[DemographicField] = []
         self.er_critical: list[ERCriticalItem] = []
         self.er_adult: dict[str, list[ERChecklistItem]] = {}
         self.er_pediatric: dict[str, list[ERChecklistItem]] = {}
         self.oldcarts: dict[str, dict[str, Question]] = {}
         self.opd: dict[str, dict[str, Question]] = {}
+
+        # Reverse maps: English name → ID (built during _load_constants)
+        self._severity_name_to_id: dict[str, str] = {}
+        self._dept_name_to_id: dict[str, str] = {}
 
         # Ordered qid lists per symptom (preserves YAML order for first-qid lookup)
         self._oldcarts_order: dict[str, list[str]] = {}
@@ -132,11 +138,13 @@ class RulesetStore:
         for raw in load_yaml(const_dir / "departments.yaml"):
             dept = DepartmentConst(**raw)
             self.departments[dept.id] = dept
+            self._dept_name_to_id[dept.name] = dept.id
 
         # Severity levels — keyed by id
         for raw in load_yaml(const_dir / "severity_levels.yaml"):
             sev = SeverityConst(**raw)
             self.severity_levels[sev.id] = sev
+            self._severity_name_to_id[sev.name] = sev.id
 
         # NHSO symptoms — keyed by English name
         for raw in load_yaml(const_dir / "nhso_symptoms.yaml"):
@@ -146,6 +154,11 @@ class RulesetStore:
         # Underlying diseases
         for raw in load_yaml(const_dir / "underlying_diseases.yaml"):
             self.underlying_diseases.append(UnderlyingDisease(**raw))
+
+        # Diseases — keyed by id
+        for raw in load_yaml(const_dir / "diseases.yaml"):
+            disease = Disease(**raw)
+            self.diseases[disease.id] = disease
 
     def _load_demographics(self) -> None:
         """Load v1/rules/demographic.yaml into DemographicField list."""
@@ -291,3 +304,28 @@ class RulesetStore:
         """
         sev = self.severity_levels[sev_id]
         return {"id": sev.id, "name": sev.name, "name_th": sev.name_th, "description": sev.description}
+
+    # ------------------------------------------------------------------
+    # ID enumeration helpers (used by prediction module for structured output)
+    # ------------------------------------------------------------------
+
+    def get_disease_ids(self) -> list[str]:
+        """Return a sorted list of all disease IDs (e.g. ['d001', 'd002', ...])."""
+        return sorted(self.diseases.keys())
+
+    def get_department_ids(self) -> list[str]:
+        """Return a sorted list of all department IDs (e.g. ['dept001', ...])."""
+        return sorted(self.departments.keys())
+
+    def get_severity_ids(self) -> list[str]:
+        """Return severity IDs in order from least to most severe."""
+        from prescreen_rulesets.constants import SEVERITY_ORDER
+        return [sid for sid in SEVERITY_ORDER if sid in self.severity_levels]
+
+    def severity_name_to_id(self, name: str) -> str | None:
+        """Resolve a severity English name to its ID. Returns None if not found."""
+        return self._severity_name_to_id.get(name)
+
+    def dept_name_to_id(self, name: str) -> str | None:
+        """Resolve a department English name to its ID. Returns None if not found."""
+        return self._dept_name_to_id.get(name)

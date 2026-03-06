@@ -7,6 +7,7 @@ const PHASES = [
   { id: 3, label: "ER Checklist" },
   { id: 4, label: "OLDCARTS" },
   { id: 5, label: "OPD" },
+  { id: 6, label: "LLM Questions" },
 ];
 
 interface PhaseIndicatorProps {

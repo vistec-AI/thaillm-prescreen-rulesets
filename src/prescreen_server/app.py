@@ -60,9 +60,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     store.load()
     logger.info("RulesetStore loaded successfully")
 
-    # --- Build pipeline ---
+    # --- Build pipeline (with optional LLM prediction) ---
+    import os
     engine = PrescreenEngine(store)
-    pipeline = PrescreenPipeline(engine, store)
+
+    predictor = None
+    if os.environ.get("OPENAI_API_KEY"):
+        from prescreen_rulesets.prediction import OpenAIPredictionModule
+        predictor = OpenAIPredictionModule(store=store)
+        logger.info("OpenAIPredictionModule enabled")
+
+    pipeline = PrescreenPipeline(engine, store, predictor=predictor)
 
     app.state.store = store
     app.state.pipeline = pipeline

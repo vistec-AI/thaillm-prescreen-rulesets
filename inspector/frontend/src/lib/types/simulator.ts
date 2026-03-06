@@ -107,6 +107,13 @@ export interface ConstantEntry {
   name_th?: string;
 }
 
+/** A disease entry for DDx display */
+export interface DiseaseEntry {
+  id: string;
+  disease_name: string;
+  name_th: string;
+}
+
 /** Full response from GET /api/simulator_data */
 export interface SimulatorDataResponse {
   demographic: RawDemographicField[];
@@ -118,6 +125,7 @@ export interface SimulatorDataResponse {
   nhso_symptoms: ConstantEntry[];
   severity_levels: ConstantEntry[];
   departments: ConstantEntry[];
+  diseases: DiseaseEntry[];
 }
 
 // --- Simulator internal state types ---
@@ -128,6 +136,16 @@ export interface TerminationResult {
   departments: Array<{ id: string; name: string }>;
   severity: { id: string; name: string } | null;
   reason: string | null;
+  /** Which phase triggered the termination — used to decide whether to insert LLM phase */
+  fromPhase?: number;
+  /** Differential diagnosis from LLM prediction */
+  diagnoses?: Array<{ disease_id: string }>;
+  /** Whether prediction was attempted but LLM was unavailable */
+  predictionUnavailable?: boolean;
+  /** Error message when prediction was attempted but failed */
+  predictionError?: string;
+  /** Whether prediction returned successfully but with no diagnoses or severity (e.g. transient API error) */
+  predictionEmpty?: boolean;
 }
 
 /** Text overrides for inline editing within the simulator */
@@ -147,6 +165,8 @@ export interface HistoryEntry {
   erChecklistFlags: Record<string, boolean>;
   pending: string[];
   currentQuestion: RawQuestion | null;
+  /** Pending termination result when LLM phase is active */
+  pendingResult: TerminationResult | null;
   /** Label describing what was answered at this step */
   label: string;
   /** The answer value submitted */

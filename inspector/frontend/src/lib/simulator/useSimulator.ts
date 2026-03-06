@@ -5,7 +5,7 @@
  * Manages history for back-navigation and text overrides for inline editing.
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import type {
   RawQuestion,
   SimulatorDataResponse,
@@ -23,6 +23,9 @@ import {
   resolveErChecklistTermination,
   buildErCriticalTermination,
 } from "./engine";
+import type { QAPairPayload } from "../api/llm";
+import type { LLMAnswerPair } from "../../components/simulator/LLMQuestionsPanel";
+import { generateQuestions, predict } from "../api/llm";
 
 /** Phase names for display */
 const PHASE_NAMES: Record<number, string> = {
@@ -32,6 +35,7 @@ const PHASE_NAMES: Record<number, string> = {
   3: "ER Checklist",
   4: "OLDCARTS",
   5: "OPD",
+  6: "LLM Questions",
 };
 
 /** What the UI should currently render */
@@ -44,6 +48,12 @@ export interface CurrentStep {
   result: TerminationResult | null;
   /** The current user-facing question (only for sequential phases 4/5) */
   currentQuestion: RawQuestion | null;
+  /** LLM phase state (phase 6) */
+  llmLoading: boolean;
+  llmQuestions: string[] | null;
+  llmError: string | null;
+  /** True while the LLM prediction call is in-flight */
+  predictionLoading: boolean;
 }
 
 /** The full public API returned by useSimulator */
@@ -57,6 +67,8 @@ export interface SimulatorAPI {
   goBack: () => void;
   /** Reset the simulation to phase 0 */
   reset: () => void;
+  /** Proceed from LLM questions phase to results (with LLM answers for prediction) */
+  proceedToResults: (llmAnswers: LLMAnswerPair[]) => void;
   /** Override a question's display text */
   setQuestionText: (qid: string, text: string) => void;
   /** Override an option's display label */
@@ -93,6 +105,22 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
   const [result, setResult] = useState<TerminationResult | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<RawQuestion | null>(null);
 
+  // --- LLM phase state (phase 6) ---
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [llmQuestions, setLlmQuestions] = useState<string[] | null>(null);
+  const [llmError, setLlmError] = useState<string | null>(null);
+  const [pendingResult, _setPendingResult] = useState<TerminationResult | null>(null);
+  const [predictionLoading, setPredictionLoading] = useState(false);
+  // Guard ref to ignore stale LLM API responses after reset/back-nav
+  const llmRequestIdRef = useRef(0);
+  // Mirror pendingResult in a ref so proceedToResults always reads the latest
+  // value synchronously, bypassing any useCallback closure staleness.
+  const pendingResultRef = useRef<TerminationResult | null>(null);
+  const setPendingResult = useCallback((val: TerminationResult | null) => {
+    pendingResultRef.current = val;
+    _setPendingResult(val);
+  }, []);
+
   // --- History for back-navigation ---
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
@@ -113,6 +141,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       erChecklistFlags: { ...erChecklistFlags },
       pending: [...pending],
       currentQuestion,
+      pendingResult,
       label,
       answerValue,
     }),
@@ -126,6 +155,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       erChecklistFlags,
       pending,
       currentQuestion,
+      pendingResult,
     ]
   );
 
@@ -140,9 +170,283 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     setErChecklistFlags(entry.erChecklistFlags);
     setPending(entry.pending);
     setCurrentQuestion(entry.currentQuestion);
+    setPendingResult(entry.pendingResult);
     setTerminated(false);
     setResult(null);
+    // Invalidate any in-flight LLM request
+    llmRequestIdRef.current++;
+    setLlmLoading(false);
+    setLlmQuestions(null);
+    setLlmError(null);
+    setPredictionLoading(false);
   }, []);
+
+  // --- LLM phase helpers ---
+
+  /** Build QAPairPayload[] from the current simulation state for the LLM endpoint */
+  const buildQAPairs = useCallback(
+    (
+      demos: Record<string, unknown>,
+      answers: Record<string, unknown>,
+      symptom: string,
+      critFlags: Record<string, boolean>,
+      checkFlags: Record<string, boolean>
+    ): QAPairPayload[] => {
+      const pairs: QAPairPayload[] = [];
+
+      // Phase 0: demographics as a single entry
+      if (Object.keys(demos).length > 0) {
+        pairs.push({
+          question: "Patient demographics",
+          answer: demos,
+          source: "rule_based",
+          qid: null,
+          question_type: "demographics",
+          phase: 0,
+        });
+      }
+
+      // Phase 1: ER critical flags
+      for (const item of ruleData.er_critical) {
+        if (item.qid in critFlags) {
+          pairs.push({
+            question: item.text,
+            answer: critFlags[item.qid],
+            source: "rule_based",
+            qid: item.qid,
+            question_type: "er_critical",
+            phase: 1,
+          });
+        }
+      }
+
+      // Phase 2: primary symptom
+      if (symptom) {
+        pairs.push({
+          question: "Primary symptom",
+          answer: symptom,
+          source: "rule_based",
+          qid: null,
+          question_type: "symptom_selection",
+          phase: 2,
+        });
+      }
+
+      // Phase 3: ER checklist flags
+      for (const [qid, val] of Object.entries(checkFlags)) {
+        pairs.push({
+          question: qid,
+          answer: val,
+          source: "rule_based",
+          qid,
+          question_type: "er_checklist",
+          phase: 3,
+        });
+      }
+
+      // Phases 4/5: sequential answers matched to question definitions
+      for (const source of ["oldcarts", "opd"] as const) {
+        const phaseNum = source === "oldcarts" ? 4 : 5;
+        const questions = ruleData[source]?.[symptom] ?? [];
+        for (const q of questions) {
+          if (q.qid in answers) {
+            pairs.push({
+              question: q.question,
+              answer: answers[q.qid],
+              source: "rule_based",
+              qid: q.qid,
+              question_type: q.question_type,
+              phase: phaseNum,
+            });
+          }
+        }
+      }
+
+      return pairs;
+    },
+    [ruleData]
+  );
+
+  /**
+   * Route a termination result: ER terminations (phases 1/3) go straight
+   * to results; normal completions enter the LLM phase first.
+   */
+  const triggerTermination = useCallback(
+    (termResult: TerminationResult, answersOverride?: Record<string, unknown>) => {
+      // ER terminations skip the LLM phase
+      if (termResult.fromPhase !== undefined && termResult.fromPhase <= 3) {
+        setTerminated(true);
+        setResult(termResult);
+        return;
+      }
+
+      // Non-ER: enter LLM phase
+      setPendingResult(termResult);
+      setPhase(6);
+      setLlmLoading(true);
+      setLlmQuestions(null);
+      setLlmError(null);
+
+      const requestId = ++llmRequestIdRef.current;
+
+      // Use answersOverride when provided to avoid stale closure values
+      // (e.g. when called from submitAnswer right after setAllAnswers)
+      const qaPairs = buildQAPairs(
+        demographics,
+        answersOverride ?? allAnswers,
+        primarySymptom,
+        erCriticalFlags,
+        erChecklistFlags
+      );
+
+      generateQuestions(qaPairs)
+        .then((resp) => {
+          // Ignore stale responses (user reset or navigated back)
+          if (llmRequestIdRef.current !== requestId) return;
+
+          if (!resp.available) {
+            // OPENAI_API_KEY not set — skip to results
+            setLlmLoading(false);
+            setTerminated(true);
+            setResult(termResult);
+            setPendingResult(null);
+            return;
+          }
+
+          setLlmLoading(false);
+          if (resp.error) {
+            setLlmError(resp.error);
+          }
+          setLlmQuestions(resp.questions);
+        })
+        .catch((err) => {
+          if (llmRequestIdRef.current !== requestId) return;
+          setLlmLoading(false);
+          setLlmError(err.message ?? "Failed to generate questions");
+          setLlmQuestions([]);
+        });
+    },
+    [demographics, allAnswers, primarySymptom, erCriticalFlags, erChecklistFlags, buildQAPairs]
+  );
+
+  /** Proceed from LLM questions phase to final results.
+   *  Calls the predict endpoint to get DDx before showing results.
+   *
+   *  Reads pendingResult from a ref (not the useState closure) to guarantee
+   *  we always see the latest value regardless of React render timing. */
+  const proceedToResults = useCallback((llmAnswers: LLMAnswerPair[]) => {
+    // Read from ref — always current, immune to closure staleness
+    const pr = pendingResultRef.current;
+    if (!pr) {
+      console.warn("[Simulator] proceedToResults: pendingResult is null — skipping predict");
+      return;
+    }
+
+    console.log("[Simulator] proceedToResults: pendingResult =", pr);
+    setPredictionLoading(true);
+    const requestId = llmRequestIdRef.current;
+
+    // Build rule-based QA pairs then append LLM-generated answers
+    const qaPairs = buildQAPairs(
+      demographics,
+      allAnswers,
+      primarySymptom,
+      erCriticalFlags,
+      erChecklistFlags
+    );
+    for (const pair of llmAnswers) {
+      qaPairs.push({
+        question: pair.question,
+        answer: pair.answer,
+        source: "llm_generated",
+        qid: null,
+        question_type: null,
+        phase: null,
+      });
+    }
+
+    // Determine context for prediction: rule-based severity/ER from pending result
+    const rbSeverity = pr.severity?.id ?? null;
+    const erOverride =
+      rbSeverity === "sev003" &&
+      pr.departments.some((d) => d.id === "dept002");
+
+    console.log("[Simulator] Calling predict with", qaPairs.length, "QA pairs");
+
+    predict(qaPairs, rbSeverity, erOverride)
+      .then((resp) => {
+        if (llmRequestIdRef.current !== requestId) return;
+        console.log("[Simulator] Prediction response:", resp);
+        setPredictionLoading(false);
+
+        let finalResult: TerminationResult = { ...pr };
+        if (resp.available && resp.prediction) {
+          finalResult = {
+            ...finalResult,
+            diagnoses: resp.prediction.diagnoses,
+            // Override departments/severity from LLM prediction
+            ...(resp.prediction.departments.length > 0
+              ? {
+                  departments: resp.prediction.departments.map((id: string) => {
+                    const dept = ruleData.departments.find((d) => d.id === id);
+                    return { id, name: dept?.name ?? id };
+                  }),
+                }
+              : {}),
+            ...(resp.prediction.severity
+              ? {
+                  severity: (() => {
+                    const sev = ruleData.severity_levels.find(
+                      (s) => s.id === resp.prediction!.severity
+                    );
+                    return {
+                      id: resp.prediction!.severity,
+                      name: sev?.name ?? resp.prediction!.severity,
+                    };
+                  })(),
+                }
+              : {}),
+          };
+          // Detect empty prediction — API returned success but no useful data
+          // (e.g. transient OpenAI error caught by the prediction module)
+          if (resp.prediction.diagnoses.length === 0 && !resp.prediction.severity) {
+            finalResult.predictionEmpty = true;
+          }
+        } else if (!resp.available) {
+          finalResult = { ...finalResult, predictionUnavailable: true };
+        } else if (resp.error) {
+          // Server returned available:true but prediction failed (e.g. API error)
+          finalResult = { ...finalResult, predictionError: resp.error };
+        } else {
+          // Fallback: server returned available:true but prediction is null with no error
+          finalResult = { ...finalResult, predictionError: "Prediction returned no data" };
+        }
+
+        setTerminated(true);
+        setResult(finalResult);
+        setPendingResult(null);
+      })
+      .catch((err) => {
+        if (llmRequestIdRef.current !== requestId) return;
+        console.error("[Simulator] Prediction failed:", err);
+        setPredictionLoading(false);
+        setTerminated(true);
+        setResult({
+          ...pr,
+          predictionError: err?.message ?? "Prediction request failed",
+        });
+        setPendingResult(null);
+      });
+  }, [
+    demographics,
+    allAnswers,
+    primarySymptom,
+    erCriticalFlags,
+    erChecklistFlags,
+    buildQAPairs,
+    ruleData,
+    setPendingResult,
+  ]);
 
   // --- Advance to sequential phase ---
 
@@ -166,13 +470,13 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         }
         // Phase 5 exhausted — complete without explicit termination
         setPhase(5);
-        setTerminated(true);
-        setResult({
+        triggerTermination({
           type: "completed",
           departments: [],
           severity: null,
           reason: "All phases completed without explicit termination",
-        });
+          fromPhase: 5,
+        }, answers);
         return;
       }
 
@@ -192,8 +496,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         setCurrentQuestion(resolved.question);
         setPending(resolved.pending);
       } else if (resolved.kind === "terminate") {
-        setTerminated(true);
-        setResult(resolved.termination);
+        triggerTermination(resolved.termination, answers);
         setPending(resolved.pending);
       } else if (resolved.kind === "advance_to_opd") {
         // OLDCARTS auto-eval chain produced an OPD action
@@ -203,17 +506,17 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         if (nextPhase === 4) {
           enterSequentialPhase(5, symptom, answers, demos);
         } else {
-          setTerminated(true);
-          setResult({
+          triggerTermination({
             type: "completed",
             departments: [],
             severity: null,
             reason: "All phases completed without explicit termination",
-          });
+            fromPhase: 5,
+          }, answers);
         }
       }
     },
-    [ruleData]
+    [ruleData, triggerTermination]
   );
 
   // --- Submit answer ---
@@ -249,8 +552,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
           .map(([k]) => k);
 
         if (positiveQids.length > 0) {
-          setTerminated(true);
-          setResult(buildErCriticalTermination(positiveQids, ruleData));
+          triggerTermination(buildErCriticalTermination(positiveQids, ruleData));
           return;
         }
 
@@ -293,8 +595,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         );
 
         if (termResult) {
-          setTerminated(true);
-          setResult(termResult);
+          triggerTermination(termResult);
           return;
         }
 
@@ -343,8 +644,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         );
 
         if (actionResult.type === "terminate") {
-          setTerminated(true);
-          setResult(actionResult.termination!);
+          triggerTermination(actionResult.termination!, nextAnswers);
           setPending(newPending);
           return;
         }
@@ -383,6 +683,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       snapshot,
       ruleData,
       enterSequentialPhase,
+      triggerTermination,
     ]
   );
 
@@ -396,8 +697,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         setCurrentQuestion(resolved.question);
         setPending(resolved.pending);
       } else if (resolved.kind === "terminate") {
-        setTerminated(true);
-        setResult(resolved.termination);
+        triggerTermination(resolved.termination, answers);
         setPending(resolved.pending);
       } else if (resolved.kind === "advance_to_opd") {
         enterSequentialPhase(5, primarySymptom, answers, demographics);
@@ -406,17 +706,17 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         if (phase === 4) {
           enterSequentialPhase(5, primarySymptom, answers, demographics);
         } else {
-          setTerminated(true);
-          setResult({
+          triggerTermination({
             type: "completed",
             departments: [],
             severity: null,
             reason: "All phases completed without explicit termination",
-          });
+            fromPhase: 5,
+          }, answers);
         }
       }
     },
-    [phase, primarySymptom, demographics, enterSequentialPhase]
+    [phase, primarySymptom, demographics, enterSequentialPhase, triggerTermination]
   );
 
   // --- Back navigation ---
@@ -445,6 +745,13 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     setResult(null);
     setCurrentQuestion(null);
     setHistory([]);
+    // Invalidate any in-flight LLM request and clear LLM state
+    llmRequestIdRef.current++;
+    setLlmLoading(false);
+    setLlmQuestions(null);
+    setLlmError(null);
+    setPendingResult(null);
+    setPredictionLoading(false);
     // Note: textOverrides are preserved across reset
   }, []);
 
@@ -479,8 +786,12 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       terminated,
       result,
       currentQuestion,
+      llmLoading,
+      llmQuestions,
+      llmError,
+      predictionLoading,
     }),
-    [phase, terminated, result, currentQuestion]
+    [phase, terminated, result, currentQuestion, llmLoading, llmQuestions, llmError, predictionLoading]
   );
 
   return {
@@ -489,6 +800,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     canGoBack,
     goBack,
     reset,
+    proceedToResults,
     setQuestionText,
     setOptionLabel,
     textOverrides,

@@ -171,6 +171,7 @@ export function processAction(
           ? { id: sevId, name: sevMap.get(sevId) ?? sevId }
           : null,
         reason: meta.reason ?? null,
+        fromPhase: currentPhase,
       },
     };
   }
@@ -370,6 +371,7 @@ export function resolveErChecklistTermination(
         departments: [{ id: deptId, name: deptMap.get(deptId) ?? deptId }],
         severity: { id: sevId, name: sevMap.get(sevId) ?? sevId },
         reason: item.reason ?? `ER checklist positive: ${item.qid} (default response)`,
+        fromPhase: 3,
       };
     }
   }
@@ -409,5 +411,6 @@ export function buildErCriticalTermination(
       name: sevMap.get(DEFAULT_ER_SEVERITY) ?? DEFAULT_ER_SEVERITY,
     },
     reason,
+    fromPhase: 1,
   };
 }
