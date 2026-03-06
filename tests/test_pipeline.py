@@ -69,8 +69,8 @@ class MockPredictionModule(PredictionModule):
         severity: str | None = None,
     ):
         self._diagnoses = diagnoses if diagnoses is not None else [
-            DiagnosisResult(disease_id="d001", confidence=0.85),
-            DiagnosisResult(disease_id="d003", confidence=0.45),
+            DiagnosisResult(disease_id="d001"),
+            DiagnosisResult(disease_id="d003"),
         ]
         self._departments = departments or []
         self._severity = severity
@@ -582,7 +582,7 @@ class TestDoneStage:
             "departments": ["dept001"],
             "severity": "sev001",
             "diagnoses": [
-                {"disease_id": "d001", "confidence": 0.9},
+                {"disease_id": "d001"},
             ],
             "reason": "All done",
         }

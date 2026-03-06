@@ -14,6 +14,93 @@ const THAI_MONTHS = [
   "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
 ];
 
+/** Age mode for random profile generation */
+type AgeMode = "adult" | "children";
+
+/** Generate a random integer in [min, max] inclusive */
+function randInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/** Pick a random element from an array */
+function randPick<T>(arr: T[]): T {
+  return arr[randInt(0, arr.length - 1)];
+}
+
+/**
+ * Build a random demographic profile for the given age mode.
+ * Children: age 1–14, Adult: age 15–80.
+ * Returns form values, dob parts, and multi-select values.
+ */
+function generateRandomProfile(
+  fields: RawDemographicField[],
+  mode: AgeMode,
+) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  // --- Age & DOB ---
+  const ageMin = mode === "children" ? 1 : 15;
+  const ageMax = mode === "children" ? 14 : 80;
+  const age = randInt(ageMin, ageMax);
+  const birthYear = currentYear - age;
+  const birthMonth = randInt(1, 12);
+  const birthDay = randInt(1, 28); // safe for all months
+  const beYear = birthYear + BE_OFFSET;
+  const isoDate = `${birthYear}-${String(birthMonth).padStart(2, "0")}-${String(birthDay).padStart(2, "0")}`;
+
+  // --- Gender ---
+  const gender = randPick(["Male", "Female"]);
+
+  // --- Height & Weight (realistic ranges by age) ---
+  let height: number;
+  let weight: number;
+  if (mode === "children") {
+    // Rough approximation by age
+    height = Math.round(50 + age * 7 + randInt(-5, 5));
+    weight = Math.round(5 + age * 3 + randInt(-2, 3));
+  } else {
+    height = randInt(150, 185);
+    weight = randInt(45, 100);
+  }
+
+  // --- Underlying diseases (0–3 random picks for adults, usually 0 for children) ---
+  const multiVals: Record<string, string[]> = {};
+  for (const f of fields) {
+    if (f.type === "from_yaml" && Array.isArray(f.values)) {
+      const options = f.values as unknown[];
+      const numPicks = mode === "children" ? randInt(0, 1) : randInt(0, 3);
+      const shuffled = [...options].sort(() => Math.random() - 0.5);
+      const picked = shuffled.slice(0, numPicks).map((opt) => {
+        if (typeof opt === "object" && opt !== null && "name" in opt) {
+          return (opt as { name: string }).name;
+        }
+        return String(opt);
+      });
+      multiVals[f.key] = picked;
+    }
+  }
+
+  // --- Build values map ---
+  const vals: Record<string, unknown> = {};
+  for (const f of fields) {
+    if (f.key === "date_of_birth") vals[f.key] = isoDate;
+    else if (f.key === "gender") vals[f.key] = gender;
+    else if (f.key === "height") vals[f.key] = String(height);
+    else if (f.key === "weight") vals[f.key] = String(weight);
+    else if (f.type === "from_yaml") vals[f.key] = "";
+    else vals[f.key] = "";
+  }
+
+  const dobParts = {
+    day: String(birthDay),
+    month: String(birthMonth),
+    year: String(beYear),
+  };
+
+  return { vals, dobParts, multiVals };
+}
+
 interface DemographicFormProps {
   fields: RawDemographicField[];
   onSubmit: (value: Record<string, unknown>) => void;
@@ -50,6 +137,18 @@ export default function DemographicForm({
 
   // Validation errors keyed by field key
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Age mode for random profile generation
+  const [ageMode, setAgeMode] = useState<AgeMode>("adult");
+
+  /** Fill the form with a randomly generated profile */
+  const handleRandomFill = () => {
+    const { vals, dobParts: dob, multiVals } = generateRandomProfile(fields, ageMode);
+    setValues(vals);
+    setDobParts(dob);
+    setMultiValues(multiVals);
+    setValidationErrors({});
+  };
 
   const handleChange = (key: string, val: unknown) => {
     setValues((prev) => ({ ...prev, [key]: val }));
@@ -330,7 +429,42 @@ export default function DemographicForm({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-800">ข้อมูลผู้ป่วย</h3>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-lg font-semibold text-gray-800">ข้อมูลผู้ป่วย</h3>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md overflow-hidden border border-gray-300 text-xs">
+            <button
+              type="button"
+              onClick={() => setAgeMode("adult")}
+              className={`px-3 py-1.5 transition-colors ${
+                ageMode === "adult"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              Adult
+            </button>
+            <button
+              type="button"
+              onClick={() => setAgeMode("children")}
+              className={`px-3 py-1.5 transition-colors ${
+                ageMode === "children"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              Children
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleRandomFill}
+            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-gray-300"
+          >
+            🎲 Random
+          </button>
+        </div>
+      </div>
       <p className="text-xs text-gray-400">
         <span className="text-red-500">*</span> จำเป็นต้องกรอก
       </p>

@@ -104,6 +104,25 @@ class DeleteQuestionRequest(BaseModel):
     qid: str
 
 
+class QAPairInput(BaseModel):
+    question: str
+    answer: Any
+    source: Literal["rule_based", "llm_generated"] = "rule_based"
+    qid: str | None = None
+    question_type: str | None = None
+    phase: int | None = None
+
+
+class GenerateQuestionsRequest(BaseModel):
+    qa_pairs: list[QAPairInput]
+
+
+class PredictRequest(BaseModel):
+    qa_pairs: list[QAPairInput]
+    min_severity: str | None = None
+    er_override: bool = False
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Prescreen Rules Inspector")
 
@@ -221,6 +240,12 @@ def create_app() -> FastAPI:
         er = load_er_rules_local()
         rules = load_rules_local()
         consts = load_constants_local()
+        # Build a lightweight diseases list (id + name + name_th) for DDx display
+        diseases_list = [
+            {"id": d["id"], "disease_name": d["disease_name"], "name_th": d["name_th"]}
+            for d in consts.get("diseases", [])
+        ]
+
         return {
             "demographic": demo,
             "er_critical": er["er_symptom"],
@@ -231,7 +256,110 @@ def create_app() -> FastAPI:
             "nhso_symptoms": consts["nhso_symptoms"],
             "severity_levels": consts["severity_levels"],
             "departments": consts["departments"],
+            "diseases": diseases_list,
         }
+
+    # ------------------------------------------------------------------
+    # LLM question generation endpoint for the simulator
+    # ------------------------------------------------------------------
+
+    @app.post("/api/simulator/generate_questions")
+    async def generate_questions(req: GenerateQuestionsRequest):
+        """Generate LLM follow-up questions from rule-based QA history.
+
+        Returns {available: false} when OPENAI_API_KEY is not configured,
+        allowing the frontend to skip the LLM phase transparently.
+        """
+        if not os.environ.get("OPENAI_API_KEY"):
+            return {"questions": [], "available": False}
+
+        try:
+            from prescreen_rulesets.models.pipeline import QAPair
+            from prescreen_rulesets.question_generator import OpenAIQuestionGenerator
+
+            qa_pairs = [
+                QAPair(
+                    question=p.question,
+                    answer=p.answer,
+                    source=p.source,
+                    qid=p.qid,
+                    question_type=p.question_type,
+                    phase=p.phase,
+                )
+                for p in req.qa_pairs
+            ]
+
+            generator = OpenAIQuestionGenerator()
+            result = await generator.generate(qa_pairs)
+            return {"questions": result.questions, "available": True}
+        except Exception as exc:
+            logger.warning("LLM question generation failed: %s", exc)
+            return {"questions": [], "available": True, "error": str(exc)}
+
+    # ------------------------------------------------------------------
+    # LLM prediction endpoint for the simulator
+    # ------------------------------------------------------------------
+
+    @app.post("/api/simulator/predict")
+    async def predict(req: PredictRequest):
+        """Run DDx prediction from Q&A history.
+
+        Returns {available: false} when OPENAI_API_KEY is not configured,
+        allowing the frontend to skip prediction transparently.
+        """
+        if not os.environ.get("OPENAI_API_KEY"):
+            return {"available": False, "prediction": None}
+
+        try:
+            from prescreen_rulesets.models.pipeline import QAPair
+            from prescreen_rulesets.prediction import OpenAIPredictionModule
+            from prescreen_rulesets.ruleset import RulesetStore
+
+            qa_pairs = [
+                QAPair(
+                    question=p.question,
+                    answer=p.answer,
+                    source=p.source,
+                    qid=p.qid,
+                    question_type=p.question_type,
+                    phase=p.phase,
+                )
+                for p in req.qa_pairs
+            ]
+
+            logger.info(
+                "Predict called: %d QA pairs, min_severity=%s, er_override=%s",
+                len(qa_pairs), req.min_severity, req.er_override,
+            )
+
+            store = RulesetStore()
+            store.load()
+            predictor = OpenAIPredictionModule(store=store)
+            predictor.set_context(
+                min_severity=req.min_severity,
+                er_override=req.er_override,
+            )
+
+            result = await predictor.predict(qa_pairs)
+            logger.info(
+                "Predict result: %d diagnoses, severity=%s, departments=%s",
+                len(result.diagnoses), result.severity, result.departments,
+            )
+            return {
+                "available": True,
+                "prediction": {
+                    "diagnoses": [
+                        {"disease_id": d.disease_id}
+                        for d in result.diagnoses
+                    ],
+                    "departments": result.departments,
+                    "severity": result.severity,
+                },
+            }
+        except Exception as exc:
+            err_msg = str(exc) or f"Prediction failed: {type(exc).__name__}"
+            logger.warning("LLM prediction failed: %s", err_msg)
+            return {"available": True, "prediction": None, "error": err_msg}
 
     @app.get("/api/symptoms")
     def list_symptoms() -> Dict[str, Any]:

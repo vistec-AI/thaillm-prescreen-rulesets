@@ -59,7 +59,12 @@ from prescreen_db.models.enums import PipelineStage, SessionStatus
 from prescreen_db.models.session import PrescreenSession
 from prescreen_db.repository import SessionRepository
 
-from prescreen_rulesets.constants import AUTO_EVAL_TYPES, PEDIATRIC_AGE_THRESHOLD
+from prescreen_rulesets.constants import (
+    AUTO_EVAL_TYPES,
+    DEFAULT_ER_DEPARTMENT,
+    DEFAULT_ER_SEVERITY,
+    PEDIATRIC_AGE_THRESHOLD,
+)
 from prescreen_rulesets.engine import PrescreenEngine
 from prescreen_rulesets.interfaces import PredictionModule, QuestionGenerator
 from prescreen_rulesets.models.pipeline import (
@@ -532,9 +537,10 @@ class PrescreenPipeline:
     ) -> None:
         """Run prediction and merge results into the session's result JSONB.
 
-        Rule-based departments/severity take precedence.  Prediction results
-        are used as fallback if the rule-based engine didn't set them.
-        Diagnoses from prediction are always stored.
+        LLM prediction **overrides** rule-based departments/severity, except
+        when the rule-based engine detected ER (sev003 + dept002) — in that
+        case, ER is always preserved via the predictor's ``set_context()``
+        mechanism.  Diagnoses from prediction are always stored.
         """
         if self._predictor is None:
             # No predictor — ensure result has an empty diagnoses list
@@ -545,20 +551,36 @@ class PrescreenPipeline:
                 await db.flush()
             return
 
-        prediction = await self._predictor.predict(qa_pairs)
-
         result = row.result or {}
+        rb_severity = result.get("severity")
+        rb_departments = result.get("departments") or []
+
+        # Detect ER: rule-based severity is sev003 AND dept002 is in departments
+        er_detected = (
+            rb_severity == DEFAULT_ER_SEVERITY
+            and DEFAULT_ER_DEPARTMENT in rb_departments
+        )
+
+        # Pass context to the predictor if it supports set_context()
+        if hasattr(self._predictor, "set_context"):
+            self._predictor.set_context(
+                min_severity=rb_severity,
+                er_override=er_detected,
+            )
+
+        prediction = await self._predictor.predict(qa_pairs)
 
         # Always store prediction diagnoses
         result["diagnoses"] = [
-            {"disease_id": d.disease_id, "confidence": d.confidence}
+            {"disease_id": d.disease_id}
             for d in prediction.diagnoses
         ]
 
-        # Use prediction departments/severity as fallback only
-        if not result.get("departments") and prediction.departments:
+        # LLM departments/severity OVERRIDE rule-based
+        # (ER override and min severity are already enforced inside the predictor)
+        if prediction.departments:
             result["departments"] = prediction.departments
-        if not result.get("severity") and prediction.severity:
+        if prediction.severity:
             result["severity"] = prediction.severity
 
         row.result = result
@@ -594,10 +616,7 @@ class PrescreenPipeline:
                 severity = {"id": sev_id}
 
         diagnoses = [
-            DiagnosisResult(
-                disease_id=d["disease_id"],
-                confidence=d.get("confidence"),
-            )
+            DiagnosisResult(disease_id=d["disease_id"])
             for d in raw_diagnoses
         ]
 

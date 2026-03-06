@@ -21,7 +21,7 @@ These models mirror the YAML files in ``v1/const/`` and ``v1/rules/``:
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +72,7 @@ class Disease(BaseModel):
     """Disease definition from diseases.yaml.
 
     ``available_severity`` lists which severity levels this disease can trigger.
+    ``departments`` lists which hospital departments handle this disease.
     """
 
     id: str
@@ -80,6 +81,7 @@ class Disease(BaseModel):
     name_th: str
     description: str
     available_severity: List[str]
+    departments: List[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@ const PHASE_LABELS: Record<number, string> = {
   3: "ER Checklist",
   4: "OLDCARTS",
   5: "OPD",
+  6: "LLM Questions",
 };
 
 /**

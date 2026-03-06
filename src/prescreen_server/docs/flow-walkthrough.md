@@ -1058,8 +1058,8 @@ When the pipeline completes, the step response has `type: "pipeline_result"`. Th
     "description": "Symptoms require medical evaluation but are not life-threatening at this moment."
   },
   "diagnoses": [
-    {"disease_id": "d042", "confidence": 0.82},
-    {"disease_id": "d015", "confidence": 0.45}
+    {"disease_id": "d042"},
+    {"disease_id": "d015"}
   ],
   "reason": "OPD routing: hea_opd_005 → dept004",
   "terminated_early": false,
