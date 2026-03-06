@@ -132,7 +132,7 @@ Returned when `type` is `"pipeline_result"` — the final outcome.
     "description": "..."
   },
   "diagnoses": [
-    {"disease_id": "d042", "confidence": 0.82}
+    {"disease_id": "d042"}
   ],
   "reason": "OPD routing: hea_opd_005 → dept004",
   "terminated_early": false

@@ -12,6 +12,7 @@ import SymptomSelector from "./SymptomSelector";
 import ErChecklistForm from "./ErChecklistForm";
 import SequentialQuestion from "./SequentialQuestion";
 import ResultsPanel from "./ResultsPanel";
+import LLMQuestionsPanel from "./LLMQuestionsPanel";
 import AnswerHistory from "./AnswerHistory";
 import MobileFrame from "./MobileFrame";
 
@@ -161,11 +162,24 @@ function SimulatorContent({
           />
         )}
 
+      {/* Phase 6: LLM Follow-up Questions */}
+      {currentStep.phase === 6 && !currentStep.terminated && (
+        <LLMQuestionsPanel
+          questions={currentStep.llmQuestions ?? []}
+          loading={currentStep.llmLoading}
+          error={currentStep.llmError}
+          onContinue={sim.proceedToResults}
+          predictionLoading={currentStep.predictionLoading}
+        />
+      )}
+
       {/* Termination / Completion result */}
       {currentStep.terminated && currentStep.result && (
         <ResultsPanel
           result={currentStep.result}
           onRestart={sim.reset}
+          diseases={ruleData.diseases}
+          predictionLoading={currentStep.predictionLoading}
         />
       )}
 

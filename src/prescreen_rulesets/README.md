@@ -508,8 +508,8 @@ pipeline = PrescreenPipeline(engine, store, generator=..., predictor=...)
     "departments": [{"id": "dept004", "name": "Internal Medicine", ...}],
     "severity": {"id": "sev002", "name": "Visit Hospital / Clinic", ...},
     "diagnoses": [
-        {"disease_id": "d042", "confidence": 0.82},
-        {"disease_id": "d015", "confidence": 0.45},
+        {"disease_id": "d042"},
+        {"disease_id": "d015"},
     ],
     "reason": "...",              # termination reason if applicable
     "terminated_early": False,    # True if ER early exit
@@ -596,8 +596,8 @@ from prescreen_rulesets import PredictionResult, DiagnosisResult
 
 result = PredictionResult(
     diagnoses=[
-        DiagnosisResult(disease_id="d042", confidence=0.82),
-        DiagnosisResult(disease_id="d015", confidence=0.45),
+        DiagnosisResult(disease_id="d042"),
+        DiagnosisResult(disease_id="d015"),
     ],
     departments=["dept004"],     # Internal Medicine
     severity="sev002",           # Visit Hospital / Clinic
@@ -661,13 +661,47 @@ class MyPredictionHead(PredictionModule):
 
         return PredictionResult(
             diagnoses=[
-                DiagnosisResult(disease_id=d["id"], confidence=d["score"])
+                DiagnosisResult(disease_id=d["id"])
                 for d in output["diseases"]
             ],
             departments=output["departments"],   # e.g. ["dept004"]
             severity=output["severity"],         # e.g. "sev002"
         )
 ```
+
+### Built-in OpenAI Implementations
+
+The SDK ships with ready-to-use OpenAI-backed implementations of both interfaces:
+
+```python
+from prescreen_rulesets import OpenAIQuestionGenerator, OpenAIPredictionModule, RulesetStore
+
+store = RulesetStore()
+store.load()
+
+# Question generator — LLM follow-up questions via OpenAI chat completions
+generator = OpenAIQuestionGenerator()  # uses OPENAI_API_KEY env var
+
+# Prediction module — DDx, department, severity via OpenAI structured output
+predictor = OpenAIPredictionModule(store=store)  # uses OPENAI_API_KEY env var
+
+pipeline = PrescreenPipeline(engine, store, generator=generator, predictor=predictor)
+```
+
+**`OpenAIQuestionGenerator`** constructor params:
+- `api_key` — OpenAI API key (falls back to `OPENAI_API_KEY` env var)
+- `model` — model identifier (default `"gpt-5.4"`)
+- `temperature` — sampling temperature; `None` omits param (default)
+- `max_tokens` — max completion tokens; `None` omits param (default)
+- `max_questions` — hard cap on returned questions (default `5`)
+
+**`OpenAIPredictionModule`** constructor params:
+- `api_key` — OpenAI API key (falls back to `OPENAI_API_KEY` env var)
+- `model` — model identifier (default `"gpt-5.4"`)
+- `temperature` — sampling temperature; `None` omits param (default)
+- `max_tokens` — max completion tokens; `None` omits param (default)
+- `max_diagnoses` — hard cap on returned diagnoses (default `10`)
+- `store` — `RulesetStore` instance (required; provides enum constraints for structured output)
 
 ### End-to-End Integration
 
@@ -757,6 +791,18 @@ src/prescreen_rulesets/
 ├── evaluator.py         # ConditionalEvaluator — auto-eval logic
 ├── constants.py         # Shared constants (severity order, phase names, defaults)
 ├── interfaces.py        # ABCs: QuestionGenerator, PredictionModule
+├── prompt/
+│   ├── __init__.py      # Exports PromptManager
+│   ├── manager.py       # PromptManager — Jinja2-based LLM prompt renderer
+│   └── template/        # Jinja2 templates for each phase/question type
+├── question_generator/
+│   ├── __init__.py      # Exports OpenAIQuestionGenerator
+│   ├── openai.py        # Concrete QuestionGenerator using OpenAI API
+│   └── prompt_manager/  # Jinja2 prompts for LLM question generation
+├── prediction/
+│   ├── __init__.py      # Exports OpenAIPredictionModule
+│   ├── openai.py        # Concrete PredictionModule using OpenAI structured output
+│   └── prompt_manager/  # Jinja2 prompts for LLM prediction
 └── models/
     ├── __init__.py      # Re-exports all model classes
     ├── action.py        # GotoAction, OPDAction, TerminateAction
@@ -774,5 +820,7 @@ uv run pytest tests/test_ruleset_store.py -q     # RulesetStore smoke tests
 uv run pytest tests/test_evaluator.py -q          # Evaluator unit tests
 uv run pytest tests/test_tree_walkthrough.py -q   # Tree walkthrough (all symptoms)
 uv run pytest tests/test_engine.py -q             # Engine with mocked DB
+uv run pytest tests/test_openai_question_generator.py -q  # OpenAI question generator
+uv run pytest tests/test_openai_prediction_module.py -q   # OpenAI prediction module
 uv run pytest -q                                  # Everything
 ```

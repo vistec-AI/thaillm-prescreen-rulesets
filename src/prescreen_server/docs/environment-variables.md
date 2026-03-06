@@ -99,6 +99,14 @@ These values control clinical decision logic in the prescreening engine. Overrid
 
 ---
 
+## LLM / OpenAI
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENAI_API_KEY` | *(none)* | OpenAI API key. When set, the server enables `OpenAIPredictionModule` for LLM-based differential diagnosis, department routing, and severity classification. When not set, the pipeline returns rule-based results only (no DDx). |
+
+---
+
 ## Pagination
 
 Control the default and maximum page sizes for list endpoints (e.g. `GET /api/v1/sessions`).
@@ -148,6 +156,7 @@ All variables in one table:
 | `PG_MAX_OVERFLOW` | `10` | Database |
 | `ADMIN_API_KEY` | *(none)* | Auth |
 | `TRUSTED_PROXY_SECRET` | *(none)* | Auth |
+| `OPENAI_API_KEY` | *(none)* | LLM |
 | `PEDIATRIC_AGE_THRESHOLD` | `15` | Medical |
 | `DEFAULT_ER_SEVERITY` | `sev003` | Medical |
 | `DEFAULT_ER_DEPARTMENT` | `dept002` | Medical |

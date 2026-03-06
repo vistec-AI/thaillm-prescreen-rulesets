@@ -72,12 +72,11 @@ class DiagnosisResult(BaseModel):
     """A single disease in the differential-diagnosis output.
 
     ``disease_id`` references a disease in ``v1/const/diseases.yaml``
-    (e.g. "d001").  ``confidence`` is an optional model-assigned score
-    in [0, 1]; its semantics depend on the prediction implementation.
+    (e.g. "d001").  Diseases are ranked by likelihood (most likely first);
+    no confidence score is exposed to avoid clinical misinterpretation.
     """
 
     disease_id: str
-    confidence: float | None = None
 
 
 class PredictionResult(BaseModel):

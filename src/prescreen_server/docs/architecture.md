@@ -33,6 +33,10 @@ graph TB
         Evaluator[ConditionalEvaluator<br/>Auto-eval logic]
     end
 
+    subgraph "LLM Layer (optional)"
+        Predictor[OpenAIPredictionModule<br/>DDx + dept + severity]
+    end
+
     subgraph "Database Layer"
         Repo[SessionRepository]
         DBEngine[SQLAlchemy AsyncEngine]
@@ -41,6 +45,7 @@ graph TB
     Routes --> Deps
     Deps --> Pipeline
     Pipeline --> Engine
+    Pipeline --> Predictor
     Engine --> Store
     Engine --> Evaluator
     Engine --> Repo
