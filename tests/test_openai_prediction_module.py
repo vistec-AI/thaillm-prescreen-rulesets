@@ -507,9 +507,9 @@ class TestPromptRendering:
             "Should still contain the instructions section"
         )
 
-    def test_group_by_phase_llm_goes_to_phase_6(self, store):
-        """LLM-generated pairs (no phase) are grouped under phase 6."""
+    def test_group_by_phase_llm_goes_to_phase_8(self, store):
+        """LLM-generated pairs (no phase) are grouped under phase 8."""
         pairs = _make_qa_pairs()
         grouped = PredictionPromptManager._group_by_phase(pairs)
-        assert 6 in grouped, "LLM-generated pairs should be in phase 6"
-        assert len(grouped[6]) == 1
+        assert 8 in grouped, "LLM-generated pairs should be in phase 8"
+        assert len(grouped[8]) == 1

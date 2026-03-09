@@ -37,7 +37,13 @@ from prescreen_rulesets.pipeline import PrescreenPipeline
 from prescreen_rulesets.ruleset import RulesetStore
 
 # Import mock infrastructure from test_engine
-from test_engine import MockRepository, MockSessionRow, VALID_DEMOGRAPHICS
+from test_engine import (
+    MockRepository,
+    MockSessionRow,
+    VALID_DEMOGRAPHICS,
+    VALID_PAST_HISTORY,
+    VALID_PERSONAL_HISTORY,
+)
 
 
 # =====================================================================
@@ -917,10 +923,10 @@ class TestPipelineMultiStepSequential:
             qid="er_checklist", value=checklist_responses,
         )
 
-        # Drive through all sequential questions
+        # Drive through OLDCARTS sequential questions (phase 4)
         seen_qids = []
         seq_count = 0
-        while isinstance(step, QuestionsStep):
+        while isinstance(step, QuestionsStep) and step.phase == 4:
             q = step.questions[0]
             seen_qids.append(q.qid)
             answer = self._pick_answer(q)
@@ -929,7 +935,36 @@ class TestPipelineMultiStepSequential:
                 value=answer,
             )
             seq_count += 1
-            # Safety limit to prevent infinite loops
+            assert seq_count < 50, (
+                f"OLDCARTS loop exceeded 50 iterations — possible infinite loop"
+            )
+
+        # After OLDCARTS, submit bulk phases 5 (Past History) and 6 (Personal History)
+        assert isinstance(step, QuestionsStep) and step.phase == 5, (
+            f"Expected phase 5 (Past History) after OLDCARTS, got phase {getattr(step, 'phase', '?')}"
+        )
+        step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_PAST_HISTORY,
+        )
+        assert isinstance(step, QuestionsStep) and step.phase == 6, (
+            f"Expected phase 6 (Personal History) after Past History, got phase {getattr(step, 'phase', '?')}"
+        )
+        step = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_PERSONAL_HISTORY,
+        )
+
+        # Drive through OPD sequential questions (phase 7)
+        while isinstance(step, QuestionsStep) and step.phase == 7:
+            q = step.questions[0]
+            seen_qids.append(q.qid)
+            answer = self._pick_answer(q)
+            step = await pipeline.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=answer,
+            )
+            seq_count += 1
             assert seq_count < 50, (
                 f"Sequential loop exceeded 50 iterations — possible infinite loop"
             )

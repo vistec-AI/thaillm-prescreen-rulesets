@@ -27,12 +27,31 @@ from prescreen_rulesets.ruleset import RulesetStore
 
 # Valid demographics payload that passes engine validation.
 # Used across tests that need to advance past phase 0.
+# Phase 0 now collects: age, gender, underlying_diseases, current_medication,
+# drug_food_allergies, and surgical_history.  Height/weight moved to phase 5
+# (Past History); occupation moved to phase 6 (Personal History).
 VALID_DEMOGRAPHICS = {
-    "date_of_birth": "1994-06-15",
+    "age": 30,
     "gender": "Male",
+    "underlying_diseases": [],
+    "current_medication": {"answer": False, "detail": None},
+    "drug_food_allergies": {"answer": False, "detail": None},
+    "surgical_history": {"answer": False, "detail": None},
+}
+
+# Valid past history payload (phase 5) — height, weight, and medical conditions.
+VALID_PAST_HISTORY = {
     "height": 175,
     "weight": 70,
-    "underlying_diseases": [],
+    "other_medical_conditions": {"answer": False, "detail": None},
+}
+
+# Valid personal history payload (phase 6) — occupation, hometown, smoking, alcohol.
+VALID_PERSONAL_HISTORY = {
+    "occupation": "พนักงานบริษัท/เอกชน/ลูกจ้าง",
+    "hometown_province": "กรุงเทพมหานคร",
+    "smoking_history": {"answer": False, "detail": None},
+    "alcohol_history": {"answer": False, "detail": None},
 }
 
 
@@ -204,12 +223,24 @@ class MockRepository:
         self, db, session, *, target_phase,
         clear_demographics=False, clear_symptoms=False,
         clear_er_flags=False, response_qids_to_remove=None,
-        new_pending=None,
+        new_pending=None, demo_keys_to_remove=None,
     ):
-        """Revert session state — mirrors real repository's revert logic."""
+        """Revert session state — mirrors real repository's revert logic.
+
+        demo_keys_to_remove: set of keys to remove from demographics JSONB
+            (used for granular clearing of past/personal history keys
+            without wiping the whole demographics dict).
+        """
         session.current_phase = target_phase
         if clear_demographics:
             session.demographics = {}
+        elif demo_keys_to_remove:
+            # Granular key removal — remove specific keys from demographics
+            # without clearing the whole dict (used for phases 5/6 back-edit)
+            demographics = dict(session.demographics or {})
+            for key in demo_keys_to_remove:
+                demographics.pop(key, None)
+            session.demographics = demographics
         if clear_symptoms:
             session.primary_symptom = None
             session.secondary_symptoms = None
@@ -292,8 +323,13 @@ class TestPhase0Demographics:
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         assert step.phase == 0, "Phase should be 0"
         assert step.phase_name == "Demographics", "Phase name mismatch"
-        assert len(step.questions) == 8, (
-            f"Expected 8 demographic questions, got {len(step.questions)}"
+        # 14 total fields in demographic.yaml: 6 unconditional (age, gender,
+        # underlying_diseases, current_medication, drug_food_allergies,
+        # surgical_history) + 1 conditional on age (age_months) + 7 conditional
+        # on gender/pregnancy status.  _step_demographics() includes ALL
+        # fields without filtering.
+        assert len(step.questions) == 14, (
+            f"Expected 14 demographic questions, got {len(step.questions)}"
         )
 
     @pytest.mark.asyncio
@@ -471,7 +507,7 @@ class TestPhase3ERChecklist:
 
 
 # =====================================================================
-# Phases 4/5: Sequential (OLDCARTS / OPD)
+# Phases 4/7: Sequential (OLDCARTS / OPD)
 # =====================================================================
 
 
@@ -516,8 +552,8 @@ class TestPhase4Sequential:
             "Expected QuestionsStep or TerminationStep"
         )
         if isinstance(step, QuestionsStep):
-            assert step.phase in (4, 5), (
-                f"Expected phase 4 or 5, got {step.phase}"
+            assert step.phase in (4, 5, 6, 7), (
+                f"Expected phase 4-7, got {step.phase}"
             )
             assert len(step.questions) > 0, "Should have at least one question"
 
@@ -570,9 +606,9 @@ class TestEdgeCases:
 class TestQidAutoDerivation:
     """Tests that submit_answer works when qid is omitted (None).
 
-    For bulk phases (0-3), qid is unused by the engine — passing None
+    For bulk phases (0-3, 5-6), qid is unused by the engine — passing None
     should behave identically to passing the phase marker string.
-    For sequential phases (4-5), the engine auto-derives the qid from
+    For sequential phases (4, 7), the engine auto-derives the qid from
     the current step via _derive_current_qid.
     """
 
@@ -657,7 +693,7 @@ class TestQidAutoDerivation:
 
     @pytest.mark.asyncio
     async def test_submit_sequential_without_qid(self, engine, mock_db):
-        """Phases 4-5 auto-derive qid from _compute_step when qid=None."""
+        """Phases 4 and 7 auto-derive qid from _compute_step when qid=None."""
         # Advance to phase 4 using explicit qids
         await engine.create_session(mock_db, user_id="u1", session_id="s1")
         await engine.submit_answer(
@@ -872,11 +908,11 @@ class TestSchemaFields:
                 f"answer_schema missing 'type' for {q.qid}"
             )
 
-        # datetime fields should have format: "date"
-        datetime_qs = [q for q in step.questions if q.question_type == "datetime"]
-        for q in datetime_qs:
-            assert q.answer_schema.get("format") == "date", (
-                f"datetime field {q.qid} should have format='date'"
+        # int fields should have type "integer"
+        int_qs = [q for q in step.questions if q.question_type == "int"]
+        for q in int_qs:
+            assert q.answer_schema.get("type") == "integer", (
+                f"int field {q.qid} should have type='integer'"
             )
 
         # enum fields should have an "enum" list
@@ -887,6 +923,13 @@ class TestSchemaFields:
             )
             assert isinstance(q.answer_schema["enum"], list), (
                 f"enum field {q.qid} 'enum' should be a list"
+            )
+
+        # yes_no_detail fields should have type "object" with "answer" property
+        ynd_qs = [q for q in step.questions if q.question_type == "yes_no_detail"]
+        for q in ynd_qs:
+            assert q.answer_schema.get("type") == "object", (
+                f"yes_no_detail field {q.qid} should have type='object'"
             )
 
         # submission_schema should be an object with properties and required
@@ -1042,7 +1085,7 @@ class TestSchemaFields:
             # Tree auto-resolved, nothing to validate
             return
 
-        assert step.phase in (4, 5), f"Expected phase 4 or 5, got {step.phase}"
+        assert step.phase in (4, 5, 6, 7), f"Expected phase 4-7, got {step.phase}"
         assert len(step.questions) == 1, "Sequential step should have exactly 1 question"
 
         q = step.questions[0]
@@ -1096,14 +1139,15 @@ class TestPhase0Validation:
     async def test_missing_required_field_raises(self, engine, mock_db):
         """Omitting a required field raises ValueError."""
         await self._create_session(engine, mock_db)
-        # Missing date_of_birth (required)
+        # Missing age (required)
         incomplete = {
             "gender": "Male",
-            "height": 175,
-            "weight": 70,
             "underlying_diseases": [],
+            "current_medication": {"answer": False, "detail": None},
+            "drug_food_allergies": {"answer": False, "detail": None},
+            "surgical_history": {"answer": False, "detail": None},
         }
-        with pytest.raises(ValueError, match="Missing required.*date_of_birth"):
+        with pytest.raises(ValueError, match="Missing required.*age"):
             await engine.submit_answer(
                 mock_db, user_id="u1", session_id="s1",
                 value=incomplete,
@@ -1120,36 +1164,25 @@ class TestPhase0Validation:
                 value=payload,
             )
 
-    # --- datetime checks ---
+    # --- int (age) checks ---
 
     @pytest.mark.asyncio
-    async def test_invalid_date_format_raises(self, engine, mock_db):
-        """Non-ISO date string raises ValueError."""
+    async def test_non_integer_age_raises(self, engine, mock_db):
+        """String age raises ValueError (age is an int field)."""
         await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "date_of_birth": "15/06/1994"}
-        with pytest.raises(ValueError, match="invalid date format"):
+        payload = {**VALID_DEMOGRAPHICS, "age": "thirty"}
+        with pytest.raises(ValueError, match="must be an integer"):
             await engine.submit_answer(
                 mock_db, user_id="u1", session_id="s1",
                 value=payload,
             )
 
     @pytest.mark.asyncio
-    async def test_future_date_raises(self, engine, mock_db):
-        """A date_of_birth in the future raises ValueError."""
+    async def test_boolean_age_raises(self, engine, mock_db):
+        """Boolean value for age raises ValueError (bool is subclass of int)."""
         await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "date_of_birth": "2099-01-01"}
-        with pytest.raises(ValueError, match="must not be in the future"):
-            await engine.submit_answer(
-                mock_db, user_id="u1", session_id="s1",
-                value=payload,
-            )
-
-    @pytest.mark.asyncio
-    async def test_non_string_date_raises(self, engine, mock_db):
-        """Non-string date_of_birth raises ValueError."""
-        await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "date_of_birth": 19940615}
-        with pytest.raises(ValueError, match="must be a date string"):
+        payload = {**VALID_DEMOGRAPHICS, "age": True}
+        with pytest.raises(ValueError, match="must be an integer"):
             await engine.submit_answer(
                 mock_db, user_id="u1", session_id="s1",
                 value=payload,
@@ -1179,47 +1212,36 @@ class TestPhase0Validation:
                 value=payload,
             )
 
-    # --- float checks ---
+    # --- yes_no_detail checks ---
 
     @pytest.mark.asyncio
-    async def test_non_numeric_height_raises(self, engine, mock_db):
-        """String height raises ValueError."""
+    async def test_yes_no_detail_non_dict_raises(self, engine, mock_db):
+        """String instead of dict for yes_no_detail field raises ValueError."""
         await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "height": "tall"}
-        with pytest.raises(ValueError, match="must be a number"):
+        payload = {**VALID_DEMOGRAPHICS, "current_medication": "none"}
+        with pytest.raises(ValueError, match="must be an object"):
             await engine.submit_answer(
                 mock_db, user_id="u1", session_id="s1",
                 value=payload,
             )
 
     @pytest.mark.asyncio
-    async def test_non_positive_weight_raises(self, engine, mock_db):
-        """Zero weight raises ValueError."""
+    async def test_yes_no_detail_missing_answer_raises(self, engine, mock_db):
+        """Missing 'answer' key in yes_no_detail raises ValueError."""
         await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "weight": 0}
-        with pytest.raises(ValueError, match="must be positive"):
+        payload = {**VALID_DEMOGRAPHICS, "current_medication": {"detail": "aspirin"}}
+        with pytest.raises(ValueError, match="must contain 'answer' key"):
             await engine.submit_answer(
                 mock_db, user_id="u1", session_id="s1",
                 value=payload,
             )
 
     @pytest.mark.asyncio
-    async def test_negative_height_raises(self, engine, mock_db):
-        """Negative height raises ValueError."""
+    async def test_yes_no_detail_non_bool_answer_raises(self, engine, mock_db):
+        """Non-boolean 'answer' in yes_no_detail raises ValueError."""
         await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "height": -10}
-        with pytest.raises(ValueError, match="must be positive"):
-            await engine.submit_answer(
-                mock_db, user_id="u1", session_id="s1",
-                value=payload,
-            )
-
-    @pytest.mark.asyncio
-    async def test_boolean_height_raises(self, engine, mock_db):
-        """Boolean value for height raises ValueError (bool is subclass of int)."""
-        await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "height": True}
-        with pytest.raises(ValueError, match="must be a number"):
+        payload = {**VALID_DEMOGRAPHICS, "drug_food_allergies": {"answer": "yes", "detail": None}}
+        with pytest.raises(ValueError, match="answer must be a boolean"):
             await engine.submit_answer(
                 mock_db, user_id="u1", session_id="s1",
                 value=payload,
@@ -1260,19 +1282,6 @@ class TestPhase0Validation:
                 value=payload,
             )
 
-    # --- str field checks ---
-
-    @pytest.mark.asyncio
-    async def test_optional_string_wrong_type_raises(self, engine, mock_db):
-        """Non-string value for optional str field raises ValueError."""
-        await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "medical_history": 12345}
-        with pytest.raises(ValueError, match="must be a string"):
-            await engine.submit_answer(
-                mock_db, user_id="u1", session_id="s1",
-                value=payload,
-            )
-
     # --- Valid payloads ---
 
     @pytest.mark.asyncio
@@ -1282,30 +1291,6 @@ class TestPhase0Validation:
         step = await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             value=VALID_DEMOGRAPHICS,
-        )
-        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
-        assert step.phase == 1, "Should advance to phase 1"
-
-    @pytest.mark.asyncio
-    async def test_integer_for_float_field_accepted(self, engine, mock_db):
-        """Integer values for float fields (height, weight) are accepted."""
-        await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "height": 180, "weight": 75}
-        step = await engine.submit_answer(
-            mock_db, user_id="u1", session_id="s1",
-            value=payload,
-        )
-        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
-        assert step.phase == 1, "Should advance to phase 1"
-
-    @pytest.mark.asyncio
-    async def test_float_values_accepted(self, engine, mock_db):
-        """Float values for height/weight are accepted."""
-        await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "height": 175.5, "weight": 70.2}
-        step = await engine.submit_answer(
-            mock_db, user_id="u1", session_id="s1",
-            value=payload,
         )
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         assert step.phase == 1, "Should advance to phase 1"
@@ -1322,10 +1307,13 @@ class TestPhase0Validation:
         assert step.phase == 1, "Should advance to phase 1"
 
     @pytest.mark.asyncio
-    async def test_extra_keys_accepted(self, engine, mock_db):
-        """Extra keys like 'age' are accepted for backward compatibility."""
+    async def test_yes_no_detail_with_true_answer_accepted(self, engine, mock_db):
+        """yes_no_detail field with answer=True and detail string is accepted."""
         await self._create_session(engine, mock_db)
-        payload = {**VALID_DEMOGRAPHICS, "age": 30}
+        payload = {
+            **VALID_DEMOGRAPHICS,
+            "current_medication": {"answer": True, "detail": "Aspirin 81mg"},
+        }
         step = await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             value=payload,
@@ -1334,27 +1322,10 @@ class TestPhase0Validation:
         assert step.phase == 1, "Should advance to phase 1"
 
     @pytest.mark.asyncio
-    async def test_optional_fields_can_be_omitted(self, engine, mock_db):
-        """Optional fields (medical_history, occupation, presenting_complaint) can be absent."""
+    async def test_extra_keys_accepted(self, engine, mock_db):
+        """Extra keys not in the schema are accepted for forward compatibility."""
         await self._create_session(engine, mock_db)
-        # VALID_DEMOGRAPHICS already omits optional fields
-        step = await engine.submit_answer(
-            mock_db, user_id="u1", session_id="s1",
-            value=VALID_DEMOGRAPHICS,
-        )
-        assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
-        assert step.phase == 1, "Should advance to phase 1"
-
-    @pytest.mark.asyncio
-    async def test_optional_fields_with_valid_values_accepted(self, engine, mock_db):
-        """Optional str fields are accepted when provided with valid string values."""
-        await self._create_session(engine, mock_db)
-        payload = {
-            **VALID_DEMOGRAPHICS,
-            "medical_history": "No known allergies",
-            "occupation": "Software engineer",
-            "presenting_complaint": "Headache for 3 days",
-        }
+        payload = {**VALID_DEMOGRAPHICS, "unknown_field": "some_value"}
         step = await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             value=payload,
@@ -1463,7 +1434,7 @@ class TestBackEdit:
             mock_db, user_id="u1", session_id="s1",
             value=VALID_DEMOGRAPHICS,
         )
-        with pytest.raises(ValueError, match="only valid for phases 4-5"):
+        with pytest.raises(ValueError, match="only valid for phases 4 and 7"):
             await engine.back_edit(
                 mock_db, user_id="u1", session_id="s1",
                 target_phase=0,
@@ -1486,14 +1457,14 @@ class TestBackEdit:
 
     @pytest.mark.asyncio
     async def test_rejects_invalid_phase_number(self, engine, mock_db):
-        """back_edit raises ValueError for target_phase outside 0-5."""
+        """back_edit raises ValueError for target_phase outside 0-7."""
         await engine.create_session(mock_db, user_id="u1", session_id="s1")
-        with pytest.raises(ValueError, match="must be 0-5"):
+        with pytest.raises(ValueError, match="must be 0-7"):
             await engine.back_edit(
                 mock_db, user_id="u1", session_id="s1",
-                target_phase=6,
+                target_phase=8,
             )
-        with pytest.raises(ValueError, match="must be 0-5"):
+        with pytest.raises(ValueError, match="must be 0-7"):
             await engine.back_edit(
                 mock_db, user_id="u1", session_id="s1",
                 target_phase=-1,
@@ -1673,7 +1644,7 @@ class TestBackEdit:
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         # The returned step should present the target question (or a question
         # after it if auto-eval resolves the target)
-        assert step.phase in (4, 5), f"Expected phase 4 or 5, got {step.phase}"
+        assert step.phase in (4, 5, 6, 7), f"Expected phase 4-7, got {step.phase}"
 
         # The target qid should no longer be in responses (it was removed)
         assert target not in row.responses, (
@@ -1904,7 +1875,7 @@ class TestStepBack:
             mock_db, user_id="u1", session_id="s1",
         )
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
-        assert step.phase in (4, 5), f"Expected phase 4 or 5, got {step.phase}"
+        assert step.phase in (4, 5, 6, 7), f"Expected phase 4-7, got {step.phase}"
 
         # The last answered qid should have been removed from responses
         assert last_answered not in row.responses, (
