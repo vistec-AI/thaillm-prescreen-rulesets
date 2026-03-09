@@ -31,6 +31,38 @@ export default function DemographicDetails({ item, onEdit, onDelete }: Props) {
         <b>Optional</b>: {item.optional ? "Yes" : "No"}
       </div>
 
+      {/* Condition — show when field has conditional visibility */}
+      {item.condition && (
+        <div className="mt-2">
+          <b>Condition</b>:{" "}
+          <code className="text-xs bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">
+            {item.condition.field} {item.condition.op} {JSON.stringify(item.condition.value)}
+          </code>
+        </div>
+      )}
+
+      {/* Max Value — show for int type */}
+      {item.max_value != null && (
+        <div className="mt-1">
+          <b>Max Value</b>: {item.max_value}
+        </div>
+      )}
+
+      {/* Detail Fields — show for yes_no_detail type */}
+      {item.type === "yes_no_detail" && item.detail_fields && item.detail_fields.length > 0 && (
+        <div className="mt-2">
+          <b>Detail Fields</b>:
+          <ul className="list-disc pl-5 text-sm mt-0.5">
+            {item.detail_fields.map((df, i) => (
+              <li key={i}>
+                <code className="text-xs bg-gray-50 px-1 rounded">{df.key}</code>{" "}
+                <span className="text-gray-500">({df.type})</span> — {df.field_name_th}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* enum type: show allowed values */}
       {item.type === "enum" && Array.isArray(item.values) && (
         <div className="mt-2">

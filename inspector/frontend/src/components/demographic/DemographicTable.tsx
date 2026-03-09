@@ -36,6 +36,7 @@ export default function DemographicTable({ items, selectedQid, onSelect, onAdd }
             <th className="bg-gray-100 px-2 py-1.5 text-left border-b-2 border-gray-200">Field Name (TH)</th>
             <th className="bg-gray-100 px-2 py-1.5 text-left border-b-2 border-gray-200 whitespace-nowrap">Type</th>
             <th className="bg-gray-100 px-2 py-1.5 text-left border-b-2 border-gray-200 whitespace-nowrap">Optional</th>
+            <th className="bg-gray-100 px-2 py-1.5 text-left border-b-2 border-gray-200 whitespace-nowrap">Cond.</th>
           </tr>
         </thead>
         <tbody>
@@ -56,6 +57,14 @@ export default function DemographicTable({ items, selectedQid, onSelect, onAdd }
                 <Badge variant="type">{item.type}</Badge>
               </td>
               <td className="px-2 py-1.5 border-b border-gray-100">{item.optional ? "Yes" : ""}</td>
+              <td className="px-2 py-1.5 border-b border-gray-100">
+                {item.condition && (
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400"
+                    title={`${item.condition.field} ${item.condition.op} ${JSON.stringify(item.condition.value)}`}
+                  />
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

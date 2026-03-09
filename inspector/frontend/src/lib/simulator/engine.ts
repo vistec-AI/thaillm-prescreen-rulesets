@@ -162,7 +162,7 @@ export function processAction(
     return {
       type: "terminate",
       termination: {
-        type: currentPhase < 5 ? "terminated" : "completed",
+        type: currentPhase < 7 ? "terminated" : "completed",
         departments: deptIds.map((id) => ({
           id,
           name: deptMap.get(id) ?? id,
@@ -188,7 +188,7 @@ export function processAction(
  * Returns either:
  *   - { question, pending } — the next user-facing question to show
  *   - { termination } — the simulation should terminate
- *   - { advanceToOpd: true } — should transition to phase 5
+ *   - { advanceToOpd: true } — should transition to past history (phase 5)
  *   - { exhausted: true } — pending queue empty, advance to next phase
  */
 export type ResolveResult =

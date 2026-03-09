@@ -75,6 +75,39 @@ def load_demographic_local(version: str = "v1") -> list[Dict[str, Any]]:
     return items
 
 
+def load_past_history_local(version: str = "v1") -> list[Dict[str, Any]]:
+    """Load past history field definitions from ``v1/rules/past_history.yaml``.
+
+    Returns the flat list of field dicts.  For fields whose ``type`` is
+    ``from_yaml``, the same resolution as ``load_demographic_local`` applies.
+    """
+    root = find_repo_root()
+    base = root / version
+    path = base / "rules" / "past_history.yaml"
+    if not path.exists():
+        return []
+    items = load_yaml(path)
+    if not isinstance(items, list):
+        return []
+    return items
+
+
+def load_personal_history_local(version: str = "v1") -> list[Dict[str, Any]]:
+    """Load personal history field definitions from ``v1/rules/personal_history.yaml``.
+
+    Returns the flat list of field dicts.
+    """
+    root = find_repo_root()
+    base = root / version
+    path = base / "rules" / "personal_history.yaml"
+    if not path.exists():
+        return []
+    items = load_yaml(path)
+    if not isinstance(items, list):
+        return []
+    return items
+
+
 def load_constants_local(version: str = "v1") -> Dict[str, Any]:
     base = find_repo_root() / version / "const"
     return {

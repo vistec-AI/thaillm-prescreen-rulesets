@@ -3,7 +3,7 @@
 import { useApp, type TabId } from "@/lib/context/AppContext";
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "demographic", label: "Demographic" },
+  { id: "demographic", label: "Patient Data" },
   { id: "er", label: "ER Checklist" },
   { id: "graph", label: "OLDCARTS / OPD" },
   { id: "simulator", label: "Simulator" },

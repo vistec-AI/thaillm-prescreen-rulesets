@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import type { SimulatorDataResponse } from "@/lib/types/simulator";
 import { fetchSimulatorData } from "@/lib/api/simulator";
 import { useSimulator } from "@/lib/simulator/useSimulator";
-import { computeAge } from "@/lib/simulator/engine";
 import PhaseIndicator from "./PhaseIndicator";
 import DemographicForm from "./DemographicForm";
 import ErCriticalForm from "./ErCriticalForm";
@@ -101,7 +100,8 @@ function SimulatorContent({
     [sim]
   );
 
-  const age = computeAge(sim.demographics.date_of_birth as string);
+  // Age is now submitted directly as a number from the demographic form
+  const age = typeof sim.demographics.age === "number" ? sim.demographics.age : null;
 
   /** The main simulation form content — shared between desktop and mobile views */
   const simulationContent = (
@@ -147,8 +147,8 @@ function SimulatorContent({
         />
       )}
 
-      {/* Phases 4/5: Sequential questions */}
-      {(currentStep.phase === 4 || currentStep.phase === 5) &&
+      {/* Phase 4 (OLDCARTS) / Phase 7 (OPD): Sequential questions */}
+      {(currentStep.phase === 4 || currentStep.phase === 7) &&
         !currentStep.terminated &&
         currentStep.currentQuestion && (
           <SequentialQuestion
@@ -162,8 +162,30 @@ function SimulatorContent({
           />
         )}
 
-      {/* Phase 6: LLM Follow-up Questions */}
+      {/* Phase 5: Past History */}
+      {currentStep.phase === 5 && !currentStep.terminated && (
+        <DemographicForm
+          fields={ruleData.past_history}
+          onSubmit={sim.submitAnswer}
+          title="ประวัติการเจ็บป่วย"
+          externalValues={sim.demographics}
+          showRandomFill={false}
+        />
+      )}
+
+      {/* Phase 6: Personal History */}
       {currentStep.phase === 6 && !currentStep.terminated && (
+        <DemographicForm
+          fields={ruleData.personal_history}
+          onSubmit={sim.submitAnswer}
+          title="ประวัติส่วนตัว"
+          externalValues={{ ...sim.demographics, ...sim.pastHistoryData }}
+          showRandomFill={false}
+        />
+      )}
+
+      {/* Phase 8: LLM Follow-up Questions */}
+      {currentStep.phase === 8 && !currentStep.terminated && (
         <LLMQuestionsPanel
           questions={currentStep.llmQuestions ?? []}
           loading={currentStep.llmLoading}

@@ -1,16 +1,37 @@
 // ── API response types ──────────────────────────────────────────────
 
+/** Condition that controls when a field is visible (e.g. show age-months only when age < 1). */
+export interface FieldCondition {
+  field: string;
+  op: string;
+  value: unknown;
+}
+
+/** Sub-field within a yes_no_detail type (e.g. detail text, date, enum sub-questions). */
+export interface DetailField {
+  key: string;
+  type: string;
+  field_name_th: string;
+  values?: string[];
+}
+
 /** A single demographic field definition from demographic.yaml. */
 export interface DemographicItem {
   qid: string;
   key: string;
   field_name: string;
   field_name_th: string;
-  type: "datetime" | "enum" | "float" | "from_yaml" | "str";
+  type: "date" | "datetime" | "enum" | "float" | "from_yaml" | "int" | "str" | "yes_no_detail";
   optional?: boolean;
   values?: unknown[] | string;
   /** Present when type=from_yaml; the original YAML path before resolution. */
   values_path?: string;
+  /** Conditional visibility — field is only shown when this condition is met. */
+  condition?: FieldCondition;
+  /** Upper bound for int-type fields. */
+  max_value?: number;
+  /** Sub-fields for yes_no_detail type (e.g. detail text, date pickers). */
+  detail_fields?: DetailField[];
 }
 
 /** GET /api/demographic response. */

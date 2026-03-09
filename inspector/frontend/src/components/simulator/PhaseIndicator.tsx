@@ -6,8 +6,10 @@ const PHASES = [
   { id: 2, label: "Symptoms" },
   { id: 3, label: "ER Checklist" },
   { id: 4, label: "OLDCARTS" },
-  { id: 5, label: "OPD" },
-  { id: 6, label: "LLM Questions" },
+  { id: 5, label: "Past Hx" },
+  { id: 6, label: "Personal Hx" },
+  { id: 7, label: "OPD" },
+  { id: 8, label: "LLM" },
 ];
 
 interface PhaseIndicatorProps {
@@ -16,7 +18,7 @@ interface PhaseIndicatorProps {
 }
 
 /**
- * Horizontal stepper showing phases 0-5 with the current one highlighted.
+ * Horizontal stepper showing phases 0-8 with the current one highlighted.
  */
 export default function PhaseIndicator({
   currentPhase,

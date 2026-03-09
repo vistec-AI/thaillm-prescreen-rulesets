@@ -37,7 +37,15 @@ async def _require_write_key(
     if not hmac.compare_digest(x_write_key, expected):
         raise HTTPException(status_code=403, detail="Invalid write key")
 
-from .loader import load_rules_local, load_er_rules_local, load_demographic_local, load_constants_local, find_repo_root
+from .loader import (
+    load_rules_local,
+    load_er_rules_local,
+    load_demographic_local,
+    load_past_history_local,
+    load_personal_history_local,
+    load_constants_local,
+    find_repo_root,
+)
 from .graph import (
     build_oldcarts_graph,
     build_opd_graph,
@@ -77,6 +85,36 @@ class AddDemographicRequest(BaseModel):
 
 
 class DeleteDemographicRequest(BaseModel):
+    qid: str
+
+
+# --- Past History request models (same flat-list structure as demographic) ---
+
+class UpdatePastHistoryRequest(BaseModel):
+    qid: str
+    data: Dict[str, Any]
+
+
+class AddPastHistoryRequest(BaseModel):
+    data: Dict[str, Any]
+
+
+class DeletePastHistoryRequest(BaseModel):
+    qid: str
+
+
+# --- Personal History request models (same flat-list structure as demographic) ---
+
+class UpdatePersonalHistoryRequest(BaseModel):
+    qid: str
+    data: Dict[str, Any]
+
+
+class AddPersonalHistoryRequest(BaseModel):
+    data: Dict[str, Any]
+
+
+class DeletePersonalHistoryRequest(BaseModel):
     qid: str
 
 
@@ -237,6 +275,8 @@ def create_app() -> FastAPI:
         without additional API calls.
         """
         demo = load_demographic_local()
+        past_hist = load_past_history_local()
+        personal_hist = load_personal_history_local()
         er = load_er_rules_local()
         rules = load_rules_local()
         consts = load_constants_local()
@@ -248,6 +288,8 @@ def create_app() -> FastAPI:
 
         return {
             "demographic": demo,
+            "past_history": past_hist,
+            "personal_history": personal_hist,
             "er_critical": er["er_symptom"],
             "er_adult": er["er_adult"],
             "er_pediatric": er["er_pediatric"],
@@ -410,7 +452,7 @@ def create_app() -> FastAPI:
     def _run_pytest() -> Dict[str, Any]:
         """Run pytest and return result dict."""
         root = find_repo_root()
-        cmd = "pytest -q tests/test_const_yaml.py tests/test_demographic.py tests/test_oldcarts.py tests/test_opd.py tests/test_er.py"
+        cmd = "pytest -q tests/test_const_yaml.py tests/test_demographic.py tests/test_past_history.py tests/test_personal_history.py tests/test_oldcarts.py tests/test_opd.py tests/test_er.py"
         try:
             proc = subprocess.run(
                 shlex.split(cmd),
@@ -834,6 +876,193 @@ def create_app() -> FastAPI:
         return {"ok": True, "version": ver, "message": "Deleted from demographic.yaml and tests passed"}
 
     # ------------------------------------------------------------------
+    # Shared helpers for flat-list YAML CRUD (demographic, past_history,
+    # personal_history all share the same flat-list-of-dicts structure).
+    # ------------------------------------------------------------------
+
+    def _update_flat_yaml(req, *, yaml_rel: str, label: str) -> Dict[str, Any]:
+        """Update a single entry by qid in a flat-list YAML file."""
+        root = find_repo_root()
+        logger.info("update_%s: qid=%s", label, req.qid)
+
+        if isinstance(req.data, dict) and req.data.get("qid") not in (None, req.qid):
+            return {"ok": False, "error": "Changing qid is not allowed from the editor.", "field": "qid"}
+        if not isinstance(req.data, dict):
+            return {"ok": False, "error": "data must be a JSON object"}
+
+        path = root / yaml_rel
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+        if not isinstance(doc, list):
+            raise HTTPException(status_code=500, detail=f"{yaml_rel} must be a list")
+
+        idx = next(
+            (i for i, item in enumerate(doc)
+             if isinstance(item, dict) and item.get("qid") == req.qid),
+            None,
+        )
+        if idx is None:
+            raise HTTPException(status_code=404, detail=f"QID '{req.qid}' not found in {yaml_rel}")
+
+        new_item = dict(req.data)
+        new_item["qid"] = req.qid
+        doc[idx] = new_item
+
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back %s update for qid=%s", label, req.qid)
+            return result
+
+        logger.info("%s update succeeded for qid=%s", label, req.qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": f"Saved to {yaml_rel} and tests passed"}
+
+    def _add_flat_yaml(req, *, yaml_rel: str, label: str) -> Dict[str, Any]:
+        """Append a new entry to a flat-list YAML file."""
+        root = find_repo_root()
+        if not isinstance(req.data, dict):
+            return {"ok": False, "error": "data must be a JSON object"}
+
+        new_qid = req.data.get("qid")
+        if not new_qid or not isinstance(new_qid, str) or not new_qid.strip():
+            return {"ok": False, "error": "data.qid is required and must be a non-empty string."}
+
+        logger.info("add_%s: qid=%s", label, new_qid)
+
+        path = root / yaml_rel
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+        if not isinstance(doc, list):
+            raise HTTPException(status_code=500, detail=f"{yaml_rel} must be a list")
+
+        existing_qids = {item.get("qid") for item in doc if isinstance(item, dict)}
+        if new_qid in existing_qids:
+            return {"ok": False, "error": f"QID '{new_qid}' already exists in {yaml_rel}."}
+
+        doc.append(dict(req.data))
+        path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back %s add for qid=%s", label, new_qid)
+            return result
+
+        logger.info("%s add succeeded for qid=%s", label, new_qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": f"Added to {yaml_rel} and tests passed"}
+
+    def _delete_flat_yaml(req, *, yaml_rel: str, label: str) -> Dict[str, Any]:
+        """Remove an entry by qid from a flat-list YAML file."""
+        root = find_repo_root()
+        logger.info("delete_%s: qid=%s", label, req.qid)
+
+        path = root / yaml_rel
+        if not path.exists():
+            raise HTTPException(status_code=500, detail=f"Missing rules file: {path}")
+
+        original = path.read_text(encoding="utf-8")
+        try:
+            doc = yaml.safe_load(original)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse YAML: {e}")
+        if not isinstance(doc, list):
+            raise HTTPException(status_code=500, detail=f"{yaml_rel} must be a list")
+
+        new_doc = [item for item in doc if not (isinstance(item, dict) and item.get("qid") == req.qid)]
+        if len(new_doc) == len(doc):
+            raise HTTPException(status_code=404, detail=f"QID '{req.qid}' not found in {yaml_rel}")
+
+        path.write_text(yaml.safe_dump(new_doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        result = _run_pytest()
+        if not result.get("ok"):
+            path.write_text(original, encoding="utf-8")
+            result["rolled_back"] = True
+            logger.warning("Tests failed. Rolled back %s delete for qid=%s", label, req.qid)
+            return result
+
+        logger.info("%s delete succeeded for qid=%s", label, req.qid)
+        ver = version()
+        return {"ok": True, "version": ver, "message": f"Deleted from {yaml_rel} and tests passed"}
+
+    # ------------------------------------------------------------------
+    # Past History API — flat list CRUD (same pattern as demographic)
+    # ------------------------------------------------------------------
+
+    @app.get("/api/past_history")
+    def get_past_history() -> Dict[str, Any]:
+        """Return past history field definitions from ``past_history.yaml``."""
+        items = load_past_history_local()
+        return {"items": items}
+
+    @app.post("/api/update_past_history", dependencies=[Depends(_require_write_key)])
+    def update_past_history(req: UpdatePastHistoryRequest) -> Dict[str, Any]:
+        """Update a single past history field in YAML, validate, rollback on failure."""
+        return _update_flat_yaml(
+            req, yaml_rel="v1/rules/past_history.yaml", label="past_history",
+        )
+
+    @app.post("/api/add_past_history", dependencies=[Depends(_require_write_key)])
+    def add_past_history(req: AddPastHistoryRequest) -> Dict[str, Any]:
+        """Append a new past history field, validate, rollback on failure."""
+        return _add_flat_yaml(
+            req, yaml_rel="v1/rules/past_history.yaml", label="past_history",
+        )
+
+    @app.post("/api/delete_past_history", dependencies=[Depends(_require_write_key)])
+    def delete_past_history(req: DeletePastHistoryRequest) -> Dict[str, Any]:
+        """Remove a past history field by qid, validate, rollback on failure."""
+        return _delete_flat_yaml(
+            req, yaml_rel="v1/rules/past_history.yaml", label="past_history",
+        )
+
+    # ------------------------------------------------------------------
+    # Personal History API — flat list CRUD (same pattern as demographic)
+    # ------------------------------------------------------------------
+
+    @app.get("/api/personal_history")
+    def get_personal_history() -> Dict[str, Any]:
+        """Return personal history field definitions from ``personal_history.yaml``."""
+        items = load_personal_history_local()
+        return {"items": items}
+
+    @app.post("/api/update_personal_history", dependencies=[Depends(_require_write_key)])
+    def update_personal_history(req: UpdatePersonalHistoryRequest) -> Dict[str, Any]:
+        """Update a single personal history field in YAML, validate, rollback on failure."""
+        return _update_flat_yaml(
+            req, yaml_rel="v1/rules/personal_history.yaml", label="personal_history",
+        )
+
+    @app.post("/api/add_personal_history", dependencies=[Depends(_require_write_key)])
+    def add_personal_history(req: AddPersonalHistoryRequest) -> Dict[str, Any]:
+        """Append a new personal history field, validate, rollback on failure."""
+        return _add_flat_yaml(
+            req, yaml_rel="v1/rules/personal_history.yaml", label="personal_history",
+        )
+
+    @app.post("/api/delete_personal_history", dependencies=[Depends(_require_write_key)])
+    def delete_personal_history(req: DeletePersonalHistoryRequest) -> Dict[str, Any]:
+        """Remove a personal history field by qid, validate, rollback on failure."""
+        return _delete_flat_yaml(
+            req, yaml_rel="v1/rules/personal_history.yaml", label="personal_history",
+        )
+
+    # ------------------------------------------------------------------
     # ER Checklist API — flat table data instead of graph
     # ------------------------------------------------------------------
 
@@ -1192,7 +1421,7 @@ def cli() -> None:
     # network access to the write endpoints.  Set INSPECTOR_HOST=0.0.0.0
     # explicitly if you need remote access (e.g. inside a container).
     host = os.environ.get("INSPECTOR_HOST", "127.0.0.1")
-    port = int(os.environ.get("INSPECTOR_PORT", "8000"))
+    port = int(os.environ.get("INSPECTOR_PORT", "36422"))
 
     url = f"http://localhost:{port}"
     try:
