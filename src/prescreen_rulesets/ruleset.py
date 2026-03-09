@@ -70,16 +70,18 @@ class RulesetStore:
 
     Attributes populated after :meth:`load`:
 
-        departments       — dict[id, DepartmentConst]
-        severity_levels   — dict[id, SeverityConst]
-        nhso_symptoms     — dict[name, NHSOSymptom]
+        departments        — dict[id, DepartmentConst]
+        severity_levels    — dict[id, SeverityConst]
+        nhso_symptoms      — dict[name, NHSOSymptom]
         underlying_diseases — list[UnderlyingDisease]
-        demographics      — list[DemographicField]
-        er_critical       — list[ERCriticalItem]
-        er_adult          — dict[symptom_name, list[ERChecklistItem]]
-        er_pediatric      — dict[symptom_name, list[ERChecklistItem]]
-        oldcarts          — dict[symptom_name, dict[qid, Question]]
-        opd               — dict[symptom_name, dict[qid, Question]]
+        demographics       — list[DemographicField]   (phase 0)
+        past_history       — list[DemographicField]   (phase 5)
+        personal_history   — list[DemographicField]   (phase 6)
+        er_critical        — list[ERCriticalItem]
+        er_adult           — dict[symptom_name, list[ERChecklistItem]]
+        er_pediatric       — dict[symptom_name, list[ERChecklistItem]]
+        oldcarts           — dict[symptom_name, dict[qid, Question]]
+        opd                — dict[symptom_name, dict[qid, Question]]
     """
 
     def __init__(self, ruleset_dir: str | Path | None = None) -> None:
@@ -94,6 +96,8 @@ class RulesetStore:
         self.underlying_diseases: list[UnderlyingDisease] = []
         self.diseases: dict[str, Disease] = {}
         self.demographics: list[DemographicField] = []
+        self.past_history: list[DemographicField] = []
+        self.personal_history: list[DemographicField] = []
         self.er_critical: list[ERCriticalItem] = []
         self.er_adult: dict[str, list[ERChecklistItem]] = {}
         self.er_pediatric: dict[str, list[ERChecklistItem]] = {}
@@ -120,14 +124,19 @@ class RulesetStore:
         """
         self._load_constants()
         self._load_demographics()
+        self._load_past_history()
+        self._load_personal_history()
         self._load_er()
         self._load_decision_trees()
         logger.info(
-            "RulesetStore loaded: %d departments, %d symptoms, %d oldcarts, %d opd",
+            "RulesetStore loaded: %d departments, %d symptoms, %d oldcarts, %d opd, "
+            "%d past_history fields, %d personal_history fields",
             len(self.departments),
             len(self.nhso_symptoms),
             len(self.oldcarts),
             len(self.opd),
+            len(self.past_history),
+            len(self.personal_history),
         )
 
     def _load_constants(self) -> None:
@@ -165,6 +174,18 @@ class RulesetStore:
         raw_list = load_yaml(self._base / "rules" / "demographic.yaml")
         for raw in raw_list:
             self.demographics.append(DemographicField(**raw))
+
+    def _load_past_history(self) -> None:
+        """Load v1/rules/past_history.yaml into DemographicField list (phase 5)."""
+        raw_list = load_yaml(self._base / "rules" / "past_history.yaml")
+        for raw in raw_list:
+            self.past_history.append(DemographicField(**raw))
+
+    def _load_personal_history(self) -> None:
+        """Load v1/rules/personal_history.yaml into DemographicField list (phase 6)."""
+        raw_list = load_yaml(self._base / "rules" / "personal_history.yaml")
+        for raw in raw_list:
+            self.personal_history.append(DemographicField(**raw))
 
     def _load_er(self) -> None:
         """Load ER rule files: critical, adult checklist, pediatric checklist."""
@@ -208,7 +229,7 @@ class RulesetStore:
             self.oldcarts[symptom_name] = parsed
             self._oldcarts_order[symptom_name] = order
 
-        # OPD — phase 5
+        # OPD — phase 7 (was phase 5)
         opd_raw = load_yaml(self._base / "rules" / "opd.yaml")
         for symptom_name, questions in opd_raw.items():
             parsed = {}

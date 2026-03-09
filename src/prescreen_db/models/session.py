@@ -1,6 +1,6 @@
 """PrescreenSession ORM model — single row per user session.
 
-Each row tracks one complete prescreening flow (phases 0-5).  Heavy use of
+Each row tracks one complete prescreening flow (phases 0-7).  Heavy use of
 JSONB columns avoids JOINs: the SDK can fetch a single row and replay the
 entire session without touching other tables.
 """
@@ -54,7 +54,7 @@ class PrescreenSession(Base):
         default=SessionStatus.CREATED,
         index=True,
     )
-    # Which phase (0-5) the user is currently on
+    # Which phase (0-7) the user is currently on
     current_phase: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     # Ruleset version tag so we can trace which rules drove the session
     ruleset_version: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -142,9 +142,9 @@ class PrescreenSession(Base):
     __table_args__ = (
         # A user can only have one session with a given session_id
         UniqueConstraint("user_id", "session_id", name="uq_user_session"),
-        # Phase must be between 0 and 5 (the 6 prescreening phases)
+        # Phase must be between 0 and 7 (the 8 prescreening phases)
         CheckConstraint(
-            "current_phase BETWEEN 0 AND 5",
+            "current_phase BETWEEN 0 AND 7",
             name="ck_phase_range",
         ),
         # Completed sessions must have a result payload
