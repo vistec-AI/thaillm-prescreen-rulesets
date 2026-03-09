@@ -176,6 +176,10 @@ class ERCriticalItem(BaseModel):
     # Optional custom reason shown when this item triggers early termination.
     # If omitted, the engine auto-generates a technical reason string.
     reason: Optional[str] = None
+    # Optional condition controlling visibility based on demographics.
+    # Uses the same FieldCondition model as demographic/past-history fields.
+    # When present, the item is only shown if the condition is satisfied.
+    condition: Optional[FieldCondition] = None
 
 
 class ERChecklistItem(BaseModel):

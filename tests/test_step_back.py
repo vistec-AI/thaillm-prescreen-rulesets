@@ -41,6 +41,7 @@ from test_engine import (
     VALID_DEMOGRAPHICS,
     VALID_PAST_HISTORY,
     VALID_PERSONAL_HISTORY,
+    _er_responses_for,
 )
 
 # Auto-evaluated question types — these should never be presented to the user
@@ -162,7 +163,7 @@ async def _advance_to_phase(
         return step
 
     # Phase 1 → 2: all-negative ER critical
-    er_responses = {item.qid: False for item in store.er_critical}
+    er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
     step = await engine.submit_answer(
         mock_db, user_id="u1", session_id="s1",
         qid="er_critical", value=er_responses,
@@ -783,7 +784,7 @@ class TestStepBackRoundTrip:
         assert step.phase == 1
 
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         step = await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,

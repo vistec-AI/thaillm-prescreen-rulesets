@@ -103,6 +103,13 @@ export interface RawErCriticalItem {
   qid: string;
   text: string;
   reason?: string;
+  /** Optional condition controlling visibility based on demographics.
+   *  When present, the item is only shown if the condition is satisfied. */
+  condition?: {
+    field: string;
+    op: string;
+    value: unknown;
+  };
 }
 
 /** An ER checklist item (adult or pediatric) */

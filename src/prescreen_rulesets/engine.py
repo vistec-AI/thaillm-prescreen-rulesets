@@ -471,8 +471,11 @@ class PrescreenEngine:
         if target_phase == 0:
             previous_values = dict(row.demographics or {})
         elif target_phase == 1:
-            # Collect ER critical answers from responses
+            # Collect ER critical answers from responses (visible items only)
+            demographics = dict(row.demographics or {})
             for item in self._store.er_critical:
+                if item.condition and not _evaluate_field_condition(item.condition, demographics):
+                    continue
                 resp = row.responses.get(item.qid)
                 if resp is not None:
                     val = resp["value"] if isinstance(resp, dict) and "value" in resp else resp
@@ -689,7 +692,7 @@ class PrescreenEngine:
         if phase == 0:
             return self._step_demographics()
         elif phase == 1:
-            return self._step_er_critical()
+            return self._step_er_critical(row)
         elif phase == 2:
             return self._step_symptom_selection()
         elif phase == 3:
@@ -756,10 +759,24 @@ class PrescreenEngine:
 
     # --- Phase 1: ER Critical Screen ---
 
-    def _step_er_critical(self) -> QuestionsStep:
-        """Build the ER critical step — present all critical yes/no checks."""
-        # Every ER critical question is a boolean yes/no
+    def _step_er_critical(self, row: PrescreenSession) -> QuestionsStep:
+        """Build the ER critical step — present visible critical yes/no checks.
+
+        Items with a ``condition`` block are only shown when the condition
+        is satisfied by the patient's demographics (same pattern as
+        ``_step_past_history``).  Males naturally won't see pregnancy-related
+        items because ``pregnancy_status`` is absent from their demographics,
+        causing ``_evaluate_field_condition`` to return False.
+        """
+        demographics = dict(row.demographics or {})
         boolean_schema = {"type": "boolean"}
+
+        # Filter to items whose condition is met (or have no condition)
+        visible_items = [
+            item for item in self._store.er_critical
+            if not item.condition or _evaluate_field_condition(item.condition, demographics)
+        ]
+
         questions = [
             QuestionPayload(
                 qid=item.qid,
@@ -767,14 +784,14 @@ class PrescreenEngine:
                 question_type="yes_no",
                 answer_schema=boolean_schema,
             )
-            for item in self._store.er_critical
+            for item in visible_items
         ]
 
-        # submission_schema: object keyed by qid → boolean
+        # submission_schema: object keyed by qid → boolean (only visible items)
         submission_schema = {
             "type": "object",
-            "properties": {item.qid: boolean_schema for item in self._store.er_critical},
-            "required": [item.qid for item in self._store.er_critical],
+            "properties": {item.qid: boolean_schema for item in visible_items},
+            "required": [item.qid for item in visible_items],
         }
 
         return QuestionsStep(
@@ -1304,7 +1321,17 @@ class PrescreenEngine:
 
         ``value`` is a dict of {qid: bool} — True means the patient said "yes"
         to that critical item.  If ANY item is positive, terminate immediately.
+
+        Only visible items (those whose condition is met) are expected in the
+        submission.  This mirrors the filtering done in ``_step_er_critical``.
         """
+        # Compute visible items (same filter as _step_er_critical)
+        demographics = dict(row.demographics or {})
+        visible_items = [
+            item for item in self._store.er_critical
+            if not item.condition or _evaluate_field_condition(item.condition, demographics)
+        ]
+
         # Record all responses
         for qid, ans in value.items():
             await self._repo.record_response(db, row, qid, ans)
@@ -1314,7 +1341,8 @@ class PrescreenEngine:
         if positive_qids:
             # Use custom reasons from YAML if available, else fall back to
             # auto-generated format with qid identifiers.
-            qid_to_item = {item.qid: item for item in self._store.er_critical}
+            # Build lookup from visible items only.
+            qid_to_item = {item.qid: item for item in visible_items}
             custom_reasons = [
                 qid_to_item[qid].reason
                 for qid in positive_qids

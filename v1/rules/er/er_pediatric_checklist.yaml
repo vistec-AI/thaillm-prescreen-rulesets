@@ -227,7 +227,7 @@ Cough:
     text: "มีสำลัก/ติดคอ หรือสงสัยสิ่งแปลกปลอมเข้าทางเดินหายใจ"
   - qid: emer_ped_cou005
     text: "มีตัวสีเขียว ปากเขียว หรือซีดมากผิดปกติ หรือชึมลง"
-  - qid: emer_ped_cou006
+  - qid: emer_ped_cou006 # auto for age < 1
     text: "เป็นในเด็กอายุน้อยกว่า 1 ปี"
     severity:
       id: sev002_5
@@ -319,7 +319,7 @@ Stomachache:
     text: "มีปวดท้องร่วมกับปวดอัณฑะ บวม แดง หรือคลื่นไส้"
   - qid: emer_ped_abd007
     text: "เคยมีประวัติเป็นเบาหวานมาก่อน"
-  - qid: emer_ped_abd008
+  - qid: emer_ped_abd008 # auto for < 4 yrs
     text: "เป็นเด็กอายุน้อยกว่า 4 ปี"
     severity:
       id: sev002_5
@@ -443,7 +443,7 @@ Diarrhea:
     text: "หายใจหอบลึก หรือหายใจเร็วผิดปกติ"
   - qid: emer_ped_dia005
     text: "ถ่ายเป็นเลือด หรือถ่ายสีดำเหมือนยางมะตอย"
-  - qid: emer_ped_dia006
+  - qid: emer_ped_dia006 # auto for age < 0.5 yr or 6 months
     text: "อายุเด็กน้อยกว่า 6 เดือน"
     severity:
       id: sev002_5
@@ -579,13 +579,13 @@ Dysuria:
       id: sev002_5
     department:
       - id: dept005
-  - qid: emer_ped_vag004
+  - qid: emer_ped_vag004 # if male, ask 004 and skip 005
     text: "มีแผลที่อวัยวะเพศ หรือมีผื่นร่วมกับไข้ (เพศหญิง)"
     severity:
       id: sev002_5
     department:
       - id: dept005
-  - qid: emer_ped_vag005
+  - qid: emer_ped_vag005 # if female, ask 005 and skip 004
     text: "มีแผลที่อวัยวะเพศ หรือมีผื่นร่วมกับไข้ (เพศชาย)"
     severity:
       id: sev002_5

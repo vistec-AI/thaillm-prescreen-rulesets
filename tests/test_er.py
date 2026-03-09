@@ -41,7 +41,7 @@ _VALID_SYMPTOM_NAMES: set[str] = {s["name"] for s in _nhso_symptoms}
 #
 # This file is a flat list of yes/no questions. If ANY answer is "yes",
 # the patient is routed directly to Emergency (sev003 / dept002).
-# Schema per item: { qid: str, text: str }  — no other fields allowed.
+# Schema per item: { qid: str, text: str, reason?: str, condition?: {field, op, value} }
 # ===================================================================
 
 def _load_er_symptom() -> list[dict[str, Any]]:
@@ -65,8 +65,8 @@ def test_er_symptom_schema():
         assert "qid" in item, f"{label} missing 'qid'"
         assert "text" in item, f"{label} missing 'text'"
 
-        # --- No extra keys (critical symptoms are simple yes/no, no overrides) ---
-        allowed = {"qid", "text", "reason"}
+        # --- No extra keys (critical symptoms are simple yes/no, optional overrides) ---
+        allowed = {"qid", "text", "reason", "condition"}
         extra = set(item.keys()) - allowed
         assert not extra, f"{label} has unexpected keys: {extra}"
 
@@ -98,6 +98,53 @@ def test_er_symptom_qid_format_and_uniqueness():
             f"qid '{qid}' second part must be 'critical'"
         assert parts[2].isdigit(), \
             f"qid '{qid}' third part must be numeric"
+
+
+def test_er_symptom_condition_blocks():
+    """If ``condition`` is present, it must have valid field/op/value structure."""
+    _VALID_OPS = {"eq", "ne", "lt", "le", "gt", "ge"}
+    items = _load_er_symptom()
+
+    for idx, item in enumerate(items):
+        if "condition" not in item:
+            continue
+        label = f"er_symptom[{idx}] ({item['qid']})"
+        cond = item["condition"]
+
+        assert isinstance(cond, dict), f"{label} condition must be a dict"
+        assert "field" in cond, f"{label} condition missing 'field'"
+        assert "op" in cond, f"{label} condition missing 'op'"
+        assert "value" in cond, f"{label} condition missing 'value'"
+        assert isinstance(cond["field"], str) and cond["field"].strip(), \
+            f"{label} condition.field must be a non-empty string"
+        assert cond["op"] in _VALID_OPS, \
+            f"{label} condition.op '{cond['op']}' not in {_VALID_OPS}"
+
+
+def test_er_symptom_specific_conditions():
+    """Verify the exact conditions on emer_critical_004 and emer_critical_020."""
+    items = _load_er_symptom()
+    by_qid = {item["qid"]: item for item in items}
+
+    # emer_critical_004: severe headache — only for children (age < 15)
+    item_004 = by_qid.get("emer_critical_004")
+    assert item_004 is not None, "emer_critical_004 must exist"
+    assert "condition" in item_004, "emer_critical_004 must have a condition"
+    cond_004 = item_004["condition"]
+    assert cond_004["field"] == "age", "emer_critical_004 condition.field must be 'age'"
+    assert cond_004["op"] == "lt", "emer_critical_004 condition.op must be 'lt'"
+    assert cond_004["value"] == 15, "emer_critical_004 condition.value must be 15"
+
+    # emer_critical_020: pregnancy-related — only for pregnant patients
+    item_020 = by_qid.get("emer_critical_020")
+    assert item_020 is not None, "emer_critical_020 must exist"
+    assert "condition" in item_020, "emer_critical_020 must have a condition"
+    cond_020 = item_020["condition"]
+    assert cond_020["field"] == "pregnancy_status", \
+        "emer_critical_020 condition.field must be 'pregnancy_status'"
+    assert cond_020["op"] == "eq", "emer_critical_020 condition.op must be 'eq'"
+    assert cond_020["value"] == "pregnant", \
+        "emer_critical_020 condition.value must be 'pregnant'"
 
 
 # ===================================================================

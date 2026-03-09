@@ -8,11 +8,12 @@
 
 import type {
   RawAction,
+  RawErCriticalItem,
   RawQuestion,
   SimulatorDataResponse,
   TerminationResult,
 } from "../types/simulator";
-import { evalAgeFilter, evalConditional, evalGenderFilter } from "./evaluator";
+import { compare, evalAgeFilter, evalConditional, evalGenderFilter } from "./evaluator";
 
 /** Question types that the engine auto-evaluates (never shown to user) */
 const AUTO_EVAL_TYPES = new Set(["gender_filter", "age_filter", "conditional"]);
@@ -297,6 +298,28 @@ function autoEvaluate(
   }
 
   return null;
+}
+
+// --- ER critical conditional visibility ---
+
+/**
+ * Filter ER critical items to those visible for the given demographics.
+ *
+ * Items without a ``condition`` are always visible. Items with a condition
+ * are visible only when the condition is satisfied (same semantics as the
+ * Python ``_evaluate_field_condition``). A missing demographics value for
+ * the condition field means the condition is not met → item hidden.
+ */
+export function getVisibleErCriticalItems(
+  items: RawErCriticalItem[],
+  demographics: Record<string, unknown>
+): RawErCriticalItem[] {
+  return items.filter((item) => {
+    if (!item.condition) return true;
+    const val = demographics[item.condition.field];
+    if (val === undefined || val === null) return false;
+    return compare(item.condition.op, val, item.condition.value);
+  });
 }
 
 // --- ER checklist helpers ---

@@ -21,7 +21,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from prescreen_db.models.enums import SessionStatus
-from prescreen_rulesets.engine import PrescreenEngine
+from prescreen_rulesets.engine import PrescreenEngine, _evaluate_field_condition
 from prescreen_rulesets.models.session import QuestionsStep, TerminationStep
 from prescreen_rulesets.ruleset import RulesetStore
 
@@ -53,6 +53,24 @@ VALID_PERSONAL_HISTORY = {
     "smoking_history": {"answer": False, "detail": None},
     "alcohol_history": {"answer": False, "detail": None},
 }
+
+
+def _visible_er_qids(store: RulesetStore, demographics: dict) -> set[str]:
+    """Return the set of ER critical qids visible for the given demographics.
+
+    Mirrors the condition-filtering logic in ``_step_er_critical``.
+    Items without a condition are always visible; items with a condition
+    are visible only when ``_evaluate_field_condition`` returns True.
+    """
+    return {
+        item.qid for item in store.er_critical
+        if not item.condition or _evaluate_field_condition(item.condition, demographics)
+    }
+
+
+def _er_responses_for(store: RulesetStore, demographics: dict) -> dict[str, bool]:
+    """Build an all-negative ER critical response dict for visible items only."""
+    return {qid: False for qid in _visible_er_qids(store, demographics)}
 
 
 # =====================================================================
@@ -369,7 +387,7 @@ class TestPhase1ERCritical:
         """All-negative ER critical responses advance to phase 2."""
         await self._setup_phase1(engine, mock_db)
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
 
         step = await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
@@ -383,7 +401,7 @@ class TestPhase1ERCritical:
         """One positive ER critical response terminates the session."""
         await self._setup_phase1(engine, mock_db)
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
 
         # Set the first critical item to positive
         first_qid = store.er_critical[0].qid
@@ -403,6 +421,90 @@ class TestPhase1ERCritical:
 
 
 # =====================================================================
+# Phase 1: ER Critical Screen — Conditional Visibility
+# =====================================================================
+
+
+class TestPhase1ERCriticalConditional:
+    """Tests for conditional visibility of ER critical items.
+
+    emer_critical_004 (severe headache): shown only when age < 15.
+    emer_critical_020 (pregnancy-related): shown only when pregnancy_status == pregnant.
+    """
+
+    async def _get_phase1_step(self, engine, mock_db, demographics):
+        """Create a session with the given demographics and return the phase 1 step."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=demographics,
+        )
+        return step
+
+    @pytest.mark.asyncio
+    async def test_adult_male_excludes_004_and_020(self, engine, mock_db):
+        """Adult male (age 30) should not see emer_critical_004 or emer_critical_020."""
+        step = await self._get_phase1_step(engine, mock_db, VALID_DEMOGRAPHICS)
+        qids = {q.qid for q in step.questions}
+        assert "emer_critical_004" not in qids, \
+            "emer_critical_004 should be hidden for adult (age >= 15)"
+        assert "emer_critical_020" not in qids, \
+            "emer_critical_020 should be hidden for non-pregnant patient"
+
+    @pytest.mark.asyncio
+    async def test_child_sees_004(self, engine, mock_db):
+        """Child (age 10) should see emer_critical_004 (severe headache)."""
+        child_demographics = {**VALID_DEMOGRAPHICS, "age": 10}
+        step = await self._get_phase1_step(engine, mock_db, child_demographics)
+        qids = {q.qid for q in step.questions}
+        assert "emer_critical_004" in qids, \
+            "emer_critical_004 should be visible for child (age < 15)"
+
+    @pytest.mark.asyncio
+    async def test_pregnant_female_sees_020(self, engine, mock_db):
+        """Pregnant female should see emer_critical_020."""
+        pregnant_demographics = {
+            **VALID_DEMOGRAPHICS,
+            "gender": "Female",
+            "pregnancy_status": "pregnant",
+            # Conditional fields required when pregnant
+            "total_pregnancies": 1,
+            "fetuses_count": 1,
+            "gestational_age_weeks": 20,
+        }
+        step = await self._get_phase1_step(engine, mock_db, pregnant_demographics)
+        qids = {q.qid for q in step.questions}
+        assert "emer_critical_020" in qids, \
+            "emer_critical_020 should be visible for pregnant patient"
+
+    @pytest.mark.asyncio
+    async def test_non_pregnant_female_excludes_020(self, engine, mock_db):
+        """Non-pregnant female should not see emer_critical_020."""
+        female_demographics = {
+            **VALID_DEMOGRAPHICS,
+            "gender": "Female",
+            "pregnancy_status": "not_pregnant",
+            # Conditional fields required when not pregnant
+            "last_menstrual_period": "2026-02-15",
+            "menstrual_duration_days": 5,
+            "menstrual_flow": "same",
+        }
+        step = await self._get_phase1_step(engine, mock_db, female_demographics)
+        qids = {q.qid for q in step.questions}
+        assert "emer_critical_020" not in qids, \
+            "emer_critical_020 should be hidden for non-pregnant female"
+
+    @pytest.mark.asyncio
+    async def test_submission_schema_matches_visible_questions(self, engine, mock_db):
+        """submission_schema.required should match the visible question qids."""
+        step = await self._get_phase1_step(engine, mock_db, VALID_DEMOGRAPHICS)
+        visible_qids = {q.qid for q in step.questions}
+        required_qids = set(step.submission_schema["required"])
+        assert visible_qids == required_qids, \
+            "submission_schema.required must match visible question qids"
+
+
+# =====================================================================
 # Phase 2: Symptom Selection
 # =====================================================================
 
@@ -419,7 +521,7 @@ class TestPhase2Symptoms:
             value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -455,7 +557,7 @@ class TestPhase3ERChecklist:
             value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -523,7 +625,7 @@ class TestPhase4Sequential:
             value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -632,7 +734,7 @@ class TestQidAutoDerivation:
             qid="demographics", value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         step = await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             value=er_responses,
@@ -649,7 +751,7 @@ class TestQidAutoDerivation:
             qid="demographics", value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -670,7 +772,7 @@ class TestQidAutoDerivation:
             qid="demographics", value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -701,7 +803,7 @@ class TestQidAutoDerivation:
             qid="demographics", value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -768,7 +870,7 @@ class TestMultiStepSequential:
             value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -986,7 +1088,7 @@ class TestSchemaFields:
             qid="demographics", value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -1027,7 +1129,7 @@ class TestSchemaFields:
             qid="demographics", value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -1064,7 +1166,7 @@ class TestSchemaFields:
             qid="demographics", value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -1351,7 +1453,7 @@ class TestBackEdit:
             value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -1669,7 +1771,7 @@ class TestStepBack:
             value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -1771,7 +1873,7 @@ class TestStepBack:
             value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -1792,7 +1894,7 @@ class TestStepBack:
             value=VALID_DEMOGRAPHICS,
         )
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { SimulatorDataResponse } from "@/lib/types/simulator";
 import { fetchSimulatorData } from "@/lib/api/simulator";
 import { useSimulator } from "@/lib/simulator/useSimulator";
+import { getVisibleErCriticalItems } from "@/lib/simulator/engine";
 import PhaseIndicator from "./PhaseIndicator";
 import DemographicForm from "./DemographicForm";
 import ErCriticalForm from "./ErCriticalForm";
@@ -116,10 +117,10 @@ function SimulatorContent({
         />
       )}
 
-      {/* Phase 1: ER Critical Screen */}
+      {/* Phase 1: ER Critical Screen — filtered by demographics conditions */}
       {currentStep.phase === 1 && !currentStep.terminated && (
         <ErCriticalForm
-          items={ruleData.er_critical}
+          items={getVisibleErCriticalItems(ruleData.er_critical, sim.demographics)}
           onSubmit={sim.submitAnswer}
           textOverrides={sim.textOverrides}
           onOverrideText={sim.setQuestionText}

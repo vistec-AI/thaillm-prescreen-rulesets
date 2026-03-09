@@ -6,8 +6,12 @@
   text: ชักเกร็ง
 - qid: emer_critical_003
   text: ซึม หรือสับสน
-- qid: emer_critical_004  # only for age < 18
+- qid: emer_critical_004
   text: ปวดหัวรุนแรง
+  condition:
+    field: age
+    op: lt
+    value: 15
 - qid: emer_critical_005
   text: อาการวิงเวียนศีรษะไม่ดีขึ้น หรือเดินเซ ทรงตัวไม่ได้อย่างรุนแรง
 - qid: emer_critical_006
@@ -38,5 +42,9 @@
   text: อุบัติเหตุรุนแรง ที่มีเลือดออกมาก เลือดไหลไม่หยุด
 - qid: emer_critical_019
   text: หลังเพิ่งประสบอุบัติเหตุแล้ว มีอาการผิดปกติ เช่น ปวดท้องรุนแรง ปวดหัวรุนแรง หรือมีอาการผิดรูปของอวัยวะ หรือซึม
-- qid: emer_critical_020 # only if pregnant
+- qid: emer_critical_020
   text: เลือดออกทางช่องคลอดมาก ลูกดิ้นลดลง ปวดท้องรุนแรง น้ำคร่ำเดิน
+  condition:
+    field: pregnancy_status
+    op: eq
+    value: pregnant
