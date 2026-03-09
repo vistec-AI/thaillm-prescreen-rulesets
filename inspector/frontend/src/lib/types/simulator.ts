@@ -120,6 +120,21 @@ export interface RawErChecklistItem {
   severity?: { id: string };
   min_severity?: { id: string };
   department?: Array<{ id: string }>;
+  /** Optional condition controlling visibility based on demographics.
+   *  When present, the item is only shown if the condition is satisfied. */
+  condition?: {
+    field: string;
+    op: string;
+    value: unknown;
+  };
+  /** Optional auto-complete condition — when met, the item is automatically
+   *  answered as positive and triggers termination.  When not met, the item
+   *  is hidden (the answer is definitively false). */
+  auto_complete?: {
+    field: string;
+    op: string;
+    value: unknown;
+  };
 }
 
 /** A constant entry (department, severity level, or NHSO symptom) */

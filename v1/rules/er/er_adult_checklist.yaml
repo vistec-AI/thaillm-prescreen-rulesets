@@ -14,6 +14,10 @@ Headache:
     text: ปวดศีรษะใหม่ที่รุนแรงมาก หลังออกแรง/ไอ/เบ่ง/มีเพศสัมพันธ์
   - qid: emer_adult_hea006
     text: ตั้งครรภ์มากกว่า 20 สัปดาห์ หรือหลังคลอดไม่เกิน 6 สัปดาห์ และมีปวดศีรษะรุนแรง หรือ ตามัว/เห็นแสงวาบ/ปวดลิ้นปี่/บวมมาก หรือทราบว่าความดันสูง
+    condition:
+      field: gender
+      op: eq
+      value: Female
   - qid: emer_adult_hea007
     text: ปวดตาอย่างรุนแรง ตาแดง ตาพร่ามัว เห็นรุ้งรอบดวงไฟ คลื่นไส้อาเจียน และ ปวดศีรษะ
   - qid: emer_adult_hea008
@@ -81,6 +85,10 @@ Dizziness:
     text: หน้ามืดคล้ายจะเป็นลม เจ็บหน้าอก ใจสั่น หรือเหนื่อยง่ายร่วมด้วย
   - qid: emer_adult_diz007
     text: ตั้งครรภ์/มีปวดศีรษะ ตาพร่ามัว หรือการมองเห็นเปลี่ยนแปลงไป
+    condition:
+      field: pregnancy_status
+      op: eq
+      value: pregnant
     min_severity:
       id: sev002_5
     department:
@@ -235,8 +243,16 @@ Stomachache:
     text: ถ่ายเป็นเลือดปริมาณมาก ร่วมกับปวดท้อง
   - qid: emer_adult_abd008
     text: ตั้งครรภ์ และมีปวดท้องรุนแรง หรือมี เลือดออกทางช่องคลอดระหว่างตั้งครรภ์
+    condition:
+      field: pregnancy_status
+      op: eq
+      value: pregnant
   - qid: emer_adult_abd009
-    text: มีปวดอัณฑะ/ถุงอัณฑะรุนแรงหรือเฉียบพลัน 
+    text: มีปวดอัณฑะ/ถุงอัณฑะรุนแรงหรือเฉียบพลัน
+    condition:
+      field: gender
+      op: eq
+      value: Male
   - qid: emer_adult_abd010
     text: ไข้สูง ร่วมกับปวดท้อง หรืออาการทรุดเร็ว
     min_severity:
@@ -318,6 +334,10 @@ Vaginal Discharge:
     text: เลือดออกทางช่องคลอดมาก
   - qid: emer_adult_vag003
     text: ตั้งครรภ์ มีน้ำไหลเหมือนน้ำคร่ำ/สงสัยน้ำเดิน หรือมีไข้ร่วมด้วย
+    condition:
+      field: pregnancy_status
+      op: eq
+      value: pregnant
   - qid: emer_adult_vag004
     text: ไข้หนาวสั่นร่วมกับตกขาว โดยเฉพาะมีกลิ่นแรง/ปนเลือด
     min_severity:

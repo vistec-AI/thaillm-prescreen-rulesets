@@ -20,13 +20,30 @@ function randPick<T>(arr: T[]): T {
 /**
  * Evaluate a field's condition against a set of values.
  * Returns true if the field should be visible (no condition or condition met).
+ *
+ * When allFields is provided, visibility is transitive: if the field referenced
+ * by this field's condition is itself hidden, this field is also hidden.
+ * This prevents stale values from keeping sub-fields visible (e.g. pregnancy
+ * sub-fields staying visible after switching gender from Female to Male).
  */
 function isFieldVisible(
   field: RawDemographicField,
-  values: Record<string, unknown>
+  values: Record<string, unknown>,
+  allFields?: RawDemographicField[]
 ): boolean {
   if (!field.condition) return true;
   const { field: condField, op, value: condValue } = field.condition;
+
+  // If the condition references a field that is itself hidden, this field is also hidden
+  if (allFields) {
+    const referencedField = allFields.find(f => f.key === condField);
+    if (referencedField && referencedField.condition) {
+      if (!isFieldVisible(referencedField, values, allFields)) {
+        return false;
+      }
+    }
+  }
+
   const actualValue = values[condField];
 
   // For numeric comparisons, convert both sides to numbers
@@ -100,7 +117,7 @@ function generateRandomProfile(
 
   for (const f of fields) {
     // Skip fields whose condition is not met
-    if (f.condition && !isFieldVisible(f, lookup)) {
+    if (f.condition && !isFieldVisible(f, lookup, fields)) {
       vals[f.key] = f.type === "yes_no_detail"
         ? { answer: false, detail: null }
         : "";
@@ -254,7 +271,7 @@ export default function DemographicForm({
     const errors: Record<string, string> = {};
     for (const f of fields) {
       if (f.optional) continue;
-      if (!isFieldVisible(f, combinedValues)) continue;
+      if (!isFieldVisible(f, combinedValues, fields)) continue;
       // from_yaml multi-select and yes_no_detail fields are never strictly required
       if (f.type === "from_yaml" && Array.isArray(f.values)) continue;
       if (f.type === "yes_no_detail") continue;
@@ -272,7 +289,7 @@ export default function DemographicForm({
     // Build the final demographics object (only visible fields)
     const result: Record<string, unknown> = {};
     for (const f of fields) {
-      if (!isFieldVisible(f, combinedValues)) continue;
+      if (!isFieldVisible(f, combinedValues, fields)) continue;
 
       if (f.type === "from_yaml" && Array.isArray(f.values)) {
         result[f.key] = multiValues[f.key] ?? [];
@@ -318,7 +335,7 @@ export default function DemographicForm({
   const renderField = (field: RawDemographicField) => {
     // Skip fields whose condition is not met (check against combined values
     // so conditions referencing fields from earlier phases work correctly)
-    if (!isFieldVisible(field, combinedValues)) return null;
+    if (!isFieldVisible(field, combinedValues, fields)) return null;
 
     const displayLabel =
       textOverrides[field.qid]?.questionText ?? field.field_name_th;

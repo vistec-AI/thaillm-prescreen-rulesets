@@ -609,6 +609,251 @@ class TestPhase3ERChecklist:
 
 
 # =====================================================================
+# Phase 3: ER Checklist — Conditional Visibility & Auto-Complete
+# =====================================================================
+
+
+class TestPhase3ERChecklistConditional:
+    """Tests for condition/auto_complete filtering on ER checklist items.
+
+    - ``condition`` items (e.g. vag004/vag005) are shown/hidden by gender.
+    - ``auto_complete`` items (e.g. cou006) trigger immediate termination
+      when the condition is met (e.g. child age < 1 with Cough).
+    """
+
+    async def _advance_to_phase3(self, engine, mock_db, demographics, symptom):
+        """Create session and advance to phase 3 with given demographics and symptom."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=demographics,
+        )
+        store = engine._store
+        er_responses = _er_responses_for(store, demographics)
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        return await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms",
+            value={"primary_symptom": symptom},
+        )
+
+    @pytest.mark.asyncio
+    async def test_auto_complete_triggers_for_infant_cough(self, engine, mock_db):
+        """Child age 0 with Cough should auto-terminate at phase 3 (cou006)."""
+        infant_demographics = {
+            **VALID_DEMOGRAPHICS,
+            "age": 0, "age_months": 3,
+        }
+        step = await self._advance_to_phase3(
+            engine, mock_db, infant_demographics, "Cough",
+        )
+        assert isinstance(step, TerminationStep), \
+            "Expected auto-complete termination for infant with Cough"
+        assert step.phase == 3, "Termination should come from phase 3"
+
+    @pytest.mark.asyncio
+    async def test_auto_complete_does_not_trigger_for_older_child_cough(self, engine, mock_db):
+        """Child age 5 with Cough should NOT auto-terminate (age >= 1)."""
+        child_demographics = {**VALID_DEMOGRAPHICS, "age": 5}
+        step = await self._advance_to_phase3(
+            engine, mock_db, child_demographics, "Cough",
+        )
+        assert isinstance(step, QuestionsStep), \
+            "Expected QuestionsStep for child age 5 with Cough"
+        # cou006 should not appear (auto_complete items are hidden)
+        qids = {q.qid for q in step.questions}
+        assert "emer_ped_cou006" not in qids, \
+            "auto_complete item cou006 should be hidden when condition not met"
+
+    @pytest.mark.asyncio
+    async def test_auto_complete_stomachache_for_toddler(self, engine, mock_db):
+        """Child age 2 with Stomachache should auto-terminate (abd008, age < 4)."""
+        toddler_demographics = {**VALID_DEMOGRAPHICS, "age": 2}
+        step = await self._advance_to_phase3(
+            engine, mock_db, toddler_demographics, "Stomachache",
+        )
+        assert isinstance(step, TerminationStep), \
+            "Expected auto-complete termination for toddler with Stomachache"
+
+    @pytest.mark.asyncio
+    async def test_auto_complete_diarrhea_under_6_months(self, engine, mock_db):
+        """Child 3 months old with Diarrhea should auto-terminate (dia006, age_in_months < 6)."""
+        infant_demographics = {
+            **VALID_DEMOGRAPHICS,
+            "age": 0, "age_months": 3,
+        }
+        step = await self._advance_to_phase3(
+            engine, mock_db, infant_demographics, "Diarrhea",
+        )
+        assert isinstance(step, TerminationStep), \
+            "Expected auto-complete termination for 3-month-old with Diarrhea"
+
+    @pytest.mark.asyncio
+    async def test_auto_complete_diarrhea_not_triggered_at_8_months(self, engine, mock_db):
+        """Child 8 months old with Diarrhea should NOT auto-terminate (age_in_months >= 6)."""
+        baby_demographics = {
+            **VALID_DEMOGRAPHICS,
+            "age": 0, "age_months": 8,
+        }
+        step = await self._advance_to_phase3(
+            engine, mock_db, baby_demographics, "Diarrhea",
+        )
+        assert isinstance(step, QuestionsStep), \
+            "Expected QuestionsStep for 8-month-old with Diarrhea"
+
+    @pytest.mark.asyncio
+    async def test_condition_filters_vag_items_by_gender(self, engine, mock_db):
+        """Female child should see vag004 but not vag005; male should see vag005 but not vag004."""
+        female_child = {
+            **VALID_DEMOGRAPHICS,
+            "age": 10, "gender": "Female",
+            "pregnancy_status": "not_pregnant",
+            "last_menstrual_period": "2026-02-15",
+            "menstrual_duration_days": 5,
+            "menstrual_flow": "same",
+        }
+        step_f = await self._advance_to_phase3(
+            engine, mock_db, female_child, "Vaginal Discharge",
+        )
+        assert isinstance(step_f, QuestionsStep)
+        qids_f = {q.qid for q in step_f.questions}
+        assert "emer_ped_vag004" in qids_f, \
+            "Female should see vag004"
+        assert "emer_ped_vag005" not in qids_f, \
+            "Female should NOT see vag005"
+
+
+# =====================================================================
+# Phase 3: ER Adult Checklist — Gender/Pregnancy Conditions
+# =====================================================================
+
+
+class TestPhase3ERAdultChecklistConditions:
+    """Tests for gender/pregnancy condition filtering on adult ER checklist items.
+
+    - ``emer_adult_vag003``, ``emer_adult_abd008``, ``emer_adult_diz007``:
+      pregnancy_status == pregnant (excluded for males and non-pregnant females)
+    - ``emer_adult_abd009``: gender == Male (testicular pain)
+    - ``emer_adult_hea006``: gender == Female (pregnancy-related headache)
+    """
+
+    async def _advance_to_phase3(self, engine, mock_db, demographics, symptom):
+        """Create session and advance to phase 3 with given demographics and symptom."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="demographics", value=demographics,
+        )
+        store = engine._store
+        er_responses = _er_responses_for(store, demographics)
+        await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="er_critical", value=er_responses,
+        )
+        return await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms",
+            value={"primary_symptom": symptom},
+        )
+
+    @pytest.mark.asyncio
+    async def test_male_excludes_pregnancy_and_female_items(self, engine, mock_db):
+        """Male patient should not see pregnancy-condition or female-only items."""
+        male_demographics = {**VALID_DEMOGRAPHICS, "age": 30, "gender": "Male"}
+        # Test Stomachache to check abd008 (pregnancy) and abd009 (male)
+        step = await self._advance_to_phase3(
+            engine, mock_db, male_demographics, "Stomachache",
+        )
+        assert isinstance(step, QuestionsStep)
+        qids = {q.qid for q in step.questions}
+        # abd008 requires pregnancy_status == pregnant → excluded for males
+        assert "emer_adult_abd008" not in qids, \
+            "Male should NOT see abd008 (pregnancy condition)"
+        # abd009 requires gender == Male → included
+        assert "emer_adult_abd009" in qids, \
+            "Male should see abd009 (testicular pain)"
+
+    @pytest.mark.asyncio
+    async def test_female_nonpregnant_excludes_pregnancy_items(self, engine, mock_db):
+        """Female non-pregnant patient should not see pregnancy-condition items but should see hea006."""
+        female_nonpregnant = {
+            **VALID_DEMOGRAPHICS,
+            "age": 30, "gender": "Female",
+            "pregnancy_status": "not_pregnant",
+            "last_menstrual_period": "2026-02-15",
+            "menstrual_duration_days": 5,
+            "menstrual_flow": "same",
+        }
+        # Test Headache to check hea006 (female-only)
+        step = await self._advance_to_phase3(
+            engine, mock_db, female_nonpregnant, "Headache",
+        )
+        assert isinstance(step, QuestionsStep)
+        qids = {q.qid for q in step.questions}
+        # hea006 requires gender == Female → included
+        assert "emer_adult_hea006" in qids, \
+            "Non-pregnant female should see hea006 (female condition)"
+
+    @pytest.mark.asyncio
+    async def test_female_nonpregnant_excludes_abd008(self, engine, mock_db):
+        """Female non-pregnant patient should not see abd008 (pregnancy-only) but abd009 excluded too."""
+        female_nonpregnant = {
+            **VALID_DEMOGRAPHICS,
+            "age": 30, "gender": "Female",
+            "pregnancy_status": "not_pregnant",
+            "last_menstrual_period": "2026-02-15",
+            "menstrual_duration_days": 5,
+            "menstrual_flow": "same",
+        }
+        step = await self._advance_to_phase3(
+            engine, mock_db, female_nonpregnant, "Stomachache",
+        )
+        assert isinstance(step, QuestionsStep)
+        qids = {q.qid for q in step.questions}
+        assert "emer_adult_abd008" not in qids, \
+            "Non-pregnant female should NOT see abd008 (pregnancy condition)"
+        assert "emer_adult_abd009" not in qids, \
+            "Female should NOT see abd009 (male-only)"
+
+    @pytest.mark.asyncio
+    async def test_pregnant_female_sees_pregnancy_items(self, engine, mock_db):
+        """Pregnant female should see pregnancy-condition items and female-only items."""
+        pregnant_female = {
+            **VALID_DEMOGRAPHICS,
+            "age": 30, "gender": "Female",
+            "pregnancy_status": "pregnant",
+            "total_pregnancies": 1,
+            "fetuses_count": 1,
+            "gestational_age_weeks": 20,
+        }
+        # Test Stomachache for abd008 (pregnant), abd009 (male-only)
+        step = await self._advance_to_phase3(
+            engine, mock_db, pregnant_female, "Stomachache",
+        )
+        assert isinstance(step, QuestionsStep)
+        qids = {q.qid for q in step.questions}
+        assert "emer_adult_abd008" in qids, \
+            "Pregnant female should see abd008 (pregnancy condition)"
+        assert "emer_adult_abd009" not in qids, \
+            "Pregnant female should NOT see abd009 (male-only)"
+
+    @pytest.mark.asyncio
+    async def test_male_excludes_hea006(self, engine, mock_db):
+        """Male patient should not see hea006 (female-only headache item)."""
+        male_demographics = {**VALID_DEMOGRAPHICS, "age": 30, "gender": "Male"}
+        step = await self._advance_to_phase3(
+            engine, mock_db, male_demographics, "Headache",
+        )
+        assert isinstance(step, QuestionsStep)
+        qids = {q.qid for q in step.questions}
+        assert "emer_adult_hea006" not in qids, \
+            "Male should NOT see hea006 (female-only)"
+
+
+# =====================================================================
 # Phases 4/7: Sequential (OLDCARTS / OPD)
 # =====================================================================
 

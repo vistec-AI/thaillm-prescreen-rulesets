@@ -21,6 +21,7 @@ import {
   getErChecklistItems,
   resolveErChecklistTermination,
   buildErCriticalTermination,
+  checkErAutoComplete,
 } from "./engine";
 import type { QAPairPayload } from "../api/llm";
 import type { LLMAnswerPair } from "../../components/simulator/LLMQuestionsPanel";
@@ -618,6 +619,21 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         setHistory((h) => [...h, snapshot(label, value)]);
         setPrimarySymptom(sel.primary_symptom);
         setSecondarySymptoms(sel.secondary_symptoms ?? []);
+
+        // Check ER checklist auto_complete before showing phase 3.
+        // If any auto_complete condition is met (e.g. child < 1 year with
+        // Cough), terminate immediately without showing the checklist.
+        const selectedSymptoms = [sel.primary_symptom, ...(sel.secondary_symptoms ?? [])];
+        const curAge = typeof demographics.age === "number" ? demographics.age : null;
+        const autoTermResult = checkErAutoComplete(
+          selectedSymptoms, curAge, demographics, ruleData
+        );
+        if (autoTermResult) {
+          setPhase(3);
+          triggerTermination(autoTermResult);
+          return;
+        }
+
         setPhase(3);
         return;
       }

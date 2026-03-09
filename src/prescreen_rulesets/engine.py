@@ -134,6 +134,21 @@ def _evaluate_field_condition(condition, demographics: dict) -> bool:
         return False
 
 
+def _enrich_demographics(demographics: dict) -> dict:
+    """Add computed fields to demographics for condition evaluation.
+
+    Currently computes ``age_in_months`` = age * 12 + age_months, which
+    allows ER checklist auto_complete conditions to reference sub-year ages
+    (e.g. ``age_in_months < 6`` for children under 6 months).
+    """
+    enriched = dict(demographics)
+    age = enriched.get("age")
+    age_months = enriched.get("age_months", 0)
+    if age is not None:
+        enriched["age_in_months"] = int(age) * 12 + int(age_months or 0)
+    return enriched
+
+
 class PrescreenEngine:
     """Orchestrates the prescreening flow across 8 phases.
 
@@ -855,19 +870,61 @@ class PrescreenEngine:
 
     # --- Phase 3: ER Checklist ---
 
-    def _step_er_checklist(self, row: PrescreenSession) -> QuestionsStep:
-        """Build the ER checklist step — age-appropriate items for selected symptoms."""
+    def _find_er_auto_complete(
+        self, row: PrescreenSession
+    ) -> tuple["ERChecklistItem", bool] | None:
+        """Check if any ER checklist item's auto_complete condition is met.
+
+        Returns ``(item, pediatric)`` for the first matching auto_complete
+        item, or ``None`` if none match.  Used by ``_submit_symptoms`` to
+        auto-terminate before showing the checklist.
+        """
         age = self._get_patient_age(row)
         pediatric = age is not None and age < PEDIATRIC_AGE_THRESHOLD
-
-        # Collect checklist items for primary + secondary symptoms
+        demographics = _enrich_demographics(dict(row.demographics or {}))
         symptoms = self._get_selected_symptoms(row)
-        questions: list[QuestionPayload] = []
-        boolean_schema = {"type": "boolean"}
 
         for symptom in symptoms:
             items = self._store.get_er_checklist(symptom, pediatric=pediatric)
             for item in items:
+                if item.auto_complete and _evaluate_field_condition(
+                    item.auto_complete, demographics
+                ):
+                    return item, pediatric
+        return None
+
+    def _step_er_checklist(self, row: PrescreenSession) -> QuestionsStep:
+        """Build the ER checklist step — age-appropriate items for selected symptoms.
+
+        Handles three kinds of items:
+        - ``auto_complete``: never shown — either auto-terminated by
+          ``_submit_symptoms`` or hidden (condition not met).
+        - ``condition``: visibility filter — item shown only when met.
+        - Plain items: always shown.
+        """
+        age = self._get_patient_age(row)
+        pediatric = age is not None and age < PEDIATRIC_AGE_THRESHOLD
+        demographics = _enrich_demographics(dict(row.demographics or {}))
+
+        # Collect checklist items for primary + secondary symptoms
+        symptoms = self._get_selected_symptoms(row)
+        boolean_schema = {"type": "boolean"}
+
+        # Build user-facing questions (exclude auto_complete items,
+        # filter by condition)
+        questions: list[QuestionPayload] = []
+        for symptom in symptoms:
+            items = self._store.get_er_checklist(symptom, pediatric=pediatric)
+            for item in items:
+                # auto_complete items are never shown — either already
+                # triggered termination or condition not met
+                if item.auto_complete:
+                    continue
+                # condition items: only shown when condition is met
+                if item.condition and not _evaluate_field_condition(
+                    item.condition, demographics
+                ):
+                    continue
                 questions.append(QuestionPayload(
                     qid=item.qid,
                     question=item.text,
@@ -876,7 +933,7 @@ class PrescreenEngine:
                     metadata={"symptom": symptom},
                 ))
 
-        # submission_schema: object keyed by qid → boolean
+        # submission_schema: object keyed by qid → boolean (visible items only)
         submission_schema = {
             "type": "object",
             "properties": {q.qid: boolean_schema for q in questions},
@@ -1370,6 +1427,11 @@ class PrescreenEngine:
 
         ``value`` is a dict with keys "primary_symptom" (str) and optionally
         "secondary_symptoms" (list[str]).
+
+        After saving symptom selection, checks ER checklist auto_complete
+        items.  If any auto_complete condition is met (e.g. child under 1
+        year with Cough), terminates immediately without showing the
+        checklist.
         """
         primary = value["primary_symptom"]
         secondary = value.get("secondary_symptoms")
@@ -1378,6 +1440,24 @@ class PrescreenEngine:
             db, row, primary_symptom=primary, secondary_symptoms=secondary,
         )
         await self._repo.advance_phase(db, row, 3)
+
+        # Check if any ER checklist auto_complete condition is met — if so,
+        # terminate immediately (the answer is deterministic from demographics)
+        auto_match = self._find_er_auto_complete(row)
+        if auto_match is not None:
+            item, pediatric = auto_match
+            dept, sev = self._resolve_er_item_result(item, pediatric=pediatric)
+            reason = (
+                item.reason
+                or f"ER checklist auto-complete: {item.qid} (default response)"
+            )
+            return await self._terminate(
+                db, row,
+                departments=[dept],
+                severity=sev,
+                reason=reason,
+            )
+
         return self._compute_step(row)
 
     async def _submit_er_checklist(

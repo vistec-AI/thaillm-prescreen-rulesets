@@ -181,7 +181,7 @@ def test_er_adult_checklist_symptom_keys():
 def test_er_adult_checklist_schema():
     """Validate item schema: {qid, text} required; optional min_severity and department."""
     checklist = _load_er_adult_checklist()
-    _allowed_keys = {"qid", "text", "min_severity", "department", "reason"}
+    _allowed_keys = {"qid", "text", "min_severity", "department", "reason", "condition"}
 
     for symptom, items in checklist.items():
         assert isinstance(items, list), \
@@ -304,6 +304,65 @@ def test_er_adult_checklist_items_nonempty():
         assert len(items) > 0, f"Adult checklist symptom '{symptom}' has no items"
 
 
+def test_er_adult_checklist_condition_blocks():
+    """If ``condition`` is present, it must have valid field/op/value structure."""
+    _VALID_OPS = {"eq", "ne", "lt", "le", "gt", "ge"}
+    checklist = _load_er_adult_checklist()
+
+    for symptom, items in checklist.items():
+        for idx, item in enumerate(items):
+            if "condition" not in item:
+                continue
+            label = f"er_adult_checklist[{symptom}][{idx}] ({item['qid']})"
+            cond = item["condition"]
+
+            assert isinstance(cond, dict), f"{label} condition must be a dict"
+            assert "field" in cond, f"{label} condition missing 'field'"
+            assert "op" in cond, f"{label} condition missing 'op'"
+            assert "value" in cond, f"{label} condition missing 'value'"
+            assert isinstance(cond["field"], str) and cond["field"].strip(), \
+                f"{label} condition.field must be a non-empty string"
+            assert cond["op"] in _VALID_OPS, \
+                f"{label} condition.op '{cond['op']}' not in {_VALID_OPS}"
+
+
+def test_er_adult_checklist_specific_conditions():
+    """Verify the exact conditions on gender/pregnancy-gated adult checklist items."""
+    checklist = _load_er_adult_checklist()
+    by_qid = {}
+    for _symptom, items in checklist.items():
+        for item in items:
+            by_qid[item["qid"]] = item
+
+    # Pregnancy-condition items: only for pregnant patients
+    for qid in ("emer_adult_vag003", "emer_adult_abd008", "emer_adult_diz007"):
+        item = by_qid.get(qid)
+        assert item is not None, f"{qid} must exist"
+        assert "condition" in item, f"{qid} must have a condition"
+        assert item["condition"]["field"] == "pregnancy_status", \
+            f"{qid} condition.field must be 'pregnancy_status'"
+        assert item["condition"]["op"] == "eq", \
+            f"{qid} condition.op must be 'eq'"
+        assert item["condition"]["value"] == "pregnant", \
+            f"{qid} condition.value must be 'pregnant'"
+
+    # emer_adult_abd009: testicular pain — male only
+    item_abd009 = by_qid.get("emer_adult_abd009")
+    assert item_abd009 is not None, "emer_adult_abd009 must exist"
+    assert "condition" in item_abd009, "emer_adult_abd009 must have a condition"
+    assert item_abd009["condition"]["field"] == "gender"
+    assert item_abd009["condition"]["op"] == "eq"
+    assert item_abd009["condition"]["value"] == "Male"
+
+    # emer_adult_hea006: pregnancy-related headache — female only
+    item_hea006 = by_qid.get("emer_adult_hea006")
+    assert item_hea006 is not None, "emer_adult_hea006 must exist"
+    assert "condition" in item_hea006, "emer_adult_hea006 must have a condition"
+    assert item_hea006["condition"]["field"] == "gender"
+    assert item_hea006["condition"]["op"] == "eq"
+    assert item_hea006["condition"]["value"] == "Female"
+
+
 def test_er_adult_checklist_department_requires_min_severity():
     """If department override is present, min_severity must also be present.
 
@@ -353,7 +412,7 @@ def test_er_pediatric_checklist_symptom_keys():
 def test_er_pediatric_checklist_schema():
     """Validate item schema: {qid, text} required; optional severity and department."""
     checklist = _load_er_pediatric_checklist()
-    _allowed_keys = {"qid", "text", "severity", "department", "reason"}
+    _allowed_keys = {"qid", "text", "severity", "department", "reason", "condition", "auto_complete"}
 
     for symptom, items in checklist.items():
         assert isinstance(items, list), \
@@ -485,6 +544,99 @@ def test_er_pediatric_checklist_department_requires_severity():
                 label = f"er_pediatric_checklist[{symptom}][{idx}] ({item['qid']})"
                 assert "severity" in item, \
                     f"{label} has department override but missing severity override"
+
+
+def test_er_pediatric_checklist_condition_blocks():
+    """If ``condition`` is present, it must have valid field/op/value structure."""
+    _VALID_OPS = {"eq", "ne", "lt", "le", "gt", "ge"}
+    checklist = _load_er_pediatric_checklist()
+
+    for symptom, items in checklist.items():
+        for idx, item in enumerate(items):
+            if "condition" not in item:
+                continue
+            label = f"er_pediatric_checklist[{symptom}][{idx}] ({item['qid']})"
+            cond = item["condition"]
+
+            assert isinstance(cond, dict), f"{label} condition must be a dict"
+            assert "field" in cond, f"{label} condition missing 'field'"
+            assert "op" in cond, f"{label} condition missing 'op'"
+            assert "value" in cond, f"{label} condition missing 'value'"
+            assert isinstance(cond["field"], str) and cond["field"].strip(), \
+                f"{label} condition.field must be a non-empty string"
+            assert cond["op"] in _VALID_OPS, \
+                f"{label} condition.op '{cond['op']}' not in {_VALID_OPS}"
+
+
+def test_er_pediatric_checklist_auto_complete_blocks():
+    """If ``auto_complete`` is present, it must have valid field/op/value structure."""
+    _VALID_OPS = {"eq", "ne", "lt", "le", "gt", "ge"}
+    checklist = _load_er_pediatric_checklist()
+
+    for symptom, items in checklist.items():
+        for idx, item in enumerate(items):
+            if "auto_complete" not in item:
+                continue
+            label = f"er_pediatric_checklist[{symptom}][{idx}] ({item['qid']})"
+            ac = item["auto_complete"]
+
+            assert isinstance(ac, dict), f"{label} auto_complete must be a dict"
+            assert "field" in ac, f"{label} auto_complete missing 'field'"
+            assert "op" in ac, f"{label} auto_complete missing 'op'"
+            assert "value" in ac, f"{label} auto_complete missing 'value'"
+            assert isinstance(ac["field"], str) and ac["field"].strip(), \
+                f"{label} auto_complete.field must be a non-empty string"
+            assert ac["op"] in _VALID_OPS, \
+                f"{label} auto_complete.op '{ac['op']}' not in {_VALID_OPS}"
+
+
+def test_er_pediatric_checklist_specific_conditions():
+    """Verify the exact conditions on vag004 (female), vag005 (male), and auto_complete items."""
+    checklist = _load_er_pediatric_checklist()
+    by_qid = {}
+    for _symptom, items in checklist.items():
+        for item in items:
+            by_qid[item["qid"]] = item
+
+    # emer_ped_vag004: female only
+    item_vag004 = by_qid.get("emer_ped_vag004")
+    assert item_vag004 is not None, "emer_ped_vag004 must exist"
+    assert "condition" in item_vag004, "emer_ped_vag004 must have a condition"
+    assert item_vag004["condition"]["field"] == "gender"
+    assert item_vag004["condition"]["op"] == "eq"
+    assert item_vag004["condition"]["value"] == "Female"
+
+    # emer_ped_vag005: male only
+    item_vag005 = by_qid.get("emer_ped_vag005")
+    assert item_vag005 is not None, "emer_ped_vag005 must exist"
+    assert "condition" in item_vag005, "emer_ped_vag005 must have a condition"
+    assert item_vag005["condition"]["field"] == "gender"
+    assert item_vag005["condition"]["op"] == "eq"
+    assert item_vag005["condition"]["value"] == "Male"
+
+    # emer_ped_cou006: auto_complete when age < 1
+    item_cou006 = by_qid.get("emer_ped_cou006")
+    assert item_cou006 is not None, "emer_ped_cou006 must exist"
+    assert "auto_complete" in item_cou006, "emer_ped_cou006 must have auto_complete"
+    assert item_cou006["auto_complete"]["field"] == "age"
+    assert item_cou006["auto_complete"]["op"] == "lt"
+    assert item_cou006["auto_complete"]["value"] == 1
+
+    # emer_ped_abd008: auto_complete when age < 4
+    item_abd008 = by_qid.get("emer_ped_abd008")
+    assert item_abd008 is not None, "emer_ped_abd008 must exist"
+    assert "auto_complete" in item_abd008, "emer_ped_abd008 must have auto_complete"
+    assert item_abd008["auto_complete"]["field"] == "age"
+    assert item_abd008["auto_complete"]["op"] == "lt"
+    assert item_abd008["auto_complete"]["value"] == 4
+
+    # emer_ped_dia006: auto_complete when age_in_months < 6
+    item_dia006 = by_qid.get("emer_ped_dia006")
+    assert item_dia006 is not None, "emer_ped_dia006 must exist"
+    assert "auto_complete" in item_dia006, "emer_ped_dia006 must have auto_complete"
+    assert item_dia006["auto_complete"]["field"] == "age_in_months"
+    assert item_dia006["auto_complete"]["op"] == "lt"
+    assert item_dia006["auto_complete"]["value"] == 6
 
 
 # ===================================================================

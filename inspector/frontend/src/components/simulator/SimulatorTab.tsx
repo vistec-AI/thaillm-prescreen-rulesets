@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { SimulatorDataResponse } from "@/lib/types/simulator";
 import { fetchSimulatorData } from "@/lib/api/simulator";
 import { useSimulator } from "@/lib/simulator/useSimulator";
-import { getVisibleErCriticalItems } from "@/lib/simulator/engine";
+import { getVisibleErCriticalItems, checkErAutoComplete } from "@/lib/simulator/engine";
 import PhaseIndicator from "./PhaseIndicator";
 import DemographicForm from "./DemographicForm";
 import ErCriticalForm from "./ErCriticalForm";
@@ -136,11 +136,12 @@ function SimulatorContent({
         />
       )}
 
-      {/* Phase 3: ER Checklist */}
+      {/* Phase 3: ER Checklist — filtered by condition, auto_complete excluded */}
       {currentStep.phase === 3 && !currentStep.terminated && (
         <ErChecklistForm
           symptoms={[sim.primarySymptom, ...sim.secondarySymptoms]}
           age={age}
+          demographics={sim.demographics}
           ruleData={ruleData}
           onSubmit={sim.submitAnswer}
           textOverrides={sim.textOverrides}

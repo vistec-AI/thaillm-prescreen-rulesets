@@ -8,6 +8,7 @@
 
 import type {
   RawAction,
+  RawErChecklistItem,
   RawErCriticalItem,
   RawQuestion,
   SimulatorDataResponse,
@@ -322,24 +323,141 @@ export function getVisibleErCriticalItems(
   });
 }
 
-// --- ER checklist helpers ---
+// --- Demographics enrichment ---
 
 /**
- * Get the ER checklist items for the given symptoms, filtered by age.
- * Returns items from all selected symptoms.
+ * Enrich demographics with computed fields for condition evaluation.
+ *
+ * Adds ``age_in_months`` (= age * 12 + age_months) so ER checklist
+ * auto_complete conditions can reference sub-year ages (e.g. < 6 months).
  */
-export function getErChecklistItems(
+function enrichDemographics(
+  demographics: Record<string, unknown>
+): Record<string, unknown> {
+  const enriched = { ...demographics };
+  const age = typeof enriched.age === "number" ? enriched.age : null;
+  const ageMonths =
+    typeof enriched.age_months === "number" ? enriched.age_months : 0;
+  if (age !== null) {
+    enriched.age_in_months = age * 12 + ageMonths;
+  }
+  return enriched;
+}
+
+// --- ER checklist helpers ---
+
+/** Resolve severity and department IDs from an ER checklist item */
+function resolveErItemIds(
+  item: RawErChecklistItem,
+  pediatric: boolean
+): { sevId: string; deptId: string } {
+  const sevField = pediatric ? item.severity : item.min_severity;
+  const sevId =
+    sevField && typeof sevField === "object" && "id" in sevField
+      ? sevField.id
+      : DEFAULT_ER_SEVERITY;
+
+  let deptId = DEFAULT_ER_DEPARTMENT;
+  if (
+    item.department &&
+    Array.isArray(item.department) &&
+    item.department.length > 0
+  ) {
+    const firstDept = item.department[0];
+    if (typeof firstDept === "object" && "id" in firstDept) {
+      deptId = firstDept.id;
+    }
+  }
+  return { sevId, deptId };
+}
+
+/**
+ * Check if any ER checklist auto_complete condition is met.
+ *
+ * Returns a TerminationResult for the first matching auto_complete item,
+ * or null if none match.  Called when transitioning from phase 2 to 3
+ * to auto-terminate before showing the checklist.
+ */
+export function checkErAutoComplete(
   symptoms: string[],
   age: number | null,
+  demographics: Record<string, unknown>,
   ruleData: SimulatorDataResponse
-): Array<{ qid: string; text: string; symptom: string; raw: Record<string, unknown> }> {
+): TerminationResult | null {
   const pediatric = age !== null && age < PEDIATRIC_AGE_THRESHOLD;
   const source = pediatric ? ruleData.er_pediatric : ruleData.er_adult;
-  const items: Array<{ qid: string; text: string; symptom: string; raw: Record<string, unknown> }> = [];
+  const enriched = enrichDemographics(demographics);
+
+  const deptMap = new Map(ruleData.departments.map((d) => [d.id, d.name]));
+  const sevMap = new Map(
+    ruleData.severity_levels.map((s) => [s.id, s.name])
+  );
 
   for (const symptom of symptoms) {
     const checklist = source[symptom] ?? [];
     for (const item of checklist) {
+      if (!item.auto_complete) continue;
+      const val = enriched[item.auto_complete.field];
+      if (val === undefined || val === null) continue;
+      if (!compare(item.auto_complete.op, val, item.auto_complete.value))
+        continue;
+
+      // Auto-complete condition met — build termination result
+      const { sevId, deptId } = resolveErItemIds(item, pediatric);
+      return {
+        type: "terminated",
+        departments: [{ id: deptId, name: deptMap.get(deptId) ?? deptId }],
+        severity: { id: sevId, name: sevMap.get(sevId) ?? sevId },
+        reason:
+          item.reason ??
+          `ER checklist auto-complete: ${item.qid} (default response)`,
+        fromPhase: 3,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get the ER checklist items for the given symptoms, filtered by age,
+ * condition, and excluding auto_complete items.
+ *
+ * - ``auto_complete`` items are never shown (handled by checkErAutoComplete).
+ * - ``condition`` items are shown only when the condition is met.
+ */
+export function getErChecklistItems(
+  symptoms: string[],
+  age: number | null,
+  demographics: Record<string, unknown>,
+  ruleData: SimulatorDataResponse
+): Array<{
+  qid: string;
+  text: string;
+  symptom: string;
+  raw: Record<string, unknown>;
+}> {
+  const pediatric = age !== null && age < PEDIATRIC_AGE_THRESHOLD;
+  const source = pediatric ? ruleData.er_pediatric : ruleData.er_adult;
+  const enriched = enrichDemographics(demographics);
+  const items: Array<{
+    qid: string;
+    text: string;
+    symptom: string;
+    raw: Record<string, unknown>;
+  }> = [];
+
+  for (const symptom of symptoms) {
+    const checklist = source[symptom] ?? [];
+    for (const item of checklist) {
+      // auto_complete items are never shown to the user
+      if (item.auto_complete) continue;
+      // condition items: only shown when condition is met
+      if (item.condition) {
+        const val = enriched[item.condition.field];
+        if (val === undefined || val === null) continue;
+        if (!compare(item.condition.op, val, item.condition.value)) continue;
+      }
       items.push({
         qid: item.qid,
         text: item.text,
@@ -373,21 +491,7 @@ export function resolveErChecklistTermination(
     for (const item of checklist) {
       if (flags[item.qid] !== true) continue;
 
-      // Resolve severity: pediatric uses "severity", adult uses "min_severity"
-      const sevField = pediatric ? item.severity : item.min_severity;
-      const sevId =
-        sevField && typeof sevField === "object" && "id" in sevField
-          ? sevField.id
-          : DEFAULT_ER_SEVERITY;
-
-      // Resolve department
-      let deptId = DEFAULT_ER_DEPARTMENT;
-      if (item.department && Array.isArray(item.department) && item.department.length > 0) {
-        const firstDept = item.department[0];
-        if (typeof firstDept === "object" && "id" in firstDept) {
-          deptId = firstDept.id;
-        }
-      }
+      const { sevId, deptId } = resolveErItemIds(item, pediatric);
 
       return {
         type: "terminated",

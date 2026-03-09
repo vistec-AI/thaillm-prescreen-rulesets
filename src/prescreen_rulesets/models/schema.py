@@ -202,6 +202,15 @@ class ERChecklistItem(BaseModel):
     # Optional custom reason shown when this item triggers early termination.
     # If omitted, the engine auto-generates a technical reason string.
     reason: Optional[str] = None
+    # Optional condition controlling visibility based on demographics.
+    # When present, the item is only shown if the condition is satisfied.
+    # Example: emer_ped_vag004 shown only for females.
+    condition: Optional[FieldCondition] = None
+    # Optional auto-complete condition — when met, the item is automatically
+    # answered as positive (true) and triggers termination.  When not met,
+    # the item is hidden (the answer is definitively false).
+    # Example: emer_ped_cou006 auto-completes when age < 1 year.
+    auto_complete: Optional[FieldCondition] = None
 
 
 # ---------------------------------------------------------------------------

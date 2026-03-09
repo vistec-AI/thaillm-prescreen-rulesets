@@ -49,6 +49,8 @@ export interface ErChecklistItem {
   department: string[];
   department_labels: string[];
   reason: string | null;
+  /** Visibility condition (e.g. gender=Female, pregnancy_status=pregnant). */
+  condition: FieldCondition | null;
   raw: Record<string, unknown>;
   source: string;
 }
