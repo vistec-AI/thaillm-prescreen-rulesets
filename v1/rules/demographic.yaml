@@ -1,47 +1,131 @@
-- qid: demo_dob
-  key: date_of_birth
-  field_name: Date of Birth (BC)
-  field_name_th: วัน เดือน ปี (พ.ศ.) เกิด
-  type: datetime
+- qid: demo_age
+  key: age
+  field_name: Age (years)
+  field_name_th: อายุ (ปี)
+  type: int
+
+- qid: demo_age-months
+  key: age_months
+  field_name: Age (months)
+  field_name_th: อายุ (เดือน)
+  type: int
+  optional: true
+  condition:
+    field: age
+    op: lt
+    value: 6
+
 - qid: demo_gender
   key: gender
-  field_name: Biological Gender
-  field_name_th: เพศ
+  field_name: Biological Sex
+  field_name_th: เพศกำเนิด
   type: enum
   values:
     - Male
     - Female
-- qid: demo_height
-  key: height
-  field_name: Height (cm)
-  field_name_th: ความสูง (ซม.)
-  type: float
-- qid: demo_weight
-  key: weight
-  field_name: Weight (kg)
-  field_name_th: น้ำหนัก (กก.)
-  type: float
+
 - qid: demo_ud
   key: underlying_diseases
   field_name: Underlying Diseases
   field_name_th: โรคประจำตัว
   type: from_yaml
   values: const/underlying_diseases.yaml
-- qid: demo_med-history
-  key: medical_history
-  field_name: Medical History
-  field_name_th: ประวัติผู้ป่วย
-  type: str
-  optional: true
-- qid: demo_occupation
-  key: occupation
-  field_name: Occupation
-  field_name_th: อาชีพ
-  type: str
-  optional: true
-- qid: demo_presenting-complaint
-  key: presenting_complaint
-  field_name: Presenting Complaint
-  field_name_th: อาการผู้ป่วย
-  type: str
-  optional: true
+
+- qid: demo_current-med
+  key: current_medication
+  field_name: Current Medication
+  field_name_th: ยาที่ใช้ประจำ
+  type: yes_no_detail
+
+- qid: demo_drug-allergy
+  key: drug_food_allergies
+  field_name: Drug/Food Allergies
+  field_name_th: ประวัติการแพ้ยา หรือแพ้อาหาร
+  type: yes_no_detail
+
+- qid: demo_surgical-history
+  key: surgical_history
+  field_name: Surgical History
+  field_name_th: ประวัติเคยได้รับการผ่าตัด
+  type: yes_no_detail
+
+# --- Female-only pregnancy block ---
+- qid: demo_pregnancy-status
+  key: pregnancy_status
+  field_name: Pregnancy Status
+  field_name_th: ประวัติการตั้งครรภ์
+  type: enum
+  values:
+    - pregnant
+    - not_pregnant
+  condition:
+    field: gender
+    op: eq
+    value: Female
+
+# If pregnant
+- qid: demo_total-pregnancies
+  key: total_pregnancies
+  field_name: Total Pregnancies
+  field_name_th: จำนวนครั้งที่ตั้งครรภ์
+  type: int
+  condition:
+    field: pregnancy_status
+    op: eq
+    value: pregnant
+
+- qid: demo_fetuses-count
+  key: fetuses_count
+  field_name: Number of Fetuses
+  field_name_th: จำนวนทารกในครรภ์
+  type: int
+  condition:
+    field: pregnancy_status
+    op: eq
+    value: pregnant
+
+- qid: demo_gestational-age
+  key: gestational_age_weeks
+  field_name: Gestational Age (weeks)
+  field_name_th: อายุครรภ์ (สัปดาห์)
+  type: int
+  max_value: 42
+  condition:
+    field: pregnancy_status
+    op: eq
+    value: pregnant
+
+# If not pregnant
+- qid: demo_lmp-date
+  key: last_menstrual_period
+  field_name: Last Menstrual Period
+  field_name_th: ประจำเดือนครั้งล่าสุด
+  type: date
+  condition:
+    field: pregnancy_status
+    op: eq
+    value: not_pregnant
+
+- qid: demo_menstrual-duration
+  key: menstrual_duration_days
+  field_name: Menstrual Duration (days)
+  field_name_th: ระยะเวลาของประจำเดือน (วัน)
+  type: int
+  condition:
+    field: pregnancy_status
+    op: eq
+    value: not_pregnant
+
+- qid: demo_menstrual-flow
+  key: menstrual_flow
+  field_name: Menstrual Flow
+  field_name_th: ปริมาณประจำเดือน
+  type: enum
+  values:
+    - same
+    - more
+    - less
+  condition:
+    field: pregnancy_status
+    op: eq
+    value: not_pregnant

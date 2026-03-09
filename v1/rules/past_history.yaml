@@ -1,0 +1,66 @@
+- qid: past_height
+  key: height
+  field_name: Height (cm)
+  field_name_th: ส่วนสูง (ซม.)
+  type: float
+
+- qid: past_weight
+  key: weight
+  field_name: Weight (kg)
+  field_name_th: น้ำหนัก (กก.)
+  type: float
+
+- qid: past_other-conditions
+  key: other_medical_conditions
+  field_name: Other Medical Conditions
+  field_name_th: ประวัติการรักษาอื่น ๆ
+  type: yes_no_detail
+
+# Children only (age < 15) — enum + conditional free text
+- qid: past_vaccination
+  key: vaccination_status
+  field_name: Vaccination Status
+  field_name_th: ได้รับวัคซีนครบตามเกณฑ์หรือไม่
+  type: enum
+  values:
+    - complete
+    - incomplete
+  condition:
+    field: age
+    op: lt
+    value: 15
+
+- qid: past_vaccination-detail
+  key: vaccination_detail
+  field_name: Missing Vaccines
+  field_name_th: ขาดวัคซีนใด
+  type: str
+  optional: true
+  condition:
+    field: vaccination_status
+    op: eq
+    value: incomplete
+
+- qid: past_dev-milestones
+  key: developmental_milestones
+  field_name: Developmental Milestones
+  field_name_th: พัฒนาการตามเกณฑ์หรือไม่
+  type: enum
+  values:
+    - normal
+    - delayed
+  condition:
+    field: age
+    op: lt
+    value: 15
+
+- qid: past_dev-milestones-detail
+  key: developmental_detail
+  field_name: Delayed Areas
+  field_name_th: ช้าด้านใด
+  type: str
+  optional: true
+  condition:
+    field: developmental_milestones
+    op: eq
+    value: delayed

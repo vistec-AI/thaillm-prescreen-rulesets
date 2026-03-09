@@ -10,12 +10,29 @@
   name_th: โรคตับเรื้อรัง
 - name: Heart disease
   name_th: โรคหัวใจ
+  sub_types:
+    - name: Coronary Artery Disease
+      name_th: โรคหลอดเลือดหัวใจ
+    - name: Heart failure
+      name_th: ภาวะหัวใจวาย
+    - name: Arrhythmias
+      name_th: โรคจังหวะการเต้นของหัวใจผิดปกติ
+    - name: Cardiomyopathy
+      name_th: โรคกล้ามเนื้อหัวใจ
+    - name: Other
+      name_th: อื่น ๆ / ไม่ทราบ
+      specify: true
 - name: Thyroid disease
   name_th: ความผิดปกติของต่อมไทรอยด์
 - name: Stroke
   name_th: โรคหลอดเลือดสมอง
 - name: Obesity
   name_th: โรคอ้วน
+- name: Gout
+  name_th: โรคเกาต์
+- name: Autoimmune disease
+  name_th: โรคแพ้ภูมิตัวเอง
+  specify: true
 - name: Chronic Obstructive Pulmonary Disease
   name_th: โรคปอดอุดกั้นเรื้อรัง
 - name: Asthma
@@ -23,10 +40,20 @@
 - name: Tuberculosis
   name_th: วัณโรค
 - name: HIV/AIDS
-  name_th: เอดส์
+  name_th: ติดเชื้อ HIV/เอดส์
 - name: Cancer
-  name_th: มะเร็ง (ระบุชนิดหรืออวัยวะที่เป็น หากทราบ)
+  name_th: มะเร็ง
+  specify: true
 - name: Allergy
-  name_th: โรคภูมิแพ้ / หรือระบุว่าแพ้อาหาร-ยาใด
-- name: Alzheimer disease
-  name_th: โรคอัลไซเมอร์
+  name_th: โรคภูมิแพ้
+- name: G6PD deficiency
+  name_th: ภาวะพร่องเอนไซม์ G6PD
+- name: Genetic disorder
+  name_th: โรคทางพันธุกรรม
+  specify: true
+- name: Congenital anomalies
+  name_th: ภาวะอวัยวะผิดปกติตั้งแต่กำเนิด
+  specify: true
+- name: Other
+  name_th: อื่น ๆ
+  specify: true

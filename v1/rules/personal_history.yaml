@@ -1,0 +1,53 @@
+- qid: pers_occupation
+  key: occupation
+  field_name: Occupation
+  field_name_th: อาชีพ
+  type: enum
+  values:
+    - รับราชการ/พนักงานรัฐวิสาหกิจ
+    - พนักงานบริษัท/เอกชน/ลูกจ้าง
+    - ธุรกิจส่วนตัว/ค้าขาย/เจ้าของกิจการ
+    - รับจ้างทั่วไป
+    - อาชีพอิสระ (Freelance)
+    - เกษตรกร
+    - แม่บ้าน
+    - นักเรียน/นักศึกษา
+    - ผู้ว่างงาน
+    - other
+
+- qid: pers_hometown
+  key: hometown_province
+  field_name: Hometown / Province
+  field_name_th: ภูมิลำเนา
+  type: str
+
+- qid: pers_smoking
+  key: smoking_history
+  field_name: Smoking History
+  field_name_th: สูบบุหรี่หรือไม่
+  type: yes_no_detail
+  detail_fields:
+    - key: cigarettes_per_day
+      type: int
+      field_name_th: ปริมาณบุหรี่ที่สูบต่อวัน (มวน)
+    - key: smoking_years
+      type: int
+      field_name_th: ระยะเวลาที่สูบ (ปี)
+
+- qid: pers_alcohol
+  key: alcohol_history
+  field_name: Alcohol History
+  field_name_th: ดื่มสุราหรือไม่
+  type: yes_no_detail
+  detail_fields:
+    - key: drinking_frequency
+      type: enum
+      values:
+        - ทุกวัน
+        - ทุกสัปดาห์
+        - ทุกเดือน
+        - นาน ๆ ครั้ง
+      field_name_th: ความถี่ในการดื่ม
+    - key: drinking_years
+      type: int
+      field_name_th: ระยะเวลาที่ดื่ม (ปี)
