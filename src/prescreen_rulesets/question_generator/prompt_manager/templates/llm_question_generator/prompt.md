@@ -22,7 +22,15 @@ Below is the patient's prescreening Q&A history, grouped by phase.
 *Detailed symptom characterization (Onset, Location, Duration, Character, Aggravating, Relieving, Timing, Severity). The patient has already answered these — do NOT re-ask these topics.*
 
 {% elif phase_num == 5 %}
-## Phase 5: OPD
+## Phase 5: Past History
+*Past medical history — height, weight, other medical conditions, pediatric developmental assessment.*
+
+{% elif phase_num == 6 %}
+## Phase 6: Personal History
+*Personal history — occupation, hometown, smoking, alcohol.*
+
+{% elif phase_num == 7 %}
+## Phase 7: OPD
 *Additional outpatient-directed questions for department routing and severity assessment.*
 
 {% else %}

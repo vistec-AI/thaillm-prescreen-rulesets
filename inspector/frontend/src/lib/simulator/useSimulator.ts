@@ -1,7 +1,7 @@
 /**
  * useSimulator — React hook managing the client-side prescreening simulation.
  *
- * Orchestrates the 6-phase flow using the pure-function engine and evaluator.
+ * Orchestrates the 9-phase flow (0-8) using the pure-function engine and evaluator.
  * Manages history for back-navigation and text overrides for inline editing.
  */
 
@@ -14,7 +14,6 @@ import type {
   TextOverride,
 } from "../types/simulator";
 import {
-  computeAge,
   getFirstQid,
   resolveNext,
   determineAction,
@@ -22,6 +21,7 @@ import {
   getErChecklistItems,
   resolveErChecklistTermination,
   buildErCriticalTermination,
+  checkErAutoComplete,
 } from "./engine";
 import type { QAPairPayload } from "../api/llm";
 import type { LLMAnswerPair } from "../../components/simulator/LLMQuestionsPanel";
@@ -34,8 +34,10 @@ const PHASE_NAMES: Record<number, string> = {
   2: "Symptom Selection",
   3: "ER Checklist",
   4: "OLDCARTS",
-  5: "OPD",
-  6: "LLM Questions",
+  5: "Past History",
+  6: "Personal History",
+  7: "OPD",
+  8: "LLM Questions",
 };
 
 /** What the UI should currently render */
@@ -46,9 +48,9 @@ export interface CurrentStep {
   terminated: boolean;
   /** The termination result (only set when terminated) */
   result: TerminationResult | null;
-  /** The current user-facing question (only for sequential phases 4/5) */
+  /** The current user-facing question (only for sequential phases 4/7) */
   currentQuestion: RawQuestion | null;
-  /** LLM phase state (phase 6) */
+  /** LLM phase state (phase 8) */
   llmLoading: boolean;
   llmQuestions: string[] | null;
   llmError: string | null;
@@ -89,6 +91,10 @@ export interface SimulatorAPI {
   secondarySymptoms: string[];
   /** All answers (for history display) */
   allAnswers: Record<string, unknown>;
+  /** Phase 5 past history data */
+  pastHistoryData: Record<string, unknown>;
+  /** Phase 6 personal history data */
+  personalHistoryData: Record<string, unknown>;
 }
 
 export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
@@ -100,12 +106,14 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
   const [secondarySymptoms, setSecondarySymptoms] = useState<string[]>([]);
   const [erCriticalFlags, setErCriticalFlags] = useState<Record<string, boolean>>({});
   const [erChecklistFlags, setErChecklistFlags] = useState<Record<string, boolean>>({});
+  const [pastHistoryData, setPastHistoryData] = useState<Record<string, unknown>>({});
+  const [personalHistoryData, setPersonalHistoryData] = useState<Record<string, unknown>>({});
   const [pending, setPending] = useState<string[]>([]);
   const [terminated, setTerminated] = useState(false);
   const [result, setResult] = useState<TerminationResult | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<RawQuestion | null>(null);
 
-  // --- LLM phase state (phase 6) ---
+  // --- LLM phase state (phase 8) ---
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmQuestions, setLlmQuestions] = useState<string[] | null>(null);
   const [llmError, setLlmError] = useState<string | null>(null);
@@ -142,6 +150,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       pending: [...pending],
       currentQuestion,
       pendingResult,
+      pastHistoryData: { ...pastHistoryData },
+      personalHistoryData: { ...personalHistoryData },
       label,
       answerValue,
     }),
@@ -156,6 +166,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       pending,
       currentQuestion,
       pendingResult,
+      pastHistoryData,
+      personalHistoryData,
     ]
   );
 
@@ -168,6 +180,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     setSecondarySymptoms(entry.secondarySymptoms);
     setErCriticalFlags(entry.erCriticalFlags);
     setErChecklistFlags(entry.erChecklistFlags);
+    setPastHistoryData(entry.pastHistoryData);
+    setPersonalHistoryData(entry.personalHistoryData);
     setPending(entry.pending);
     setCurrentQuestion(entry.currentQuestion);
     setPendingResult(entry.pendingResult);
@@ -190,7 +204,9 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       answers: Record<string, unknown>,
       symptom: string,
       critFlags: Record<string, boolean>,
-      checkFlags: Record<string, boolean>
+      checkFlags: Record<string, boolean>,
+      pastHx: Record<string, unknown>,
+      persHx: Record<string, unknown>
     ): QAPairPayload[] => {
       const pairs: QAPairPayload[] = [];
 
@@ -244,9 +260,9 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         });
       }
 
-      // Phases 4/5: sequential answers matched to question definitions
+      // Phase 4 (OLDCARTS) and 7 (OPD): sequential answers matched to question definitions
       for (const source of ["oldcarts", "opd"] as const) {
-        const phaseNum = source === "oldcarts" ? 4 : 5;
+        const phaseNum = source === "oldcarts" ? 4 : 7;
         const questions = ruleData[source]?.[symptom] ?? [];
         for (const q of questions) {
           if (q.qid in answers) {
@@ -260,6 +276,30 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
             });
           }
         }
+      }
+
+      // Phase 5: past history as a single entry
+      if (Object.keys(pastHx).length > 0) {
+        pairs.push({
+          question: "Past history",
+          answer: pastHx,
+          source: "rule_based",
+          qid: null,
+          question_type: "past_history",
+          phase: 5,
+        });
+      }
+
+      // Phase 6: personal history as a single entry
+      if (Object.keys(persHx).length > 0) {
+        pairs.push({
+          question: "Personal history",
+          answer: persHx,
+          source: "rule_based",
+          qid: null,
+          question_type: "personal_history",
+          phase: 6,
+        });
       }
 
       return pairs;
@@ -280,9 +320,9 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         return;
       }
 
-      // Non-ER: enter LLM phase
+      // Non-ER: enter LLM phase (phase 8)
       setPendingResult(termResult);
-      setPhase(6);
+      setPhase(8);
       setLlmLoading(true);
       setLlmQuestions(null);
       setLlmError(null);
@@ -296,7 +336,9 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         answersOverride ?? allAnswers,
         primarySymptom,
         erCriticalFlags,
-        erChecklistFlags
+        erChecklistFlags,
+        pastHistoryData,
+        personalHistoryData
       );
 
       generateQuestions(qaPairs)
@@ -326,7 +368,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
           setLlmQuestions([]);
         });
     },
-    [demographics, allAnswers, primarySymptom, erCriticalFlags, erChecklistFlags, buildQAPairs]
+    [demographics, allAnswers, primarySymptom, erCriticalFlags, erChecklistFlags, pastHistoryData, personalHistoryData, buildQAPairs]
   );
 
   /** Proceed from LLM questions phase to final results.
@@ -352,7 +394,9 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       allAnswers,
       primarySymptom,
       erCriticalFlags,
-      erChecklistFlags
+      erChecklistFlags,
+      pastHistoryData,
+      personalHistoryData
     );
     for (const pair of llmAnswers) {
       qaPairs.push({
@@ -361,7 +405,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         source: "llm_generated",
         qid: null,
         question_type: null,
-        phase: null,
+        // LLM-generated answers are placed under phase 8 in prediction prompts
+        phase: 8,
       });
     }
 
@@ -443,6 +488,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     primarySymptom,
     erCriticalFlags,
     erChecklistFlags,
+    pastHistoryData,
+    personalHistoryData,
     buildQAPairs,
     ruleData,
     setPendingResult,
@@ -450,38 +497,38 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
 
   // --- Advance to sequential phase ---
 
-  /** Enter phase 4 or 5 by seeding the pending queue with the first qid */
+  /** Enter phase 4 (OLDCARTS) or 7 (OPD) by seeding the pending queue with the first qid */
   const enterSequentialPhase = useCallback(
     (
-      nextPhase: 4 | 5,
+      nextPhase: 4 | 7,
       symptom: string,
       answers: Record<string, unknown>,
       demos: Record<string, unknown>
     ) => {
       const source = nextPhase === 4 ? "oldcarts" : "opd";
-      const firstQid = getFirstQid(source as "oldcarts" | "opd", symptom, ruleData);
+      const firstQid = getFirstQid(source, symptom, ruleData);
 
       if (!firstQid) {
         // No questions for this symptom in this source
         if (nextPhase === 4) {
-          // Try OPD
-          enterSequentialPhase(5, symptom, answers, demos);
+          // Skip OLDCARTS — go to past history (phase 5)
+          setPhase(5);
           return;
         }
-        // Phase 5 exhausted — complete without explicit termination
-        setPhase(5);
+        // Phase 7 (OPD) exhausted — complete without explicit termination
+        setPhase(7);
         triggerTermination({
           type: "completed",
           departments: [],
           severity: null,
           reason: "All phases completed without explicit termination",
-          fromPhase: 5,
+          fromPhase: 7,
         }, answers);
         return;
       }
 
       const resolved = resolveNext(
-        source as "oldcarts" | "opd",
+        source,
         symptom,
         [firstQid],
         answers,
@@ -499,19 +546,21 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         triggerTermination(resolved.termination, answers);
         setPending(resolved.pending);
       } else if (resolved.kind === "advance_to_opd") {
-        // OLDCARTS auto-eval chain produced an OPD action
-        enterSequentialPhase(5, symptom, answers, demos);
+        // OLDCARTS auto-eval chain produced an OPD action — go to past history first
+        setPhase(5);
       } else {
         // exhausted — advance to next phase
         if (nextPhase === 4) {
-          enterSequentialPhase(5, symptom, answers, demos);
+          // OLDCARTS exhausted — go to past history (phase 5)
+          setPhase(5);
         } else {
+          // OPD exhausted — complete
           triggerTermination({
             type: "completed",
             departments: [],
             severity: null,
             reason: "All phases completed without explicit termination",
-            fromPhase: 5,
+            fromPhase: 7,
           }, answers);
         }
       }
@@ -570,6 +619,21 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         setHistory((h) => [...h, snapshot(label, value)]);
         setPrimarySymptom(sel.primary_symptom);
         setSecondarySymptoms(sel.secondary_symptoms ?? []);
+
+        // Check ER checklist auto_complete before showing phase 3.
+        // If any auto_complete condition is met (e.g. child < 1 year with
+        // Cough), terminate immediately without showing the checklist.
+        const selectedSymptoms = [sel.primary_symptom, ...(sel.secondary_symptoms ?? [])];
+        const curAge = typeof demographics.age === "number" ? demographics.age : null;
+        const autoTermResult = checkErAutoComplete(
+          selectedSymptoms, curAge, demographics, ruleData
+        );
+        if (autoTermResult) {
+          setPhase(3);
+          triggerTermination(autoTermResult);
+          return;
+        }
+
         setPhase(3);
         return;
       }
@@ -586,7 +650,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
 
         // Check for first positive item
         const symptoms = [primarySymptom, ...secondarySymptoms];
-        const age = computeAge(demographics.date_of_birth as string);
+        // Age is now submitted directly as a number from the demographic form
+        const age = typeof demographics.age === "number" ? demographics.age : null;
         const termResult = resolveErChecklistTermination(
           flags,
           symptoms,
@@ -604,7 +669,28 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         return;
       }
 
-      if (phase === 4 || phase === 5) {
+      // Phase 5: Past History — bulk form, store and advance to phase 6
+      if (phase === 5) {
+        const data = value as Record<string, unknown>;
+        const label = "Past History submitted";
+        setHistory((h) => [...h, snapshot(label, value)]);
+        setPastHistoryData(data);
+        setPhase(6);
+        return;
+      }
+
+      // Phase 6: Personal History — bulk form, store and advance to OPD (phase 7)
+      if (phase === 6) {
+        const data = value as Record<string, unknown>;
+        const label = "Personal History submitted";
+        setHistory((h) => [...h, snapshot(label, value)]);
+        setPersonalHistoryData(data);
+        enterSequentialPhase(7, primarySymptom, allAnswers, demographics);
+        return;
+      }
+
+      // Phases 4 (OLDCARTS) and 7 (OPD): sequential questions
+      if (phase === 4 || phase === 7) {
         // Sequential answer: value is the answer for currentQuestion
         if (!currentQuestion) return;
 
@@ -621,7 +707,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         if (!action) {
           // No action determined — try to continue with existing pending
           const resolved = resolveNext(
-            source as "oldcarts" | "opd",
+            source,
             primarySymptom,
             [...pending],
             nextAnswers,
@@ -650,13 +736,14 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         }
 
         if (actionResult.type === "advance_to_opd") {
-          enterSequentialPhase(5, primarySymptom, nextAnswers, demographics);
+          // OPD action from OLDCARTS — go to past history first (phase 5)
+          setPhase(5);
           return;
         }
 
         // Goto — resolve next from the updated pending queue
         const resolved = resolveNext(
-          source as "oldcarts" | "opd",
+          source,
           primarySymptom,
           newPending,
           nextAnswers,
@@ -677,6 +764,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       secondarySymptoms,
       erCriticalFlags,
       erChecklistFlags,
+      pastHistoryData,
+      personalHistoryData,
       pending,
       currentQuestion,
       history,
@@ -700,18 +789,21 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         triggerTermination(resolved.termination, answers);
         setPending(resolved.pending);
       } else if (resolved.kind === "advance_to_opd") {
-        enterSequentialPhase(5, primarySymptom, answers, demographics);
+        // OPD action from OLDCARTS — go to past history first (phase 5)
+        setPhase(5);
       } else {
         // exhausted
         if (phase === 4) {
-          enterSequentialPhase(5, primarySymptom, answers, demographics);
+          // OLDCARTS exhausted — go to past history (phase 5)
+          setPhase(5);
         } else {
+          // OPD (phase 7) exhausted — complete
           triggerTermination({
             type: "completed",
             departments: [],
             severity: null,
             reason: "All phases completed without explicit termination",
-            fromPhase: 5,
+            fromPhase: 7,
           }, answers);
         }
       }
@@ -740,6 +832,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     setSecondarySymptoms([]);
     setErCriticalFlags({});
     setErChecklistFlags({});
+    setPastHistoryData({});
+    setPersonalHistoryData({});
     setPending([]);
     setTerminated(false);
     setResult(null);
@@ -811,5 +905,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     primarySymptom,
     secondarySymptoms,
     allAnswers,
+    pastHistoryData,
+    personalHistoryData,
   };
 }

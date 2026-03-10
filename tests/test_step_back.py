@@ -1,5 +1,5 @@
 """Comprehensive step_back tests — verifies going-back-one-step behaviour
-across all 6 phases, including conditional/auto-evaluated question skipping.
+across all 8 phases, including conditional/auto-evaluated question skipping.
 
 Tests the contract documented in the flow-walkthrough:
 
@@ -11,9 +11,11 @@ Tests the contract documented in the flow-walkthrough:
   | Phase 3                              | Phase 2 (Symptom Selection)                       |
   | Phase 4, has answered questions      | Last answered OLDCARTS question                   |
   | Phase 4, no answered questions       | Phase 3 (ER Checklist)                            |
-  | Phase 5, has answered OPD questions  | Last answered OPD question                        |
-  | Phase 5, no OPD answers              | Last answered OLDCARTS question (or Phase 3)      |
-  | Phase 5, no OPD or OLDCARTS answers  | Phase 3                                           |
+  | Phase 5                              | Phase 4 (last OLDCARTS question or Phase 3)       |
+  | Phase 6                              | Phase 5 (Past History)                            |
+  | Phase 7, has answered OPD questions  | Last answered OPD question                        |
+  | Phase 7, no OPD answers              | Last answered OLDCARTS question (or Phase 3)      |
+  | Phase 7, no OPD or OLDCARTS answers  | Phase 3                                           |
 
 Additionally verifies:
   - After step_back, re-submitting the same answer advances normally
@@ -33,7 +35,14 @@ from prescreen_rulesets.models.session import QuestionsStep, TerminationStep
 from prescreen_rulesets.ruleset import RulesetStore
 
 # Reuse mock infrastructure from test_engine
-from test_engine import MockRepository, MockSessionRow, VALID_DEMOGRAPHICS
+from test_engine import (
+    MockRepository,
+    MockSessionRow,
+    VALID_DEMOGRAPHICS,
+    VALID_PAST_HISTORY,
+    VALID_PERSONAL_HISTORY,
+    _er_responses_for,
+)
 
 # Auto-evaluated question types — these should never be presented to the user
 AUTO_EVAL_TYPES = {"gender_filter", "age_filter", "conditional"}
@@ -154,7 +163,7 @@ async def _advance_to_phase(
         return step
 
     # Phase 1 → 2: all-negative ER critical
-    er_responses = {item.qid: False for item in store.er_critical}
+    er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
     step = await engine.submit_answer(
         mock_db, user_id="u1", session_id="s1",
         qid="er_critical", value=er_responses,
@@ -181,13 +190,14 @@ async def _advance_to_phase(
     if target_phase == 4:
         return step
 
-    # Phase 4 → 5: answer all OLDCARTS questions until we reach phase 5
+    # Phase 4 → 5: answer all OLDCARTS questions until we leave phase 4.
+    # After OLDCARTS the engine advances to phase 5 (Past History).
     max_iterations = 200  # safety limit
     for _ in range(max_iterations):
         if not isinstance(step, QuestionsStep):
             break
-        if step.phase == 5:
-            return step
+        if step.phase >= 5:
+            break
         q = step.questions[0]
         answer = picker(q)
         step = await engine.submit_answer(
@@ -195,10 +205,39 @@ async def _advance_to_phase(
             value=answer,
         )
 
-    if target_phase == 5 and isinstance(step, QuestionsStep) and step.phase == 5:
+    if target_phase == 5:
+        # Phase 5 is Past History (bulk).
+        if isinstance(step, QuestionsStep) and step.phase == 5:
+            return step
         return step
 
-    # If we couldn't reach phase 5, return whatever we got
+    # Phase 5 → 6: submit past history
+    if isinstance(step, QuestionsStep) and step.phase == 5:
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_PAST_HISTORY,
+        )
+
+    if target_phase == 6:
+        # Phase 6 is Personal History (bulk).
+        if isinstance(step, QuestionsStep) and step.phase == 6:
+            return step
+        return step
+
+    # Phase 6 → 7: submit personal history
+    if isinstance(step, QuestionsStep) and step.phase == 6:
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_PERSONAL_HISTORY,
+        )
+
+    if target_phase == 7:
+        # Phase 7 is OPD (sequential).
+        if isinstance(step, QuestionsStep) and step.phase == 7:
+            return step
+        return step
+
+    # If we couldn't reach the target phase, return whatever we got
     return step
 
 
@@ -215,7 +254,7 @@ async def _answer_sequential_questions(engine, mock_db, step, count, picker=None
     for _ in range(count):
         if not isinstance(step, QuestionsStep):
             break
-        if step.phase not in (4, 5):
+        if step.phase not in (4, 7):
             break
         q = step.questions[0]
         answered_qids.append(q.qid)
@@ -485,12 +524,12 @@ class TestStepBackPhase4:
 
 
 # =====================================================================
-# Test: Phase 5 (OPD) step_back scenarios
+# Test: Phase 7 (OPD) step_back scenarios
 # =====================================================================
 
 
-class TestStepBackPhase5:
-    """Verify step_back from phase 5 (OPD) — various answer states.
+class TestStepBackPhase7:
+    """Verify step_back from phase 7 (OPD) — various answer states.
 
     Uses the "Wound" symptom because its OPD tree has multiple user-facing
     single_select questions (unlike most symptoms whose OPD trees are
@@ -502,20 +541,20 @@ class TestStepBackPhase5:
     _SYMPTOM = "Wound"
 
     @pytest.mark.asyncio
-    async def test_phase5_with_opd_answers_back_to_last_opd(
+    async def test_phase7_with_opd_answers_back_to_last_opd(
         self, engine, mock_db, mock_repo,
     ):
-        """Phase 5 with OPD answers → back to last answered OPD question.
+        """Phase 7 with OPD answers → back to last answered OPD question.
 
         Only answers 1 OPD question (out of 2 for Wound), then steps back
         before the session completes.
         """
         step = await _advance_to_phase(
-            engine, mock_db, target_phase=5,
+            engine, mock_db, target_phase=7,
             symptom=self._SYMPTOM, picker=_pick_answer_last,
         )
-        if not isinstance(step, QuestionsStep) or step.phase != 5:
-            pytest.skip("Could not reach phase 5 with user-facing OPD questions")
+        if not isinstance(step, QuestionsStep) or step.phase != 7:
+            pytest.skip("Could not reach phase 7 with user-facing OPD questions")
 
         # Answer only 1 OPD question so the session stays active
         answered_qids, step = await _answer_sequential_questions(
@@ -528,7 +567,7 @@ class TestStepBackPhase5:
 
         step = await engine.step_back(mock_db, user_id="u1", session_id="s1")
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
-        assert step.phase == 5, f"Expected phase 5, got {step.phase}"
+        assert step.phase == 7, f"Expected phase 7, got {step.phase}"
 
         # Verify the last answered qid was removed
         row = mock_repo._sessions[("u1", "s1")]
@@ -537,50 +576,37 @@ class TestStepBackPhase5:
         )
 
     @pytest.mark.asyncio
-    async def test_phase5_no_opd_answers_back_to_oldcarts(
+    async def test_phase7_no_opd_answers_back_to_personal_history(
         self, engine, mock_db, mock_repo,
     ):
-        """Phase 5 with no OPD answers but has OLDCARTS → back to last OLDCARTS qid."""
+        """Phase 7 with no OPD answers → back to phase 6 (Personal History)."""
         step = await _advance_to_phase(
-            engine, mock_db, target_phase=5,
+            engine, mock_db, target_phase=7,
             symptom=self._SYMPTOM, picker=_pick_answer_last,
         )
-        if not isinstance(step, QuestionsStep) or step.phase != 5:
-            pytest.skip("Could not reach phase 5")
+        if not isinstance(step, QuestionsStep) or step.phase != 7:
+            pytest.skip("Could not reach phase 7")
 
         # Don't answer any OPD questions — step_back from here.
-        # The engine should find the last OLDCARTS answer instead.
-        row = mock_repo._sessions[("u1", "s1")]
-        store = engine._store
-        oldcarts_qids = set(store.oldcarts.get(self._SYMPTOM, {}).keys())
-        has_oldcarts = any(
-            qid in row.responses
-            and isinstance(row.responses[qid], dict)
-            and "answered_at" in row.responses[qid]
-            for qid in oldcarts_qids
-        )
-
-        if not has_oldcarts:
-            pytest.skip("No OLDCARTS answers — cannot test cross-phase step_back")
-
+        # With no OPD answers, engine goes back to phase 6 (Personal History).
         step = await engine.step_back(mock_db, user_id="u1", session_id="s1")
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
-        assert step.phase == 4, (
-            f"With no OPD answers, should go back to phase 4 (OLDCARTS), "
+        assert step.phase == 6, (
+            f"With no OPD answers, should go back to phase 6 (Personal History), "
             f"got phase {step.phase}"
         )
 
     @pytest.mark.asyncio
-    async def test_phase5_never_shows_auto_eval_question(
+    async def test_phase7_never_shows_auto_eval_question(
         self, engine, mock_db,
     ):
-        """step_back in phase 5 never presents an auto-evaluated question."""
+        """step_back in phase 7 never presents an auto-evaluated question."""
         step = await _advance_to_phase(
-            engine, mock_db, target_phase=5,
+            engine, mock_db, target_phase=7,
             symptom=self._SYMPTOM, picker=_pick_answer_last,
         )
-        if not isinstance(step, QuestionsStep) or step.phase != 5:
-            pytest.skip("Could not reach phase 5")
+        if not isinstance(step, QuestionsStep) or step.phase != 7:
+            pytest.skip("Could not reach phase 7")
 
         # Answer only 1 question to keep the session active
         answered_qids, step = await _answer_sequential_questions(
@@ -594,20 +620,20 @@ class TestStepBackPhase5:
             qtype = step.questions[0].question_type
             assert qtype not in AUTO_EVAL_TYPES, (
                 f"step_back should not present auto-evaluated question type "
-                f"'{qtype}' in phase 5"
+                f"'{qtype}' in phase 7"
             )
 
     @pytest.mark.asyncio
-    async def test_phase5_step_back_re_presents_question(
+    async def test_phase7_step_back_re_presents_question(
         self, engine, mock_db,
     ):
-        """After step_back in phase 5, the question can be re-answered and advances."""
+        """After step_back in phase 7, the question can be re-answered and advances."""
         step = await _advance_to_phase(
-            engine, mock_db, target_phase=5,
+            engine, mock_db, target_phase=7,
             symptom=self._SYMPTOM, picker=_pick_answer_last,
         )
-        if not isinstance(step, QuestionsStep) or step.phase != 5:
-            pytest.skip("Could not reach phase 5")
+        if not isinstance(step, QuestionsStep) or step.phase != 7:
+            pytest.skip("Could not reach phase 7")
 
         # Answer only 1 question to keep the session active
         answered_qids, step = await _answer_sequential_questions(
@@ -758,7 +784,7 @@ class TestStepBackRoundTrip:
         assert step.phase == 1
 
         store = engine._store
-        er_responses = {item.qid: False for item in store.er_critical}
+        er_responses = _er_responses_for(store, VALID_DEMOGRAPHICS)
         step = await engine.submit_answer(
             mock_db, user_id="u1", session_id="s1",
             qid="er_critical", value=er_responses,
@@ -860,7 +886,7 @@ class TestStepBackConditionalSkipping:
             )
 
     @pytest.mark.asyncio
-    async def test_step_back_skips_conditionals_in_phase5(
+    async def test_step_back_skips_conditionals_in_phase7(
         self, engine, mock_db,
     ):
         """OPD trees use conditionals heavily. step_back should skip them.
@@ -869,11 +895,11 @@ class TestStepBackConditionalSkipping:
         Answers only 1 question to keep the session active.
         """
         step = await _advance_to_phase(
-            engine, mock_db, target_phase=5,
+            engine, mock_db, target_phase=7,
             symptom="Wound", picker=_pick_answer_last,
         )
-        if not isinstance(step, QuestionsStep) or step.phase != 5:
-            pytest.skip("Could not reach phase 5")
+        if not isinstance(step, QuestionsStep) or step.phase != 7:
+            pytest.skip("Could not reach phase 7")
 
         answered_qids, step = await _answer_sequential_questions(
             engine, mock_db, step, count=1, picker=_pick_answer_last,
@@ -886,7 +912,7 @@ class TestStepBackConditionalSkipping:
             for q in step.questions:
                 assert q.question_type not in AUTO_EVAL_TYPES, (
                     f"step_back presented auto-evaluated question type "
-                    f"'{q.question_type}' (qid: {q.qid}) in phase 5"
+                    f"'{q.question_type}' (qid: {q.qid}) in phase 7"
                 )
 
     @pytest.mark.asyncio

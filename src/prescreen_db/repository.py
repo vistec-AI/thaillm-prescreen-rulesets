@@ -223,6 +223,7 @@ class SessionRepository:
         clear_er_flags: bool = False,
         response_qids_to_remove: set[str] | None = None,
         new_pending: list[str] | None = None,
+        demo_keys_to_remove: set[str] | None = None,
     ) -> PrescreenSession:
         """Revert a session to a previous phase by clearing data from later phases.
 
@@ -230,18 +231,27 @@ class SessionRepository:
         and passes the instructions here.  The repository just executes them.
 
         Args:
-            target_phase: the phase to revert to (0-5)
+            target_phase: the phase to revert to (0-7)
             clear_demographics: if True, reset demographics to empty dict
             clear_symptoms: if True, clear primary_symptom and secondary_symptoms
             clear_er_flags: if True, reset er_flags to None
             response_qids_to_remove: set of qid keys to remove from responses JSONB
             new_pending: if provided, set the ``__pending`` queue to this value;
                 if None, the ``__pending`` key is removed entirely
+            demo_keys_to_remove: set of keys to remove from demographics JSONB
+                (used for granular clearing of past/personal history keys)
         """
         session.current_phase = target_phase
 
         if clear_demographics:
             session.demographics = {}
+        elif demo_keys_to_remove:
+            # Granular key removal — remove specific keys from demographics
+            # without clearing the whole dict (used for phases 5/6 back-edit)
+            demographics = dict(session.demographics or {})
+            for key in demo_keys_to_remove:
+                demographics.pop(key, None)
+            session.demographics = demographics
         if clear_symptoms:
             session.primary_symptom = None
             session.secondary_symptoms = None

@@ -35,6 +35,7 @@ export default function ErTable({ items, selectedQid, onSelect, onAdd }: Props) 
             <th className="bg-gray-100 px-2 py-1.5 text-left border-b-2 border-gray-200 whitespace-nowrap">Severity</th>
             <th className="bg-gray-100 px-2 py-1.5 text-left border-b-2 border-gray-200">Department</th>
             <th className="bg-gray-100 px-2 py-1.5 text-left border-b-2 border-gray-200">Reason</th>
+            <th className="bg-gray-100 px-2 py-1.5 text-left border-b-2 border-gray-200 whitespace-nowrap">Condition</th>
           </tr>
         </thead>
         <tbody>
@@ -63,6 +64,13 @@ export default function ErTable({ items, selectedQid, onSelect, onAdd }: Props) 
                 </td>
                 <td className="px-2 py-1.5 border-b border-gray-100">{item.department_labels.join(", ")}</td>
                 <td className="px-2 py-1.5 border-b border-gray-100 text-gray-500">{item.reason ?? ""}</td>
+                <td className="px-2 py-1.5 border-b border-gray-100">
+                  {item.condition && (
+                    <span className="inline-block px-1.5 py-0.5 text-[11px] bg-purple-100 text-purple-700 rounded">
+                      {item.condition.field} {item.condition.op} {String(item.condition.value)}
+                    </span>
+                  )}
+                </td>
               </tr>
             );
           })}

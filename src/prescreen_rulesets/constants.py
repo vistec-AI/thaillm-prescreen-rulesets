@@ -30,7 +30,9 @@ PHASE_NAMES: dict[int, str] = {
     2: "Symptom Selection",
     3: "ER Checklist",
     4: "OLDCARTS",
-    5: "OPD",
+    5: "Past History",
+    6: "Personal History",
+    7: "OPD",
 }
 
 # Auto-evaluated question types that the engine resolves without user input.

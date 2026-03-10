@@ -28,7 +28,7 @@ graph TB
 
     subgraph "SDK Layer"
         Pipeline[PrescreenPipeline<br/>Full orchestrator]
-        Engine[PrescreenEngine<br/>6-phase rule-based]
+        Engine[PrescreenEngine<br/>8-phase rule-based]
         Store[RulesetStore<br/>YAML cache + lookups]
         Evaluator[ConditionalEvaluator<br/>Auto-eval logic]
     end

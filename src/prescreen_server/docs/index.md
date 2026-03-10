@@ -16,7 +16,7 @@ The prescreening system achieves three goals:
 
 ## How It Works
 
-A prescreening session progresses through **6 phases** of rule-based questions, optionally followed by LLM-generated follow-up questions and a prediction stage. The API manages the session state, serves one step at a time, and returns a final result with department, severity, and diagnosis information.
+A prescreening session progresses through **8 phases** of rule-based questions, optionally followed by LLM-generated follow-up questions and a prediction stage. The API manages the session state, serves one step at a time, and returns a final result with department, severity, and diagnosis information.
 
 ```
 Client                          API Server
@@ -48,5 +48,5 @@ Client                          API Server
 
 - [Getting Started](getting-started.md) — install, run, and make your first request
 - [Environment Variables](environment-variables.md) — full reference for all configuration variables
-- [Flow Walkthrough](flow-walkthrough.md) — understand the 6-phase prescreening flow
+- [Flow Walkthrough](flow-walkthrough.md) — understand the 8-phase prescreening flow
 - [API Reference](api-reference.md) — endpoint table and model shapes

@@ -13,8 +13,10 @@ const PHASE_LABELS: Record<number, string> = {
   2: "Symptoms",
   3: "ER Checklist",
   4: "OLDCARTS",
-  5: "OPD",
-  6: "LLM Questions",
+  5: "Past History",
+  6: "Personal History",
+  7: "OPD",
+  8: "LLM Questions",
 };
 
 /**

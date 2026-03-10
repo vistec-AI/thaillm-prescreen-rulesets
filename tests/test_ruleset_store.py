@@ -4,8 +4,8 @@ Validates that RulesetStore loads all YAML rulesets from v1/ correctly
 and that lookup methods return expected results.
 
 Expected counts (from v1/const/ and v1/rules/):
-    12 departments, 4 severity levels, 16 NHSO symptoms,
-    8 demographic fields, 11 ER critical items
+    13 departments, 4 severity levels, 16 NHSO symptoms,
+    14 demographic fields, 20 ER critical items
 """
 
 import pytest
@@ -27,9 +27,9 @@ def store():
 
 
 def test_store_loads_all_departments(store):
-    """All 12 departments load and have required fields."""
-    assert len(store.departments) == 12, (
-        f"Expected 12 departments, got {len(store.departments)}"
+    """All 13 departments load and have required fields."""
+    assert len(store.departments) == 13, (
+        f"Expected 13 departments, got {len(store.departments)}"
     )
     for dept_id, dept in store.departments.items():
         assert dept.id == dept_id, f"Department key mismatch: {dept_id} vs {dept.id}"
@@ -60,23 +60,27 @@ def test_store_loads_all_nhso_symptoms(store):
 
 
 def test_store_loads_demographics(store):
-    """8 demographic fields load with expected keys."""
-    assert len(store.demographics) == 8, (
-        f"Expected 8 demographic fields, got {len(store.demographics)}"
+    """14 demographic fields load with expected keys."""
+    assert len(store.demographics) == 14, (
+        f"Expected 14 demographic fields, got {len(store.demographics)}"
     )
     keys = {f.key for f in store.demographics}
+    # Phase 0 now has age, gender, underlying diseases, yes_no_detail fields,
+    # and conditional pregnancy fields (for female patients)
     expected = {
-        "date_of_birth", "gender", "height", "weight",
-        "underlying_diseases", "medical_history", "occupation",
-        "presenting_complaint",
+        "age", "age_months", "gender", "underlying_diseases",
+        "current_medication", "drug_food_allergies", "surgical_history",
+        "pregnancy_status", "total_pregnancies", "fetuses_count",
+        "gestational_age_weeks", "last_menstrual_period",
+        "menstrual_duration_days", "menstrual_flow",
     }
     assert keys == expected, f"Demographic key mismatch: {keys} != {expected}"
 
 
 def test_store_loads_er_critical(store):
-    """11 ER critical items load with correct qid prefix."""
-    assert len(store.er_critical) == 11, (
-        f"Expected 11 ER critical items, got {len(store.er_critical)}"
+    """20 ER critical items load with correct qid prefix."""
+    assert len(store.er_critical) == 20, (
+        f"Expected 20 ER critical items, got {len(store.er_critical)}"
     )
     for item in store.er_critical:
         assert item.qid.startswith("emer_critical_"), (

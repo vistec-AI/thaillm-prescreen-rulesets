@@ -77,10 +77,25 @@ export interface RawDemographicField {
   key: string;
   field_name: string;
   field_name_th: string;
-  type: "datetime" | "enum" | "float" | "from_yaml" | "str";
+  type: "int" | "float" | "date" | "enum" | "from_yaml" | "yes_no_detail" | "str" | "datetime";
   optional?: boolean;
   values?: unknown[] | string;
   values_path?: string;
+  max_value?: number;
+  /** Conditional visibility: field is shown only when this condition is met */
+  condition?: {
+    field: string;
+    op: string;
+    value: unknown;
+  };
+  /** Sub-fields for yes_no_detail when answer is true */
+  detail_fields?: Array<{
+    key: string;
+    type: string;
+    field_name_th?: string;
+    /** Allowed values for enum-type sub-fields (e.g. drinking_frequency) */
+    values?: string[];
+  }>;
 }
 
 /** An ER critical symptom check item */
@@ -88,6 +103,13 @@ export interface RawErCriticalItem {
   qid: string;
   text: string;
   reason?: string;
+  /** Optional condition controlling visibility based on demographics.
+   *  When present, the item is only shown if the condition is satisfied. */
+  condition?: {
+    field: string;
+    op: string;
+    value: unknown;
+  };
 }
 
 /** An ER checklist item (adult or pediatric) */
@@ -98,6 +120,21 @@ export interface RawErChecklistItem {
   severity?: { id: string };
   min_severity?: { id: string };
   department?: Array<{ id: string }>;
+  /** Optional condition controlling visibility based on demographics.
+   *  When present, the item is only shown if the condition is satisfied. */
+  condition?: {
+    field: string;
+    op: string;
+    value: unknown;
+  };
+  /** Optional auto-complete condition — when met, the item is automatically
+   *  answered as positive and triggers termination.  When not met, the item
+   *  is hidden (the answer is definitively false). */
+  auto_complete?: {
+    field: string;
+    op: string;
+    value: unknown;
+  };
 }
 
 /** A constant entry (department, severity level, or NHSO symptom) */
@@ -117,6 +154,8 @@ export interface DiseaseEntry {
 /** Full response from GET /api/simulator_data */
 export interface SimulatorDataResponse {
   demographic: RawDemographicField[];
+  past_history: RawDemographicField[];
+  personal_history: RawDemographicField[];
   er_critical: RawErCriticalItem[];
   er_adult: Record<string, RawErChecklistItem[]>;
   er_pediatric: Record<string, RawErChecklistItem[]>;
@@ -167,6 +206,10 @@ export interface HistoryEntry {
   currentQuestion: RawQuestion | null;
   /** Pending termination result when LLM phase is active */
   pendingResult: TerminationResult | null;
+  /** Phase 5 past history data snapshot */
+  pastHistoryData: Record<string, unknown>;
+  /** Phase 6 personal history data snapshot */
+  personalHistoryData: Record<string, unknown>;
   /** Label describing what was answered at this step */
   label: string;
   /** The answer value submitted */

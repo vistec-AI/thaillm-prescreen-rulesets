@@ -125,7 +125,7 @@ The demographics payload includes fields with fixed enum values:
 - **`gender`**: `"Male"` or `"Female"`
 - **`underlying_diseases`**: list of disease names (e.g. `"Hypertension"`, `"Diabetes Mellitus"`) or `[]` for none
 
-See the [Flow Walkthrough — Reference Data](flow-walkthrough.md#reference-data-enums-fixed-values) for the full list of accepted values.
+Demographics now includes 14 fields with conditional visibility (e.g. pregnancy fields only for females). See the [Flow Walkthrough — Reference Data](flow-walkthrough.md#reference-data-enums-fixed-values) for the full list of accepted values.
 
 === "curl"
 
@@ -135,14 +135,12 @@ See the [Flow Walkthrough — Reference Data](flow-walkthrough.md#reference-data
       -H "X-User-ID: patient-1" \
       -d '{
         "value": {
-          "date_of_birth": "1990-01-15",
+          "age": 35,
           "gender": "Male",
-          "height": 175,
-          "weight": 70,
           "underlying_diseases": ["Hypertension"],
-          "medical_history": "None",
-          "occupation": "Engineer",
-          "presenting_complaint": "Headache for 3 days"
+          "current_medication": {"answer": false, "detail": null},
+          "drug_food_allergies": {"answer": false, "detail": null},
+          "surgical_history": {"answer": false, "detail": null}
         }
       }'
     ```
@@ -154,14 +152,12 @@ See the [Flow Walkthrough — Reference Data](flow-walkthrough.md#reference-data
         "/api/v1/sessions/sess-001/step",
         json={
             "value": {
-                "date_of_birth": "1990-01-15",
+                "age": 35,
                 "gender": "Male",
-                "height": 175,
-                "weight": 70,
                 "underlying_diseases": ["Hypertension"],
-                "medical_history": "None",
-                "occupation": "Engineer",
-                "presenting_complaint": "Headache for 3 days",
+                "current_medication": {"answer": False, "detail": None},
+                "drug_food_allergies": {"answer": False, "detail": None},
+                "surgical_history": {"answer": False, "detail": None},
             }
         },
         headers=headers,
@@ -170,7 +166,7 @@ See the [Flow Walkthrough — Reference Data](flow-walkthrough.md#reference-data
     print(next_step["phase_name"])  # "ER Critical Screen"
     ```
 
-The response is the next step — Phase 1 (ER Critical Screen) with 11 yes/no questions.
+The response is the next step — Phase 1 (ER Critical Screen) with up to 20 yes/no questions.
 
 ### 4. Continue the Flow
 

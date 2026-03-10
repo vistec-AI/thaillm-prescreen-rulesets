@@ -3,8 +3,8 @@
 Loads templates from the ``template/`` directory and renders ``QuestionsStep``
 objects into LLM-ready prompt strings with JSON response instructions.
 
-Templates are dispatched by phase for bulk steps (0-3) and by question_type
-for sequential steps (4-5).
+Templates are dispatched by phase for bulk steps (0-3, 5-6) and by
+question_type for sequential steps (4, 7).
 """
 
 from __future__ import annotations
@@ -27,6 +27,8 @@ _PHASE_TEMPLATES: dict[int, str] = {
     1: "er_critical.jinja2",
     2: "symptom_selection.jinja2",
     3: "er_checklist.jinja2",
+    5: "past_history.jinja2",
+    6: "personal_history.jinja2",
 }
 
 # --- question_type-to-template mapping for sequential phases ---
@@ -72,8 +74,8 @@ class PromptManager:
     ) -> str:
         """Render a full QuestionsStep as an LLM prompt.
 
-        Dispatches by phase for bulk (0-3) and by question_type for
-        sequential (4-5).  Includes JSON response format instructions.
+        Dispatches by phase for bulk (0-3, 5-6) and by question_type for
+        sequential (4, 7).  Includes JSON response format instructions.
 
         Args:
             history: optional list of prior Q&A pairs.  When provided,
@@ -82,12 +84,12 @@ class PromptManager:
         """
         phase = step.phase
 
-        # Bulk phases 0-3 each have their own template
+        # Bulk phases 0-3, 5-6 each have their own template
         if phase in _PHASE_TEMPLATES:
             template_name = _PHASE_TEMPLATES[phase]
             return self._render_bulk(template_name, step, history=history)
 
-        # Sequential phases 4-5: dispatch by question_type
+        # Sequential phases 4, 7: dispatch by question_type
         if step.questions:
             question = step.questions[0]
             qtype = question.question_type
@@ -115,9 +117,9 @@ class PromptManager:
         history: list[QAPair] | None = None,
     ) -> str:
         """Render a bulk-phase template with the full step as context."""
-        # Build a submission example for demographics
+        # Build a submission example for bulk field phases (0, 5, 6)
         submission_example = None
-        if step.phase == 0 and step.questions:
+        if step.phase in (0, 5, 6) and step.questions:
             example = {}
             for q in step.questions:
                 key = q.metadata.get("key", q.qid) if q.metadata else q.qid

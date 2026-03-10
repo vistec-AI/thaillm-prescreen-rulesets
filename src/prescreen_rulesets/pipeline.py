@@ -248,8 +248,9 @@ class PrescreenPipeline:
 
         Delegates to the engine and handles the transition when the engine
         signals completion or termination.  ``qid`` is optional — for bulk
-        phases (0-3) it is ignored by the engine, and for sequential phases
-        (4-5) the engine auto-derives it from the current step when ``None``.
+        phases (0-3, 5-6) it is ignored by the engine, and for sequential
+        phases (4, 7) the engine auto-derives it from the current step
+        when ``None``.
 
         Raises:
             ValueError: if the session is not in the ``rule_based`` stage
@@ -474,7 +475,7 @@ class PrescreenPipeline:
 
         Two cases:
           - TERMINATED (ER early exit): skip LLM/prediction, return empty DDx
-          - COMPLETED (all 6 phases done): proceed to LLM questioning or prediction
+          - COMPLETED (all 8 phases done): proceed to LLM questioning or prediction
         """
         if row.status == SessionStatus.TERMINATED:
             # Early termination — add empty diagnoses to result, skip LLM/prediction
@@ -505,7 +506,7 @@ class PrescreenPipeline:
                 history=history,
             )
 
-        # COMPLETED — rule-based flow finished normally
+        # COMPLETED — all 8 phases done, rule-based flow finished normally
         rule_based_pairs = self._build_qa_pairs(row)
 
         # Try LLM question generation if generator is available
@@ -639,7 +640,7 @@ class PrescreenPipeline:
     def _build_qa_pairs(self, row: PrescreenSession) -> list[QAPair]:
         """Reconstruct the full rule-based Q&A history from session data.
 
-        Builds pairs in phase order (0-5), skipping auto-eval question types
+        Builds pairs in phase order (0-7), skipping auto-eval question types
         and the ``__pending`` metadata key.  Each pair carries its source
         metadata for downstream consumers.
         """
@@ -721,8 +722,8 @@ class PrescreenPipeline:
                             phase=3,
                         ))
 
-        # --- Phases 4 & 5: OLDCARTS and OPD ---
-        for phase_num, source in [(4, "oldcarts"), (5, "opd")]:
+        # --- Phases 4 & 7: OLDCARTS and OPD ---
+        for phase_num, source in [(4, "oldcarts"), (7, "opd")]:
             if not row.primary_symptom:
                 continue
             tree = (
@@ -750,6 +751,32 @@ class PrescreenPipeline:
                         phase=phase_num,
                     ))
 
+        # --- Phase 5: Past History (from demographics JSONB) ---
+        for field in self._store.past_history:
+            value = demographics.get(field.key)
+            if value is not None:
+                pairs.append(QAPair(
+                    question=field.field_name_th,
+                    answer=value,
+                    source="rule_based",
+                    qid=field.qid,
+                    question_type=field.type,
+                    phase=5,
+                ))
+
+        # --- Phase 6: Personal History (from demographics JSONB) ---
+        for field in self._store.personal_history:
+            value = demographics.get(field.key)
+            if value is not None:
+                pairs.append(QAPair(
+                    question=field.field_name_th,
+                    answer=value,
+                    source="rule_based",
+                    qid=field.qid,
+                    question_type=field.type,
+                    phase=6,
+                ))
+
         return pairs
 
     # ==================================================================
@@ -774,7 +801,7 @@ class PrescreenPipeline:
     def _build_full_history(self, row: PrescreenSession) -> list[QAPair]:
         """Combine rule-based Q&A pairs with LLM follow-up pairs.
 
-        Rule-based pairs come from ``_build_qa_pairs`` (phases 0-5).
+        Rule-based pairs come from ``_build_qa_pairs`` (phases 0-7).
         LLM pairs come from ``row.llm_responses`` (stored after
         ``submit_llm_answers``).
         """

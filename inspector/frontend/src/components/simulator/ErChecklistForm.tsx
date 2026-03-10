@@ -9,6 +9,7 @@ import EditableText from "./EditableText";
 interface ErChecklistFormProps {
   symptoms: string[];
   age: number | null;
+  demographics: Record<string, unknown>;
   ruleData: SimulatorDataResponse;
   onSubmit: (flags: Record<string, boolean>) => void;
   textOverrides: Record<string, TextOverride>;
@@ -17,17 +18,19 @@ interface ErChecklistFormProps {
 
 /**
  * Phase 3 form: age-dependent ER checklist yes/no toggles.
- * Items are filtered based on the patient's age and selected symptoms.
+ * Items are filtered by age, condition (gender etc.), and auto_complete
+ * items are excluded (handled before this form is shown).
  */
 export default function ErChecklistForm({
   symptoms,
   age,
+  demographics,
   ruleData,
   onSubmit,
   textOverrides,
   onOverrideText,
 }: ErChecklistFormProps) {
-  const items = getErChecklistItems(symptoms, age, ruleData);
+  const items = getErChecklistItems(symptoms, age, demographics, ruleData);
 
   const [flags, setFlags] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};

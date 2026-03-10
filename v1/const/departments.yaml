@@ -77,3 +77,10 @@
   genders: any
   name: Surgery
   name_th: ศัลยกรรม
+- id: dept013
+  description: Provides primary healthcare services, including general medical consultation,
+    initial diagnosis, basic treatment, health promotion, disease prevention, and
+    referral to specialized care when needed.
+  genders: any
+  name: Primary Care Unit
+  name_th: หน่วยบริการปฐมภูมิ (แพทย์ทั่วไป)

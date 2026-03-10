@@ -91,10 +91,10 @@ class PredictionPromptManager:
     def _group_by_phase(qa_pairs: list[QAPair]) -> dict[int, list[QAPair]]:
         """Group QA pairs by their phase number.
 
-        Pairs without a phase (e.g. LLM-generated) are placed under phase 6.
+        Pairs without a phase (e.g. LLM-generated) are placed under phase 8.
         """
         groups: dict[int, list[QAPair]] = defaultdict(list)
         for pair in qa_pairs:
-            phase = pair.phase if pair.phase is not None else 6
+            phase = pair.phase if pair.phase is not None else 8
             groups[phase].append(pair)
         return dict(sorted(groups.items()))

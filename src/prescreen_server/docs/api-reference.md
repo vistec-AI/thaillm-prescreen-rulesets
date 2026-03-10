@@ -31,7 +31,7 @@ This page provides a quick-reference endpoint table and key model shapes.
 |--------|------|------|-------------|
 | `GET` | `/api/v1/sessions/{session_id}/step` | `X-User-ID` | Get the current step. Response type depends on pipeline stage. |
 | `POST` | `/api/v1/sessions/{session_id}/step` | `X-User-ID` | Submit an answer. Body: `{"qid": "...", "value": ...}`. `qid` is optional. |
-| `POST` | `/api/v1/sessions/{session_id}/back-edit` | `X-User-ID` | Revert to a previous phase or question. Body: `{"target_phase": N, "target_qid": "..."}`. `target_qid` optional, only for phases 4-5. |
+| `POST` | `/api/v1/sessions/{session_id}/back-edit` | `X-User-ID` | Revert to a previous phase or question. Body: `{"target_phase": N, "target_qid": "..."}`. `target_qid` optional, only for phases 4 and 7. |
 | `POST` | `/api/v1/sessions/{session_id}/step-back` | `X-User-ID` | Go back one step automatically. No request body needed — the engine determines the previous step. Returns 400 if already at phase 0. |
 
 ### LLM
@@ -165,8 +165,8 @@ Body for `POST /sessions/{session_id}/back-edit`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `target_phase` | `int` | Yes | Phase to revert to (0-5). Must be less than current phase, or equal for intra-phase back-edit in phases 4-5. |
-| `target_qid` | `string \| null` | No | For phases 4-5 only: jump to a specific previously-answered question within the phase. |
+| `target_phase` | `int` | Yes | Phase to revert to (0-7). Must be less than current phase, or equal for intra-phase back-edit in phases 4 and 7. |
+| `target_qid` | `string \| null` | No | For phases 4 and 7 only: jump to a specific previously-answered question within the phase. |
 
 The response is a `QuestionsStep` at the reverted position. For bulk phases (0-3), question metadata includes `previous_value` with the patient's earlier answer to help UIs pre-fill forms.
 
@@ -209,7 +209,7 @@ All error responses follow the same shape:
 ]
 ```
 
-Full list: `dept001`–`dept012` (12 departments). See the [Flow Walkthrough — Departments](flow-walkthrough.md#departments) for the complete table.
+Full list: `dept001`–`dept013` (13 departments). See the [Flow Walkthrough — Departments](flow-walkthrough.md#departments) for the complete table.
 
 ### Severity Levels
 
@@ -266,13 +266,18 @@ Use the `name` field as the value when submitting `primary_symptom` or `secondar
   {"name": "Thyroid disease", "name_th": "ความผิดปกติของต่อมไทรอยด์"},
   {"name": "Stroke", "name_th": "โรคหลอดเลือดสมอง"},
   {"name": "Obesity", "name_th": "โรคอ้วน"},
+  {"name": "Gout", "name_th": "โรคเกาต์"},
+  {"name": "Autoimmune disease", "name_th": "โรคแพ้ภูมิตัวเอง"},
   {"name": "Chronic Obstructive Pulmonary Disease", "name_th": "โรคปอดอุดกั้นเรื้อรัง"},
   {"name": "Asthma", "name_th": "โรคหอบหืด"},
   {"name": "Tuberculosis", "name_th": "วัณโรค"},
-  {"name": "HIV/AIDS", "name_th": "เอดส์"},
+  {"name": "HIV/AIDS", "name_th": "ติดเชื้อ HIV/เอดส์"},
   {"name": "Cancer", "name_th": "มะเร็ง"},
   {"name": "Allergy", "name_th": "โรคภูมิแพ้"},
-  {"name": "Alzheimer disease", "name_th": "โรคอัลไซเมอร์"}
+  {"name": "G6PD deficiency", "name_th": "ภาวะพร่องเอนไซม์ G6PD"},
+  {"name": "Genetic disorder", "name_th": "โรคทางพันธุกรรม"},
+  {"name": "Congenital anomalies", "name_th": "ภาวะอวัยวะผิดปกติตั้งแต่กำเนิด"},
+  {"name": "Other", "name_th": "อื่น ๆ"}
 ]
 ```
 
