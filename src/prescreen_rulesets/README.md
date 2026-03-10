@@ -1,6 +1,6 @@
 # prescreen_rulesets SDK
 
-Rule-based prescreening SDK that drives patients through a 6-phase triage flow.
+Rule-based prescreening SDK that drives patients through an 8-phase triage flow.
 Loads decision-tree rulesets from YAML, manages session state via a database,
 and returns typed step results that API consumers can render directly.
 
@@ -49,22 +49,24 @@ async with Session() as db:
 
 ## Core Concepts
 
-### The 6-Phase Flow
+### The 8-Phase Flow
 
 Every prescreening session progresses through these phases:
 
 | Phase | Name | Mode | What happens |
 |-------|------|------|--------------|
-| 0 | Demographics | bulk | Collect date of birth, gender, height, weight, etc. |
-| 1 | ER Critical Screen | bulk | 11 yes/no life-threatening checks. Any "yes" terminates immediately (Emergency). |
+| 0 | Demographics | bulk | Collect 14 demographic fields (age, gender, underlying diseases, medication, allergies, surgical history, conditional pregnancy block). |
+| 1 | ER Critical Screen | bulk | Up to 20 yes/no life-threatening checks (some conditional on demographics). Any "yes" terminates immediately (Emergency). |
 | 2 | Symptom Selection | bulk | Patient picks a primary symptom (+ optional secondary) from 16 NHSO symptoms. |
 | 3 | ER Checklist | bulk | Age-appropriate checklist for selected symptoms. First positive terminates. |
 | 4 | OLDCARTS | sequential | Symptom-specific decision tree (Onset, Location, Duration, Character, etc.). |
-| 5 | OPD | sequential | Conditional routing tree that determines the final department and severity. |
+| 5 | Past History | bulk | Height, weight, other medical conditions, pediatric-specific fields. |
+| 6 | Personal History | bulk | Occupation, hometown, smoking history, alcohol history. |
+| 7 | OPD | sequential | Conditional routing tree that determines the final department and severity. |
 
-**Bulk phases (0-3):** All questions are presented at once. Submit all answers in a single call.
+**Bulk phases (0-3, 5-6):** All questions are presented at once. Submit all answers in a single call.
 
-**Sequential phases (4-5):** Questions are presented one at a time. The engine automatically resolves filter/conditional questions behind the scenes and only surfaces user-facing questions.
+**Sequential phases (4, 7):** Questions are presented one at a time. The engine automatically resolves filter/conditional questions behind the scenes and only surfaces user-facing questions.
 
 ### StepResult
 
@@ -123,7 +125,7 @@ Each `QuestionPayload` carries an optional `answer_schema` — a JSON-Schema-lik
 | 1 (ER Critical) | `{"type": "object", "properties": {qid: {"type": "boolean"}}, "required": [...]}` |
 | 2 (Symptom Selection) | `{"type": "object", "properties": {"primary_symptom": ..., "secondary_symptoms": ...}, "required": ["primary_symptom"]}` |
 | 3 (ER Checklist) | `{"type": "object", "properties": {qid: {"type": "boolean"}}, "required": [...]}` |
-| 4-5 (Sequential) | Same as the single question's `answer_schema` |
+| 4, 7 (Sequential) | Same as the single question's `answer_schema` |
 
 ### LLM Prompt Rendering
 
@@ -194,8 +196,8 @@ step: StepResult = await engine.submit_answer(
     value={...},            # full batch (bulk) or single answer (sequential)
 )
 
-# qid is optional — for bulk phases (0-3) it is ignored, and for sequential
-# phases (4-5) it is auto-derived from the current step when omitted:
+# qid is optional — for bulk phases (0-3, 5-6) it is ignored, and for sequential
+# phases (4, 7) it is auto-derived from the current step when omitted:
 step: StepResult = await engine.submit_answer(
     db, user_id="u1", session_id="s1",
     value={...},            # qid omitted — engine derives it automatically
@@ -205,7 +207,7 @@ step: StepResult = await engine.submit_answer(
 #### Submitting Answers Per Phase
 
 The `qid` parameter is **optional** in `submit_answer()`.  For bulk phases
-(0-3) it is ignored by the engine, and for sequential phases (4-5) it is
+(0-3, 5-6) it is ignored by the engine, and for sequential phases (4, 7) it is
 auto-derived from the current step when omitted.  You can still pass it
 explicitly for clarity or backward compatibility.
 
@@ -216,14 +218,12 @@ Each phase expects a different `value` shape:
 await engine.submit_answer(db, user_id=..., session_id=...,
     qid="demographics",
     value={
-        "date_of_birth": "1990-01-15",
+        "age": 35,
         "gender": "Male",
-        "height": 175,
-        "weight": 70,
         "underlying_diseases": ["Hypertension"],
-        "medical_history": "None",
-        "occupation": "Engineer",
-        "presenting_complaint": "Headache for 3 days",
+        "current_medication": {"answer": False, "detail": None},
+        "drug_food_allergies": {"answer": False, "detail": None},
+        "surgical_history": {"answer": False, "detail": None},
     },
 )
 ```
@@ -235,7 +235,7 @@ await engine.submit_answer(db, user_id=..., session_id=...,
     value={
         "emer_critical_001": False,
         "emer_critical_002": False,
-        # ... all 11 items, True = yes
+        # ... up to 20 items (some conditional on demographics), True = yes
     },
 )
 ```
@@ -263,7 +263,29 @@ await engine.submit_answer(db, user_id=..., session_id=...,
 )
 ```
 
-**Phases 4-5 — Sequential (OLDCARTS / OPD):**
+**Phases 5-6 — Bulk (Past History / Personal History):**
+```python
+await engine.submit_answer(db, user_id=..., session_id=...,
+    qid="past_history",
+    value={
+        "height": 175.0,
+        "weight": 70.0,
+        "other_medical_conditions": {"answer": False, "detail": None},
+    },
+)
+
+await engine.submit_answer(db, user_id=..., session_id=...,
+    qid="personal_history",
+    value={
+        "occupation": "พนักงานบริษัท/เอกชน/ลูกจ้าง",
+        "hometown_province": "กรุงเทพมหานคร",
+        "smoking_history": {"answer": False, "detail": None},
+        "alcohol_history": {"answer": False, "detail": None},
+    },
+)
+```
+
+**Phases 4, 7 — Sequential (OLDCARTS / OPD):**
 ```python
 # qid can be omitted — the engine auto-derives it from the current step
 await engine.submit_answer(db, user_id=..., session_id=...,
@@ -299,12 +321,12 @@ store.load()
 #### Reference Data
 
 ```python
-store.departments         # dict[str, DepartmentConst]  — 12 departments
+store.departments         # dict[str, DepartmentConst]  — 13 departments
 store.severity_levels     # dict[str, SeverityConst]    — 4 severity levels
 store.nhso_symptoms       # dict[str, NHSOSymptom]      — 16 NHSO symptoms
 store.underlying_diseases # list[UnderlyingDisease]
-store.demographics        # list[DemographicField]      — 8 fields
-store.er_critical         # list[ERCriticalItem]         — 11 critical checks
+store.demographics        # list[DemographicField]      — 14 fields
+store.er_critical         # list[ERCriticalItem]         — 20 critical checks
 ```
 
 #### Decision Tree Lookups
@@ -531,7 +553,7 @@ Both `generator` and `predictor` are optional:
 The pipeline's optional stages (`QuestionGenerator` and `PredictionModule`) are defined as abstract base classes — concrete implementations live in separate packages.
 
 ```
-Rule-based (phases 0-5)
+Rule-based (phases 0-7)
         │
         ▼
   ┌─────────────────────┐     list[QAPair]       ┌───────────────────┐
@@ -725,7 +747,7 @@ pipeline = PrescreenPipeline(
 async with Session() as db:
     await pipeline.create_session(db, user_id="p1", session_id="s1")
 
-    # Submit answers through rule-based phases 0-5
+    # Submit answers through rule-based phases 0-7
     step = await pipeline.submit_answer(db, user_id="p1", session_id="s1",
                                          qid="demographics", value={...})
     # ... continue submitting answers ...
@@ -777,7 +799,7 @@ The prediction outputs are bounded by the constants in `v1/const/`:
 | Output | Constant file | ID format | Example |
 |--------|--------------|-----------|---------|
 | `DiagnosisResult.disease_id` | `v1/const/diseases.yaml` | `d001`–`d###` | `d042` (Migraine) |
-| `PredictionResult.departments` | `v1/const/departments.yaml` | `dept001`–`dept012` | `dept004` (Internal Medicine) |
+| `PredictionResult.departments` | `v1/const/departments.yaml` | `dept001`–`dept013` | `dept004` (Internal Medicine) |
 | `PredictionResult.severity` | `v1/const/severity_levels.yaml` | `sev001`/`sev002`/`sev002_5`/`sev003` | `sev002` (Visit Hospital) |
 
 ## Package Layout
@@ -785,7 +807,7 @@ The prediction outputs are bounded by the constants in `v1/const/`:
 ```
 src/prescreen_rulesets/
 ├── __init__.py          # Public exports
-├── engine.py            # PrescreenEngine — 6-phase rule-based orchestrator
+├── engine.py            # PrescreenEngine — 8-phase rule-based orchestrator
 ├── pipeline.py          # PrescreenPipeline — full pipeline (engine + LLM + prediction)
 ├── ruleset.py           # RulesetStore — YAML loading + lookups
 ├── evaluator.py         # ConditionalEvaluator — auto-eval logic

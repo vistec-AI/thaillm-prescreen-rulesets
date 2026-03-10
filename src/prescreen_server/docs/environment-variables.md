@@ -96,6 +96,7 @@ These values control clinical decision logic in the prescreening engine. Overrid
 | `dept010` | Psychiatry |
 | `dept011` | Rehabilitation |
 | `dept012` | Surgery |
+| `dept013` | Primary Care Unit |
 
 ---
 

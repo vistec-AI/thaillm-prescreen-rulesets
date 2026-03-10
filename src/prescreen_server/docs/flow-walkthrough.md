@@ -4,7 +4,7 @@ This page walks through a complete prescreening session, phase by phase, with co
 
 ## Overview
 
-Every session progresses through up to 6 rule-based phases, optionally followed by LLM questions and a prediction stage:
+Every session progresses through up to 8 rule-based phases, optionally followed by LLM questions and a prediction stage:
 
 ```mermaid
 flowchart TD
@@ -15,8 +15,10 @@ flowchart TD
     P2 --> P3[Phase 3: ER Checklist]
     P3 -->|Any positive| TERM_CHECKLIST[Terminate: Severity from checklist]
     P3 -->|All negative| P4[Phase 4: OLDCARTS]
-    P4 --> P5[Phase 5: OPD]
-    P5 --> ENGINE_DONE{Engine complete}
+    P4 --> P5[Phase 5: Past History]
+    P5 --> P6[Phase 6: Personal History]
+    P6 --> P7[Phase 7: OPD]
+    P7 --> ENGINE_DONE{Engine complete}
     ENGINE_DONE -->|Generator configured| LLM[LLM Follow-up Questions]
     ENGINE_DONE -->|No generator| RESULT
     LLM --> RESULT([Pipeline Result])
@@ -30,7 +32,7 @@ The session's `pipeline_stage` field tracks the macro-stage:
 
 | Stage | What's happening | Valid operations |
 |-------|-----------------|-----------------|
-| `rule_based` | Phases 0-5 questions | `GET /step`, `POST /step`, `POST /back-edit`, `POST /step-back`, `GET /history` |
+| `rule_based` | Phases 0-7 questions | `GET /step`, `POST /step`, `POST /back-edit`, `POST /step-back`, `GET /history` |
 | `llm_questioning` | LLM follow-up questions | `GET /step`, `POST /llm-answers`, `GET /history` |
 | `done` | Final result available | `GET /step` (returns cached result with history), `GET /history` |
 
@@ -66,13 +68,18 @@ Fetch dynamically: `GET /api/v1/reference/underlying-diseases`
 | `"Thyroid disease"` | ความผิดปกติของต่อมไทรอยด์ |
 | `"Stroke"` | โรคหลอดเลือดสมอง |
 | `"Obesity"` | โรคอ้วน |
+| `"Gout"` | โรคเกาต์ |
+| `"Autoimmune disease"` | โรคแพ้ภูมิตัวเอง |
 | `"Chronic Obstructive Pulmonary Disease"` | โรคปอดอุดกั้นเรื้อรัง |
 | `"Asthma"` | โรคหอบหืด |
 | `"Tuberculosis"` | วัณโรค |
-| `"HIV/AIDS"` | เอดส์ |
+| `"HIV/AIDS"` | ติดเชื้อ HIV/เอดส์ |
 | `"Cancer"` | มะเร็ง |
 | `"Allergy"` | โรคภูมิแพ้ |
-| `"Alzheimer disease"` | โรคอัลไซเมอร์ |
+| `"G6PD deficiency"` | ภาวะพร่องเอนไซม์ G6PD |
+| `"Genetic disorder"` | โรคทางพันธุกรรม |
+| `"Congenital anomalies"` | ภาวะอวัยวะผิดปกติตั้งแต่กำเนิด |
+| `"Other"` | อื่น ๆ |
 
 ### NHSO Symptoms
 
@@ -128,6 +135,7 @@ Fetch dynamically: `GET /api/v1/reference/departments`
 | `dept010` | Psychiatry | จิตเวชศาสตร์ |
 | `dept011` | Rehabilitation | เวชศาสตร์ฟื้นฟู |
 | `dept012` | Surgery | ศัลยกรรม |
+| `dept013` | Primary Care Unit | หน่วยบริการปฐมภูมิ (แพทย์ทั่วไป) |
 
 ---
 
@@ -139,16 +147,24 @@ The first step collects patient demographic information. Several fields accept o
 
 ### Demographic fields
 
-| Field | Type | Required | Accepted values |
-|-------|------|----------|-----------------|
-| `date_of_birth` | `string` | Yes | ISO date format `"YYYY-MM-DD"` |
-| `gender` | `string` | Yes | `"Male"` or `"Female"` |
-| `height` | `number` | Yes | Height in cm (e.g. `175`) |
-| `weight` | `number` | Yes | Weight in kg (e.g. `70`) |
-| `underlying_diseases` | `list[string]` | Yes | List of disease names from the [Underlying Diseases](#underlying-diseases) table, or `[]` for none |
-| `medical_history` | `string` | No | Free text, or `"None"` |
-| `occupation` | `string` | No | Free text |
-| `presenting_complaint` | `string` | No | Free text describing the main symptom |
+The demographic form collects 14 fields total. Some fields are conditionally visible based on prior answers (e.g. the pregnancy block only appears for females).
+
+| Field | Key | Type | Required | Accepted values |
+|-------|-----|------|----------|-----------------|
+| Age (years) | `age` | `int` | Yes | Patient's age in years |
+| Age (months) | `age_months` | `int` | No | Only shown when `age < 6`; additional months |
+| Biological Sex | `gender` | `enum` | Yes | `"Male"` or `"Female"` |
+| Underlying Diseases | `underlying_diseases` | `from_yaml` | Yes | List of disease names from the [Underlying Diseases](#underlying-diseases) table, or `[]` for none |
+| Current Medication | `current_medication` | `yes_no_detail` | Yes | `{"answer": bool, "detail": str \| null}` |
+| Drug/Food Allergies | `drug_food_allergies` | `yes_no_detail` | Yes | `{"answer": bool, "detail": str \| null}` |
+| Surgical History | `surgical_history` | `yes_no_detail` | Yes | `{"answer": bool, "detail": str \| null}` |
+| Pregnancy Status | `pregnancy_status` | `enum` | Conditional | `"pregnant"` or `"not_pregnant"` — only shown for females |
+| Total Pregnancies | `total_pregnancies` | `int` | Conditional | Only shown when `pregnancy_status == "pregnant"` |
+| Number of Fetuses | `fetuses_count` | `int` | Conditional | Only shown when `pregnancy_status == "pregnant"` |
+| Gestational Age (weeks) | `gestational_age_weeks` | `int` | Conditional | Max 42; only shown when `pregnancy_status == "pregnant"` |
+| Last Menstrual Period | `last_menstrual_period` | `date` | Conditional | ISO date; only shown when `pregnancy_status == "not_pregnant"` |
+| Menstrual Duration (days) | `menstrual_duration_days` | `int` | Conditional | Only shown when `pregnancy_status == "not_pregnant"` |
+| Menstrual Flow | `menstrual_flow` | `enum` | Conditional | `"same"`, `"more"`, or `"less"`; only shown when `pregnancy_status == "not_pregnant"` |
 
 ### Example: Submit demographics
 
@@ -159,20 +175,18 @@ The first step collects patient demographic information. Several fields accept o
     curl http://localhost:8080/api/v1/sessions/sess-001/step \
       -H "X-User-ID: patient-1"
 
-    # Submit demographics
+    # Submit demographics (male patient — no pregnancy fields needed)
     curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step \
       -H "Content-Type: application/json" \
       -H "X-User-ID: patient-1" \
       -d '{
         "value": {
-          "date_of_birth": "1990-01-15",
+          "age": 35,
           "gender": "Male",
-          "height": 175,
-          "weight": 70,
           "underlying_diseases": ["Hypertension", "Diabetes Mellitus"],
-          "medical_history": "None",
-          "occupation": "Engineer",
-          "presenting_complaint": "Headache for 3 days"
+          "current_medication": {"answer": true, "detail": "Amlodipine 5mg"},
+          "drug_food_allergies": {"answer": false, "detail": null},
+          "surgical_history": {"answer": false, "detail": null}
         }
       }'
     ```
@@ -186,19 +200,17 @@ The first step collects patient demographic information. Several fields accept o
         headers=headers,
     ).json()
 
-    # Submit demographics
+    # Submit demographics (male patient — no pregnancy fields needed)
     next_step = client.post(
         "/api/v1/sessions/sess-001/step",
         json={
             "value": {
-                "date_of_birth": "1990-01-15",
+                "age": 35,
                 "gender": "Male",
-                "height": 175,
-                "weight": 70,
                 "underlying_diseases": ["Hypertension", "Diabetes Mellitus"],
-                "medical_history": "None",
-                "occupation": "Engineer",
-                "presenting_complaint": "Headache for 3 days",
+                "current_medication": {"answer": True, "detail": "Amlodipine 5mg"},
+                "drug_food_allergies": {"answer": False, "detail": None},
+                "surgical_history": {"answer": False, "detail": None},
             }
         },
         headers=headers,
@@ -211,9 +223,9 @@ The response is the next step — Phase 1 (ER Critical Screen).
 
 ## Phase 1 — ER Critical Screen
 
-**Mode:** Bulk (all 11 yes/no questions at once)
+**Mode:** Bulk (up to 20 yes/no questions at once, some conditional on demographics)
 
-Eleven life-threatening checks. If **any** answer is `true`, the session terminates immediately with **Emergency** severity.
+Twenty life-threatening checks. Some items are conditionally visible based on demographics (e.g. age or pregnancy status). If **any** answer is `true`, the session terminates immediately with **Emergency** severity.
 
 ### Example: GET step response
 
@@ -226,15 +238,13 @@ Eleven life-threatening checks. If **any** answer is `true`, the session termina
     {"qid": "emer_critical_001", "question": "คนไข้มีอาการหมดสติ เรียกไม่รู้สึกตัวหรือไม่?", "question_type": "single_select"},
     {"qid": "emer_critical_002", "question": "มีกาการชักเกร็งหรือไม่?", "question_type": "single_select"},
     {"qid": "emer_critical_003", "question": "มีอาการซึม หรือสับสนหรือไม่", "question_type": "single_select"},
-    {"qid": "emer_critical_004", "question": "มีอาการที่บ่งบอกถึงโรคหลอดเหลือสมองหรือไม่?...", "question_type": "single_select"},
-    {"qid": "emer_critical_005", "question": "มีอาการหายใจเหนื่อยหอบ หายใจไม่ออกหรือไม่?", "question_type": "single_select"},
-    {"qid": "emer_critical_006", "question": "มีอาการเจ็บแน่นหน้าอก...", "question_type": "single_select"},
-    {"qid": "emer_critical_007", "question": "มีอาการหน้าหรือตัวเขียว/ซีด...", "question_type": "single_select"},
-    {"qid": "emer_critical_008", "question": "มีเลือดออกเป็นจำนวนมาก...", "question_type": "single_select"},
-    {"qid": "emer_critical_009", "question": "ได้รับสารพิษ สารเคมี หรือถูกสัตว์มีพิษร้ายแรงกัด...", "question_type": "single_select"},
-    {"qid": "emer_critical_010", "question": "มีความเจ็บปวดรุนแรงมากกว่า 7/10 คะแนน...", "question_type": "single_select"},
-    {"qid": "emer_critical_011", "question": "ประสบอุบัติเหตุรุนแรงเสี่ยงถึงชีวิต", "question_type": "single_select"}
+    ...
+    {"qid": "emer_critical_020", "question": "...", "question_type": "single_select"}
   ]
+```
+
+!!! note "Conditional ER items"
+    Some items are only shown when their demographic condition is met (e.g. `emer_critical_004` requires `age < 15`, `emer_critical_020` requires `pregnancy_status == "pregnant"`). The server automatically filters these based on the patient's demographics.
 }
 ```
 
@@ -243,6 +253,7 @@ Eleven life-threatening checks. If **any** answer is `true`, the session termina
 === "curl"
 
     ```bash
+    # Submit all visible ER items as false (actual items depend on patient demographics)
     curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step \
       -H "Content-Type: application/json" \
       -H "X-User-ID: patient-1" \
@@ -251,14 +262,21 @@ Eleven life-threatening checks. If **any** answer is `true`, the session termina
           "emer_critical_001": false,
           "emer_critical_002": false,
           "emer_critical_003": false,
-          "emer_critical_004": false,
           "emer_critical_005": false,
           "emer_critical_006": false,
           "emer_critical_007": false,
           "emer_critical_008": false,
           "emer_critical_009": false,
           "emer_critical_010": false,
-          "emer_critical_011": false
+          "emer_critical_011": false,
+          "emer_critical_012": false,
+          "emer_critical_013": false,
+          "emer_critical_014": false,
+          "emer_critical_015": false,
+          "emer_critical_016": false,
+          "emer_critical_017": false,
+          "emer_critical_018": false,
+          "emer_critical_019": false
         }
       }'
     ```
@@ -266,23 +284,11 @@ Eleven life-threatening checks. If **any** answer is `true`, the session termina
 === "Python"
 
     ```python
+    # Programmatic: answer False for every visible ER critical item
+    er_answers = {q["qid"]: False for q in step["questions"]}
     next_step = client.post(
         "/api/v1/sessions/sess-001/step",
-        json={
-            "value": {
-                "emer_critical_001": False,
-                "emer_critical_002": False,
-                "emer_critical_003": False,
-                "emer_critical_004": False,
-                "emer_critical_005": False,
-                "emer_critical_006": False,
-                "emer_critical_007": False,
-                "emer_critical_008": False,
-                "emer_critical_009": False,
-                "emer_critical_010": False,
-                "emer_critical_011": False,
-            }
-        },
+        json={"value": er_answers},
         headers=headers,
     ).json()
     ```
@@ -787,7 +793,112 @@ Each `GET /step` returns **one question**. Submit the answer, then `GET /step` a
 
 ---
 
-## Phase 5 — OPD (Sequential)
+## Phase 5 — Past History (Bulk)
+
+**Mode:** Bulk (all questions at once)
+
+Collects height, weight, other medical conditions, and pediatric-specific fields (vaccination status, developmental milestones). Some fields are only shown for children (age < 15) using conditional visibility.
+
+### Past History fields
+
+| Field | Key | Type | Required | Notes |
+|-------|-----|------|----------|-------|
+| Height (cm) | `height` | `float` | Yes | |
+| Weight (kg) | `weight` | `float` | Yes | |
+| Other Medical Conditions | `other_medical_conditions` | `yes_no_detail` | Yes | `{"answer": bool, "detail": str \| null}` |
+| Vaccination Status | `vaccination_status` | `enum` | Conditional | `"complete"` or `"incomplete"` — only for age < 15 |
+| Missing Vaccines | `vaccination_detail` | `str` | No | Only shown when `vaccination_status == "incomplete"` |
+| Developmental Milestones | `developmental_milestones` | `enum` | Conditional | `"normal"` or `"delayed"` — only for age < 15 |
+| Delayed Areas | `developmental_detail` | `str` | No | Only shown when `developmental_milestones == "delayed"` |
+
+### Example: Submit past history
+
+=== "curl"
+
+    ```bash
+    curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step \
+      -H "Content-Type: application/json" \
+      -H "X-User-ID: patient-1" \
+      -d '{
+        "value": {
+          "height": 175.0,
+          "weight": 70.0,
+          "other_medical_conditions": {"answer": false, "detail": null}
+        }
+      }'
+    ```
+
+=== "Python"
+
+    ```python
+    next_step = client.post(
+        "/api/v1/sessions/sess-001/step",
+        json={
+            "value": {
+                "height": 175.0,
+                "weight": 70.0,
+                "other_medical_conditions": {"answer": False, "detail": None},
+            }
+        },
+        headers=headers,
+    ).json()
+    ```
+
+---
+
+## Phase 6 — Personal History (Bulk)
+
+**Mode:** Bulk (all questions at once)
+
+Collects occupation, hometown, smoking history, and alcohol history. Smoking and alcohol fields use `yes_no_detail` type with `detail_fields` sub-structure for follow-up data when the answer is positive.
+
+### Personal History fields
+
+| Field | Key | Type | Required | Notes |
+|-------|-----|------|----------|-------|
+| Occupation | `occupation` | `enum` | Yes | Thai occupation categories (includes `"other"`) |
+| Hometown / Province | `hometown_province` | `str` | Yes | |
+| Smoking History | `smoking_history` | `yes_no_detail` | Yes | If yes: detail includes `cigarettes_per_day` (int) and `smoking_years` (int) |
+| Alcohol History | `alcohol_history` | `yes_no_detail` | Yes | If yes: detail includes `drinking_frequency` (enum) and `drinking_years` (int) |
+
+### Example: Submit personal history
+
+=== "curl"
+
+    ```bash
+    curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step \
+      -H "Content-Type: application/json" \
+      -H "X-User-ID: patient-1" \
+      -d '{
+        "value": {
+          "occupation": "พนักงานบริษัท/เอกชน/ลูกจ้าง",
+          "hometown_province": "กรุงเทพมหานคร",
+          "smoking_history": {"answer": false, "detail": null},
+          "alcohol_history": {"answer": false, "detail": null}
+        }
+      }'
+    ```
+
+=== "Python"
+
+    ```python
+    next_step = client.post(
+        "/api/v1/sessions/sess-001/step",
+        json={
+            "value": {
+                "occupation": "พนักงานบริษัท/เอกชน/ลูกจ้าง",
+                "hometown_province": "กรุงเทพมหานคร",
+                "smoking_history": {"answer": False, "detail": None},
+                "alcohol_history": {"answer": False, "detail": None},
+            }
+        },
+        headers=headers,
+    ).json()
+    ```
+
+---
+
+## Phase 7 — OPD (Sequential)
 
 **Mode:** Sequential (one question at a time)
 
@@ -802,7 +913,7 @@ OPD trees make heavy use of **auto-evaluated** question types (`age_filter`, `ge
 ```json
 {
   "type": "questions",
-  "phase": 5,
+  "phase": 7,
   "phase_name": "OPD",
   "questions": [
     {
@@ -848,7 +959,7 @@ When the OPD tree reaches a terminal node, the rule-based engine is complete:
 
 ## Back-Edit (Revert to Earlier Step)
 
-During the `rule_based` pipeline stage, you can jump back to any previous phase (or to a specific question within sequential phases 4-5) using the back-edit endpoint. This is useful when the patient wants to correct an earlier answer.
+During the `rule_based` pipeline stage, you can jump back to any previous phase (or to a specific question within sequential phases 4 and 7) using the back-edit endpoint. This is useful when the patient wants to correct an earlier answer.
 
 !!! note "Rule-based stage only"
     Back-edit is only valid during the `rule_based` pipeline stage. Once the session transitions to `llm_questioning` or `done`, back-edit is no longer available.
@@ -863,8 +974,10 @@ When you back-edit to a target phase, all data from that phase onward is cleared
 | Phase 1 | Symptoms, ER flags, all responses from phase 1 onward |
 | Phase 2 | Symptoms, ER flags, all responses from phase 2 onward |
 | Phase 3 | ER flags, all responses from phase 3 onward |
-| Phase 4 | All OLDCARTS + OPD responses |
-| Phase 5 | All OPD responses |
+| Phase 4 | All OLDCARTS + later phase responses |
+| Phase 5 | Past history + later phase responses |
+| Phase 6 | Personal history + later phase responses |
+| Phase 7 | All OPD responses |
 
 ### Bulk phase back-edit (phases 0-3)
 
@@ -906,7 +1019,7 @@ The response is a `QuestionsStep` at the target phase. For bulk phases, question
 }
 ```
 
-### Sequential qid-level back-edit (phases 4-5)
+### Sequential qid-level back-edit (phases 4 and 7)
 
 For sequential phases, you can jump back to a specific previously-answered question by providing `target_qid`:
 
@@ -963,8 +1076,10 @@ No request body is needed. The response is the same `QuestionsStep` as back-edit
 | Phase 3 | Phase 2 (Symptom Selection) |
 | Phase 4, has answered questions | Last answered OLDCARTS question |
 | Phase 4, no answered questions | Phase 3 (ER Checklist) |
-| Phase 5, has answered OPD questions | Last answered OPD question |
-| Phase 5, no OPD answers | Last answered OLDCARTS question (or Phase 3 if none) |
+| Phase 5 | Phase 4 (last answered OLDCARTS question, or Phase 3 if none) |
+| Phase 6 | Phase 5 (Past History) |
+| Phase 7, has answered OPD questions | Last answered OPD question |
+| Phase 7, no OPD answers | Phase 6 (Personal History) |
 | Phase 0 | Error — already at first step (400) |
 
 !!! tip "When to use step-back vs back-edit"
@@ -1084,7 +1199,7 @@ Each entry in `history` contains:
 | `question_type` | `string \| null` | Question type (e.g. `"single_select"`, `"free_text"`, `"yes_no"`). Null for LLM-generated. |
 | `question` | `string` | The question text shown to the user. |
 | `answer` | `any` | The user's answer. Type varies: `bool` (ER yes/no), `string`, `list[string]`, `object`, or `number`. |
-| `phase` | `int \| null` | Phase number (0-5) for rule-based questions. Null for LLM-generated. |
+| `phase` | `int \| null` | Phase number (0-7) for rule-based questions. Null for LLM-generated. |
 | `source` | `string` | `"rule_based"` or `"llm_generated"`. |
 
 !!! tip "History is always present"
