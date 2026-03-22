@@ -74,7 +74,7 @@ class TextField(BaseModel):
 
     id: str
     label: str
-    kind: Literal["text"]
+    kind: Literal["text", "number"]
 
 
 # --- User-facing question types ---
@@ -171,7 +171,15 @@ class AgeFilterQuestion(BaseQuestion):
 # --- Conditional logic models ---
 
 class Predicate(BaseModel):
-    """A single condition that references a prior answer.
+    """A single condition that references a prior answer or demographics field.
+
+    Two reference modes:
+      - qid: references a prior question's answer (standard mode)
+      - field: references a demographics field directly (e.g. pregnancy_status,
+        age, gender) — used when the condition depends on demographics rather
+        than a specific question answer
+
+    At least one of qid or field must be present.
 
     Operators:
       - eq, ne: equality / inequality
@@ -182,7 +190,7 @@ class Predicate(BaseModel):
       - matches: regex match
     """
 
-    qid: str
+    qid: Optional[str] = None
     field: Optional[str] = None
     op: Literal[
         "eq", "ne", "contains", "not_contains", "matches",

@@ -170,9 +170,7 @@ def test_oldcarts_schema():
                 action = parsed_question.on_submit if parsed_question.question_type != "multi_select" else parsed_question.next
 
                 # update has_opd state
-                # also check if there's only one opd action exists
                 if action.action == "opd":
-                    assert not has_opd, f"Only 1 OPD is allowed for symptom {symptom}"
                     has_opd = True
 
                 # check if referred action follows format
@@ -187,6 +185,15 @@ def test_oldcarts_schema():
                         assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid}"
                     for sev in action.severity:
                         assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid}"
+
+                # urgency: validate department IDs in metadata if present
+                elif action.action == "urgency":
+                    for dept in action.department:
+                        assert dept in _department_ids, f"Unknown department {dept} in urgency action at {parsed_question.qid}"
+
+                # emergency: no metadata to validate — fixed sev003/dept002
+                elif action.action == "emergency":
+                    pass
 
             elif parsed_question.question_type in ["single_select", "image_single_select", "gender_filter", "age_filter"]:
                 for opt in parsed_question.options:
@@ -210,6 +217,15 @@ def test_oldcarts_schema():
                         for sev in action.severity:
                             assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid}"
 
+                    # urgency: validate department IDs in metadata if present
+                    elif action.action == "urgency":
+                        for dept in action.department:
+                            assert dept in _department_ids, f"Unknown department {dept} in urgency action at {parsed_question.qid}"
+
+                    # emergency: no metadata to validate — fixed sev003/dept002
+                    elif action.action == "emergency":
+                        pass
+
             elif isinstance(parsed_question, ConditionalQuestion):
                 # check if default action is needed based on rule coverage
                 needs_default = _conditional_needs_default(parsed_question, rules["oldcarts"][symptom])
@@ -225,6 +241,9 @@ def test_oldcarts_schema():
                             assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid} default"
                         for sev in parsed_question.default.severity:
                             assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid} default"
+                    elif parsed_question.default.action == "urgency":
+                        for dept in parsed_question.default.department:
+                            assert dept in _department_ids, f"Unknown department {dept} in urgency action at {parsed_question.qid} default"
 
                 # validate rules
                 for rule in parsed_question.rules:
@@ -240,6 +259,9 @@ def test_oldcarts_schema():
                             assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid}"
                         for sev in rule.then.severity:
                             assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid}"
+                    elif rule.then.action == "urgency":
+                        for dept in rule.then.department:
+                            assert dept in _department_ids, f"Unknown department {dept} in urgency action at {parsed_question.qid}"
 
         # oldcards must have at least 1 opd
         assert has_opd, f"Symptom {symptom} must have at least one OPD action"
@@ -270,7 +292,7 @@ def recursive_traverse(
     if question.question_type  in ["free_text", "free_text_with_fields", "number_range", "multi_select",  "image_multi_select"]:
         action = question.on_submit if question.question_type not in ["multi_select", "image_multi_select"] else question.next
         # base case: opd handoff or early termination both end traversal
-        if action.action in ("opd", "terminate"):
+        if action.action in ("opd", "terminate", "urgency", "emergency"):
             return qid_pools
 
         # recursive

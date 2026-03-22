@@ -20,7 +20,13 @@ import pytest
 
 from prescreen_rulesets.constants import AUTO_EVAL_TYPES
 from prescreen_rulesets.evaluator import ConditionalEvaluator
-from prescreen_rulesets.models.action import GotoAction, OPDAction, TerminateAction
+from prescreen_rulesets.models.action import (
+    EmergencyAction,
+    GotoAction,
+    OPDAction,
+    TerminateAction,
+    UrgencyAction,
+)
 from prescreen_rulesets.models.question import (
     FreeTextQuestion,
     FreeTextWithFieldQuestion,
@@ -150,6 +156,8 @@ def _walk_tree(store, evaluator, source, symptom, demographics, rng,
     answers = dict(prior_answers) if prior_answers else {}
     pending = [store.get_first_qid(source, symptom)]
     steps = 0
+    # Track whether urgency was flagged — affects terminal outcome
+    urgency_flagged = False
 
     while pending and steps < MAX_STEPS:
         qid = pending.pop(0)
@@ -184,13 +192,26 @@ def _walk_tree(store, evaluator, source, symptom, demographics, rng,
                         if q not in answers and q not in pending]
             pending[0:0] = new_qids
         elif isinstance(action, OPDAction):
+            # If urgency was flagged, the engine terminates here instead of advancing
+            if urgency_flagged:
+                return ("terminate", steps, answers)
             return ("opd", steps, answers)
         elif isinstance(action, TerminateAction):
+            return ("terminate", steps, answers)
+        elif isinstance(action, UrgencyAction):
+            # Flag-and-continue: urgency doesn't navigate, just flags.
+            # When OPD or pending exhaustion occurs, this triggers termination.
+            urgency_flagged = True
+        elif isinstance(action, EmergencyAction):
+            # Immediate termination
             return ("terminate", steps, answers)
 
     assert steps < MAX_STEPS, (
         f"Possible infinite loop in {source}/{symptom} after {steps} steps"
     )
+    # If urgency was flagged and pending exhausted, the engine terminates
+    if urgency_flagged:
+        return ("terminate", steps, answers)
     return ("exhausted", steps, answers)
 
 
@@ -251,9 +272,13 @@ def test_opd_walkthrough_adult(store, symptom):
     for seed in range(NUM_RANDOM_RUNS):
         rng = random.Random(seed)
         # Walk OLDCARTS first to collect answers
-        _, _, oldcarts_answers = _walk_tree(
+        oc_result, _, oldcarts_answers = _walk_tree(
             store, evaluator, "oldcarts", symptom, demographics, rng,
         )
+        # Skip OPD when OLDCARTS terminated early (urgency/emergency/terminate)
+        # — in the real engine, OPD never runs after early termination
+        if oc_result == "terminate":
+            continue
         # Walk OPD with OLDCARTS answers available
         result, steps, _ = _walk_tree(
             store, evaluator, "opd", symptom, demographics, rng,
@@ -273,9 +298,12 @@ def test_opd_walkthrough_pediatric(store, symptom):
 
     for seed in range(NUM_RANDOM_RUNS):
         rng = random.Random(seed)
-        _, _, oldcarts_answers = _walk_tree(
+        oc_result, _, oldcarts_answers = _walk_tree(
             store, evaluator, "oldcarts", symptom, demographics, rng,
         )
+        # Skip OPD when OLDCARTS terminated early
+        if oc_result == "terminate":
+            continue
         result, steps, _ = _walk_tree(
             store, evaluator, "opd", symptom, demographics, rng,
             prior_answers=oldcarts_answers,

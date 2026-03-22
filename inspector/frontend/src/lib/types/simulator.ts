@@ -16,7 +16,7 @@ export interface RawOption {
 
 /** An action attached to an option or as on_submit/next/default */
 export interface RawAction {
-  action: "goto" | "opd" | "terminate";
+  action: "goto" | "opd" | "terminate" | "urgency" | "emergency";
   qid?: string[];
   metadata?: {
     department?: Array<{ id: string }>;
@@ -210,6 +210,8 @@ export interface HistoryEntry {
   pastHistoryData: Record<string, unknown>;
   /** Phase 6 personal history data snapshot */
   personalHistoryData: Record<string, unknown>;
+  /** Urgency flag department IDs (set by urgency action during OLDCARTS) */
+  urgencyFlag: string[] | null;
   /** Label describing what was answered at this step */
   label: string;
   /** The answer value submitted */

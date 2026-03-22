@@ -35,6 +35,11 @@ PHASE_NAMES: dict[int, str] = {
     7: "OPD",
 }
 
+# Fixed severity for urgency actions in OLDCARTS (always "Visit Urgently").
+# Urgency is a flag-and-continue pattern: records the flag, OLDCARTS continues,
+# and terminates with this severity when the phase ends.
+DEFAULT_URGENCY_SEVERITY = "sev002_5"
+
 # Auto-evaluated question types that the engine resolves without user input.
 # These are never shown to the patient.
 AUTO_EVAL_TYPES: set[str] = {"gender_filter", "age_filter", "conditional"}

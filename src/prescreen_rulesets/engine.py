@@ -34,12 +34,19 @@ from prescreen_rulesets.constants import (
     AUTO_EVAL_TYPES,
     DEFAULT_ER_DEPARTMENT,
     DEFAULT_ER_SEVERITY,
+    DEFAULT_URGENCY_SEVERITY,
     PEDIATRIC_AGE_THRESHOLD,
     PHASE_NAMES,
     SEVERITY_ORDER,
 )
 from prescreen_rulesets.evaluator import ConditionalEvaluator
-from prescreen_rulesets.models.action import GotoAction, OPDAction, TerminateAction
+from prescreen_rulesets.models.action import (
+    EmergencyAction,
+    GotoAction,
+    OPDAction,
+    TerminateAction,
+    UrgencyAction,
+)
 from prescreen_rulesets.models.question import (
     FreeTextQuestion,
     FreeTextWithFieldQuestion,
@@ -64,6 +71,11 @@ logger = logging.getLogger(__name__)
 # Key used in the responses JSONB to store the pending-qid queue for
 # sequential phases (4 OLDCARTS, 7 OPD).
 _PENDING_KEY = "__pending"
+
+# Key used in the responses JSONB to store urgency flag data set by
+# UrgencyAction during OLDCARTS.  When OPD action or pending exhaustion
+# occurs, this flag triggers termination with sev002_5.
+_URGENCY_KEY = "__urgency"
 
 
 def _demographic_answer_schema(field) -> dict:
@@ -592,6 +604,9 @@ class PrescreenEngine:
         clear_demographics = False
         clear_symptoms = False
         clear_er_flags = False
+        # Urgency is only set in phase 4 — clear when reverting to phase 4
+        # or earlier so a different answer path doesn't inherit a stale flag.
+        clear_urgency = False
         new_pending: list[str] | None = None
         # Keys to remove from demographics JSONB (for phases 5/6 back-edit)
         demo_keys_to_remove: set[str] = set()
@@ -600,6 +615,7 @@ class PrescreenEngine:
             clear_demographics = True
             clear_symptoms = True
             clear_er_flags = True
+            clear_urgency = True
             # Remove all response qids
             qids_to_remove = {
                 k for k in row.responses if not k.startswith("__")
@@ -608,6 +624,7 @@ class PrescreenEngine:
         elif target_phase == 1:
             clear_symptoms = True
             clear_er_flags = True
+            clear_urgency = True
             # Remove phase 1+ qids
             qids_to_remove = (
                 er_critical_qids | er_checklist_qids | oldcarts_qids | opd_qids
@@ -618,17 +635,20 @@ class PrescreenEngine:
         elif target_phase == 2:
             clear_symptoms = True
             clear_er_flags = True
+            clear_urgency = True
             # Remove phase 2+ qids (keep phase 1 ER critical responses)
             qids_to_remove = er_checklist_qids | oldcarts_qids | opd_qids
             demo_keys_to_remove = past_history_keys | personal_history_keys
 
         elif target_phase == 3:
             clear_er_flags = True
+            clear_urgency = True
             # Remove phase 3+ qids
             qids_to_remove = er_checklist_qids | oldcarts_qids | opd_qids
             demo_keys_to_remove = past_history_keys | personal_history_keys
 
         elif target_phase == 4:
+            clear_urgency = True
             # Remove phase 4+ qids
             qids_to_remove = oldcarts_qids | opd_qids
             demo_keys_to_remove = past_history_keys | personal_history_keys
@@ -687,6 +707,7 @@ class PrescreenEngine:
             "clear_demographics": clear_demographics,
             "clear_symptoms": clear_symptoms,
             "clear_er_flags": clear_er_flags,
+            "clear_urgency": clear_urgency,
             "response_qids_to_remove": qids_to_remove if qids_to_remove else None,
             "new_pending": new_pending,
             "demo_keys_to_remove": demo_keys_to_remove if demo_keys_to_remove else None,
@@ -1163,6 +1184,17 @@ class PrescreenEngine:
         # Pending queue exhausted — advance to next phase
         phase = row.current_phase
         if phase == 4:
+            # Check urgency flag before advancing — if set, terminate with sev002_5
+            urgency = row.responses.get(_URGENCY_KEY)
+            if urgency:
+                dept_ids = urgency.get("departments", [])
+                return TerminationStep(
+                    type="terminated",
+                    phase=row.current_phase,
+                    departments=[self._store.resolve_department(d) for d in dept_ids],
+                    severity=self._store.resolve_severity(DEFAULT_URGENCY_SEVERITY),
+                    reason=None,
+                )
             # OLDCARTS done — advance to Past History (phase 5)
             return self._build_advance_step(row, 5)
         else:
@@ -1603,7 +1635,19 @@ class PrescreenEngine:
             return None
 
         if isinstance(action, OPDAction):
-            # Transition from OLDCARTS (phase 4) to Past History (phase 5)
+            # Check if urgency was flagged during OLDCARTS — if so, terminate
+            # with sev002_5 instead of advancing to Past History.
+            urgency = row.responses.get(_URGENCY_KEY)
+            if urgency:
+                dept_ids = urgency.get("departments", [])
+                return TerminationStep(
+                    type="terminated",
+                    phase=row.current_phase,
+                    departments=[self._store.resolve_department(d) for d in dept_ids],
+                    severity=self._store.resolve_severity(DEFAULT_URGENCY_SEVERITY),
+                    reason=None,
+                )
+            # No urgency — transition from OLDCARTS (phase 4) to Past History (phase 5)
             return self._build_advance_step(row, 5)
 
         if isinstance(action, TerminateAction):
@@ -1616,6 +1660,25 @@ class PrescreenEngine:
                 departments=[self._store.resolve_department(d) for d in dept_ids],
                 severity=self._store.resolve_severity(severity) if severity else None,
                 reason=action.reason,
+            )
+
+        if isinstance(action, UrgencyAction):
+            # Flag urgency in session state — don't terminate yet.
+            # When OPD action or pending exhaustion occurs, this flag
+            # will trigger termination with sev002_5.
+            urgency_data = {"departments": action.department}
+            row.responses = {**row.responses, _URGENCY_KEY: urgency_data}
+            return None  # continue processing (like goto but no qids added)
+
+        if isinstance(action, EmergencyAction):
+            # Immediate termination with Emergency severity (sev003) and
+            # Emergency Medicine department (dept002).
+            return TerminationStep(
+                type="terminated" if row.current_phase < 7 else "completed",
+                phase=row.current_phase,
+                departments=[self._store.resolve_department(DEFAULT_ER_DEPARTMENT)],
+                severity=self._store.resolve_severity(DEFAULT_ER_SEVERITY),
+                reason=None,
             )
 
         logger.warning("Unknown action type: %s", type(action))

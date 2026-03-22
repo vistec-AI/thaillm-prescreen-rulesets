@@ -26,6 +26,9 @@ const DEFAULT_ER_DEPARTMENT = "dept002";
 /** Patients younger than this use the pediatric ER checklist */
 const PEDIATRIC_AGE_THRESHOLD = 15;
 
+/** Fixed severity for urgency actions in OLDCARTS (always "Visit Urgently") */
+const DEFAULT_URGENCY_SEVERITY = "sev002_5";
+
 // --- Age computation ---
 
 /**
@@ -118,8 +121,10 @@ export function determineAction(
  * or a TerminationResult / phase-advance signal.
  */
 export interface ActionResult {
-  type: "continue" | "terminate" | "advance_to_opd";
+  type: "continue" | "terminate" | "advance_to_opd" | "urgency_flag";
   termination?: TerminationResult;
+  /** Department IDs from urgency action metadata (only for urgency_flag type) */
+  urgencyDepartments?: string[];
 }
 
 /**
@@ -173,6 +178,40 @@ export function processAction(
           ? { id: sevId, name: sevMap.get(sevId) ?? sevId }
           : null,
         reason: meta.reason ?? null,
+        fromPhase: currentPhase,
+      },
+    };
+  }
+
+  if (action.action === "urgency") {
+    // Flag-and-continue: return urgency signal with department IDs.
+    // The simulator hook stores the flag and checks it at opd/exhaustion.
+    const meta = action.metadata ?? {};
+    const deptIds = (meta.department ?? []).map((d) => d.id);
+    return { type: "urgency_flag", urgencyDepartments: deptIds };
+  }
+
+  if (action.action === "emergency") {
+    // Immediate termination with Emergency severity (sev003) and dept002
+    const deptMap = new Map(ruleData.departments.map((d) => [d.id, d.name]));
+    const sevMap = new Map(
+      ruleData.severity_levels.map((s) => [s.id, s.name])
+    );
+    return {
+      type: "terminate",
+      termination: {
+        type: currentPhase < 7 ? "terminated" : "completed",
+        departments: [
+          {
+            id: DEFAULT_ER_DEPARTMENT,
+            name: deptMap.get(DEFAULT_ER_DEPARTMENT) ?? DEFAULT_ER_DEPARTMENT,
+          },
+        ],
+        severity: {
+          id: DEFAULT_ER_SEVERITY,
+          name: sevMap.get(DEFAULT_ER_SEVERITY) ?? DEFAULT_ER_SEVERITY,
+        },
+        reason: null,
         fromPhase: currentPhase,
       },
     };
@@ -281,7 +320,8 @@ function autoEvaluate(
     return evalConditional(
       question.rules ?? [],
       question.default,
-      answers
+      answers,
+      demographics
     );
   }
   if (qt === "age_filter") {
@@ -504,6 +544,32 @@ export function resolveErChecklistTermination(
   }
 
   return null;
+}
+
+/** Build urgency termination result (sev002_5 with optional departments) */
+export function buildUrgencyTermination(
+  departmentIds: string[],
+  ruleData: SimulatorDataResponse,
+  currentPhase: number
+): TerminationResult {
+  const deptMap = new Map(ruleData.departments.map((d) => [d.id, d.name]));
+  const sevMap = new Map(
+    ruleData.severity_levels.map((s) => [s.id, s.name])
+  );
+
+  return {
+    type: "terminated",
+    departments: departmentIds.map((id) => ({
+      id,
+      name: deptMap.get(id) ?? id,
+    })),
+    severity: {
+      id: DEFAULT_URGENCY_SEVERITY,
+      name: sevMap.get(DEFAULT_URGENCY_SEVERITY) ?? DEFAULT_URGENCY_SEVERITY,
+    },
+    reason: null,
+    fromPhase: currentPhase,
+  };
 }
 
 /** Build ER critical termination result (any positive → Emergency) */

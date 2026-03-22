@@ -39,6 +39,34 @@ def _extract_terminate_label(
     return label, suffix
 
 
+def _extract_urgency_label(
+    act: Dict[str, Any],
+    dept_map: Optional[Dict[str, str]] = None,
+    sev_map: Optional[Dict[str, str]] = None,
+) -> Tuple[str, str]:
+    """Extract a human-readable label and unique suffix from an urgency action's metadata.
+
+    Urgency always uses sev002_5 (Visit Urgently). Department comes from
+    optional metadata.  Format mirrors _extract_terminate_label.
+    """
+    meta = act.get("metadata") or {}
+    dept_ids = [d["id"] if isinstance(d, dict) else d for d in meta.get("department", [])]
+
+    if dept_map:
+        dept_labels = [f"{dept_map.get(d, d)} ({d})" for d in dept_ids]
+    else:
+        dept_labels = list(dept_ids)
+
+    sev_label = "sev002_5"
+    if sev_map:
+        sev_label = f"{sev_map.get('sev002_5', 'sev002_5')} (sev002_5)"
+
+    parts = dept_labels + [sev_label]
+    label = "Urgency: " + ", ".join(parts)
+    suffix = "_".join(dept_ids + ["sev002_5"]) if dept_ids else "sev002_5"
+    return label, suffix
+
+
 def build_oldcarts_graph(
     symptom: str,
     q_list: List[Dict[str, Any]],
@@ -94,6 +122,16 @@ def build_oldcarts_graph(
                 term_id = f"{qid}_TERM_{suffix}"
                 edges.append({"data": {"source": qid, "target": term_id, "label": label}})
                 nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
+            elif act.get("action") == "urgency":
+                label, suffix = _extract_urgency_label(act, dept_map, sev_map)
+                urg_id = f"{qid}_URG_{suffix}"
+                edges.append({"data": {"source": qid, "target": urg_id, "label": label}})
+                nodes.append({"data": {"id": urg_id, "label": label, "type": "urgency"}})
+            elif act.get("action") == "emergency":
+                emrg_id = f"{qid}_EMRG"
+                label = "Emergency (sev003, dept002)"
+                edges.append({"data": {"source": qid, "target": emrg_id, "label": label}})
+                nodes.append({"data": {"id": emrg_id, "label": label, "type": "emergency"}})
         elif qtype in ["multi_select", "image_multi_select"]:
             act = q_dict.get("next", {})
             if act.get("action") == "goto":
@@ -106,19 +144,40 @@ def build_oldcarts_graph(
                 term_id = f"{qid}_TERM_{suffix}"
                 edges.append({"data": {"source": qid, "target": term_id, "label": label}})
                 nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
+            elif act.get("action") == "urgency":
+                label, suffix = _extract_urgency_label(act, dept_map, sev_map)
+                urg_id = f"{qid}_URG_{suffix}"
+                edges.append({"data": {"source": qid, "target": urg_id, "label": label}})
+                nodes.append({"data": {"id": urg_id, "label": label, "type": "urgency"}})
+            elif act.get("action") == "emergency":
+                emrg_id = f"{qid}_EMRG"
+                label = "Emergency (sev003, dept002)"
+                edges.append({"data": {"source": qid, "target": emrg_id, "label": label}})
+                nodes.append({"data": {"id": emrg_id, "label": label, "type": "emergency"}})
         elif qtype in ["single_select", "image_single_select", "gender_filter", "age_filter"]:
             for opt in q_dict.get("options", []):
                 act = opt.get("action", {})
+                opt_label = opt.get("label", opt.get("id", ""))
                 if act.get("action") == "goto":
                     for tgt in act.get("qid", []):
-                        edges.append({"data": {"source": qid, "target": tgt, "label": opt.get("label", opt.get("id", ""))}})
+                        edges.append({"data": {"source": qid, "target": tgt, "label": opt_label}})
                 elif act.get("action") == "opd":
-                    edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": opt.get("label", opt.get("id", ""))}})
+                    edges.append({"data": {"source": qid, "target": f"{symptom}_OPD", "label": opt_label}})
                 elif act.get("action") == "terminate":
                     label, suffix = _extract_terminate_label(act, dept_map, sev_map)
                     term_id = f"{qid}_TERM_{suffix}"
-                    edges.append({"data": {"source": qid, "target": term_id, "label": opt.get("label", opt.get("id", ""))}})
+                    edges.append({"data": {"source": qid, "target": term_id, "label": opt_label}})
                     nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
+                elif act.get("action") == "urgency":
+                    label, suffix = _extract_urgency_label(act, dept_map, sev_map)
+                    urg_id = f"{qid}_URG_{suffix}"
+                    edges.append({"data": {"source": qid, "target": urg_id, "label": opt_label}})
+                    nodes.append({"data": {"id": urg_id, "label": label, "type": "urgency"}})
+                elif act.get("action") == "emergency":
+                    emrg_id = f"{qid}_EMRG"
+                    label = "Emergency (sev003, dept002)"
+                    edges.append({"data": {"source": qid, "target": emrg_id, "label": opt_label}})
+                    nodes.append({"data": {"id": emrg_id, "label": label, "type": "emergency"}})
         elif qtype == "conditional":
             for rule in q_dict.get("rules", []):
                 act = rule.get("then", {})
@@ -134,6 +193,16 @@ def build_oldcarts_graph(
                     term_id = f"{qid}_TERM_{suffix}"
                     edges.append({"data": {"source": qid, "target": term_id, "label": cond or label}})
                     nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
+                elif act.get("action") == "urgency":
+                    label, suffix = _extract_urgency_label(act, dept_map, sev_map)
+                    urg_id = f"{qid}_URG_{suffix}"
+                    edges.append({"data": {"source": qid, "target": urg_id, "label": cond or label}})
+                    nodes.append({"data": {"id": urg_id, "label": label, "type": "urgency"}})
+                elif act.get("action") == "emergency":
+                    emrg_id = f"{qid}_EMRG"
+                    label = "Emergency (sev003, dept002)"
+                    edges.append({"data": {"source": qid, "target": emrg_id, "label": cond or label}})
+                    nodes.append({"data": {"id": emrg_id, "label": label, "type": "emergency"}})
                 # Predicate reference edges (to visualize dependency and keep graph connected)
                 for w in rule.get("when", []) or []:
                     src = w.get("qid")
@@ -151,6 +220,16 @@ def build_oldcarts_graph(
                     term_id = f"{qid}_TERM_{suffix}"
                     edges.append({"data": {"source": qid, "target": term_id, "label": "default"}})
                     nodes.append({"data": {"id": term_id, "label": label, "type": "terminate"}})
+                elif act.get("action") == "urgency":
+                    label, suffix = _extract_urgency_label(act, dept_map, sev_map)
+                    urg_id = f"{qid}_URG_{suffix}"
+                    edges.append({"data": {"source": qid, "target": urg_id, "label": "default"}})
+                    nodes.append({"data": {"id": urg_id, "label": label, "type": "urgency"}})
+                elif act.get("action") == "emergency":
+                    emrg_id = f"{qid}_EMRG"
+                    label = "Emergency (sev003, dept002)"
+                    edges.append({"data": {"source": qid, "target": emrg_id, "label": "default"}})
+                    nodes.append({"data": {"id": emrg_id, "label": label, "type": "emergency"}})
 
     # add virtual OPD node
     nodes.append({"data": {"id": f"{symptom}_OPD", "label": "OPD", "type": "opd"}})

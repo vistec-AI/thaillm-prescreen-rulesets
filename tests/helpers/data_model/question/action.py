@@ -7,9 +7,12 @@ This file re-exports them so existing test imports continue working.
 from prescreen_rulesets.models.action import (  # noqa: F401
     Action,
     DepartmentRef,
+    EmergencyAction,
     GotoAction,
     OPDAction,
     SeverityRef,
     TerminateAction,
     TerminateMetadata,
+    UrgencyAction,
+    UrgencyMetadata,
 )

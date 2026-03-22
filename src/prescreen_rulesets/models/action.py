@@ -5,6 +5,8 @@ question resolves):
   - GotoAction: navigate to one or more follow-up questions by qid
   - OPDAction: hand off to the OPD phase (phase 5)
   - TerminateAction: end the session with department routing and optional severity
+  - UrgencyAction: flag session for urgent termination post-OLDCARTS (sev002_5)
+  - EmergencyAction: immediate termination with Emergency severity (sev003/dept002)
 
 The discriminated ``Action`` union uses the ``action`` field as its discriminator
 so Pydantic can deserialise YAML dicts directly into the correct type.
@@ -71,5 +73,41 @@ class TerminateAction(BaseModel):
         return [s.id for s in self.metadata.severity]
 
 
+class UrgencyMetadata(BaseModel):
+    """Optional metadata for urgency action: department routing only.
+    Severity is always sev002_5 (Visit Hospital/Clinic Urgently)."""
+
+    department: List[DepartmentRef] = []
+
+
+class UrgencyAction(BaseModel):
+    """Flag session for urgent termination post-OLDCARTS.
+
+    Does NOT terminate immediately. Sets an urgency flag that causes
+    termination when the OLDCARTS phase ends (at opd or pending exhaustion).
+    Severity is always sev002_5. Department from metadata or empty.
+    """
+
+    action: Literal["urgency"] = "urgency"
+    metadata: Optional[UrgencyMetadata] = None
+
+    @property
+    def department(self) -> List[str]:
+        """Flat list of department IDs from metadata, empty if no metadata."""
+        if self.metadata is None:
+            return []
+        return [d.id for d in self.metadata.department]
+
+
+class EmergencyAction(BaseModel):
+    """Immediate termination with Emergency severity (sev003) and
+    Emergency Medicine department (dept002)."""
+
+    action: Literal["emergency"] = "emergency"
+
+
 # Discriminated union — Pydantic picks the right type based on the "action" field.
-Action = Annotated[Union[GotoAction, OPDAction, TerminateAction], Field(discriminator="action")]
+Action = Annotated[
+    Union[GotoAction, OPDAction, TerminateAction, UrgencyAction, EmergencyAction],
+    Field(discriminator="action"),
+]

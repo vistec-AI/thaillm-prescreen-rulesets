@@ -224,6 +224,7 @@ class SessionRepository:
         response_qids_to_remove: set[str] | None = None,
         new_pending: list[str] | None = None,
         demo_keys_to_remove: set[str] | None = None,
+        clear_urgency: bool = False,
     ) -> PrescreenSession:
         """Revert a session to a previous phase by clearing data from later phases.
 
@@ -240,6 +241,7 @@ class SessionRepository:
                 if None, the ``__pending`` key is removed entirely
             demo_keys_to_remove: set of keys to remove from demographics JSONB
                 (used for granular clearing of past/personal history keys)
+            clear_urgency: if True, remove the ``__urgency`` key from responses
         """
         session.current_phase = target_phase
 
@@ -262,6 +264,8 @@ class SessionRepository:
         responses = dict(session.responses or {})
         # Always remove __pending — we either set a new one or clear it
         responses.pop("__pending", None)
+        if clear_urgency:
+            responses.pop("__urgency", None)
         if response_qids_to_remove:
             for qid in response_qids_to_remove:
                 responses.pop(qid, None)
