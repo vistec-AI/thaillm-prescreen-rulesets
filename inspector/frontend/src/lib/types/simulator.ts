@@ -210,8 +210,6 @@ export interface HistoryEntry {
   pastHistoryData: Record<string, unknown>;
   /** Phase 6 personal history data snapshot */
   personalHistoryData: Record<string, unknown>;
-  /** Urgency flag department IDs (set by urgency action during OLDCARTS) */
-  urgencyFlag: string[] | null;
   /** Label describing what was answered at this step */
   label: string;
   /** The answer value submitted */

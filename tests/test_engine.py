@@ -242,7 +242,6 @@ class MockRepository:
         clear_demographics=False, clear_symptoms=False,
         clear_er_flags=False, response_qids_to_remove=None,
         new_pending=None, demo_keys_to_remove=None,
-        clear_urgency=False,
     ):
         """Revert session state — mirrors real repository's revert logic.
 
@@ -268,8 +267,6 @@ class MockRepository:
         # Rebuild responses: remove specified qids + __pending
         responses = dict(session.responses or {})
         responses.pop("__pending", None)
-        if clear_urgency:
-            responses.pop("__urgency", None)
         if response_qids_to_remove:
             for qid in response_qids_to_remove:
                 responses.pop(qid, None)

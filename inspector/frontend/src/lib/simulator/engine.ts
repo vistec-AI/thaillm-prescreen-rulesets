@@ -121,10 +121,8 @@ export function determineAction(
  * or a TerminationResult / phase-advance signal.
  */
 export interface ActionResult {
-  type: "continue" | "terminate" | "advance_to_opd" | "urgency_flag";
+  type: "continue" | "terminate" | "advance_to_opd";
   termination?: TerminationResult;
-  /** Department IDs from urgency action metadata (only for urgency_flag type) */
-  urgencyDepartments?: string[];
 }
 
 /**
@@ -184,11 +182,14 @@ export function processAction(
   }
 
   if (action.action === "urgency") {
-    // Flag-and-continue: return urgency signal with department IDs.
-    // The simulator hook stores the flag and checks it at opd/exhaustion.
+    // Immediate termination with urgency severity (sev002_5) and
+    // departments from action metadata (may be empty).
     const meta = action.metadata ?? {};
     const deptIds = (meta.department ?? []).map((d) => d.id);
-    return { type: "urgency_flag", urgencyDepartments: deptIds };
+    return {
+      type: "terminate",
+      termination: buildUrgencyTermination(deptIds, ruleData, currentPhase),
+    };
   }
 
   if (action.action === "emergency") {

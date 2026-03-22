@@ -21,7 +21,6 @@ import {
   getErChecklistItems,
   resolveErChecklistTermination,
   buildErCriticalTermination,
-  buildUrgencyTermination,
   checkErAutoComplete,
 } from "./engine";
 import type { QAPairPayload } from "../api/llm";
@@ -109,8 +108,6 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
   const [erChecklistFlags, setErChecklistFlags] = useState<Record<string, boolean>>({});
   const [pastHistoryData, setPastHistoryData] = useState<Record<string, unknown>>({});
   const [personalHistoryData, setPersonalHistoryData] = useState<Record<string, unknown>>({});
-  // Urgency flag set by UrgencyAction during OLDCARTS — checked at opd/exhaustion
-  const [urgencyFlag, setUrgencyFlag] = useState<string[] | null>(null);
   const [pending, setPending] = useState<string[]>([]);
   const [terminated, setTerminated] = useState(false);
   const [result, setResult] = useState<TerminationResult | null>(null);
@@ -155,7 +152,6 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       pendingResult,
       pastHistoryData: { ...pastHistoryData },
       personalHistoryData: { ...personalHistoryData },
-      urgencyFlag,
       label,
       answerValue,
     }),
@@ -172,7 +168,6 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       pendingResult,
       pastHistoryData,
       personalHistoryData,
-      urgencyFlag,
     ]
   );
 
@@ -187,7 +182,6 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     setErChecklistFlags(entry.erChecklistFlags);
     setPastHistoryData(entry.pastHistoryData);
     setPersonalHistoryData(entry.personalHistoryData);
-    setUrgencyFlag(entry.urgencyFlag);
     setPending(entry.pending);
     setCurrentQuestion(entry.currentQuestion);
     setPendingResult(entry.pendingResult);
@@ -319,8 +313,9 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
    */
   const triggerTermination = useCallback(
     (termResult: TerminationResult, answersOverride?: Record<string, unknown>) => {
-      // ER terminations skip the LLM phase
-      if (termResult.fromPhase !== undefined && termResult.fromPhase <= 3) {
+      // Early terminations (ER phases 1/3, OLDCARTS urgency/emergency/terminate)
+      // skip the LLM phase — only "completed" (full flow through phase 7) enters LLM.
+      if (termResult.type === "terminated") {
         setTerminated(true);
         setResult(termResult);
         return;
@@ -741,32 +736,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
           return;
         }
 
-        if (actionResult.type === "urgency_flag") {
-          // Store urgency flag — don't terminate yet, continue processing
-          setUrgencyFlag(actionResult.urgencyDepartments ?? []);
-          // Resolve next question from remaining pending queue
-          const resolved = resolveNext(
-            source,
-            primarySymptom,
-            newPending,
-            nextAnswers,
-            demographics,
-            ruleData,
-            phase
-          );
-          handleResolveResult(resolved, nextAnswers, actionResult.urgencyDepartments ?? urgencyFlag);
-          return;
-        }
-
         if (actionResult.type === "advance_to_opd") {
-          // Check urgency flag before advancing to past history
-          if (urgencyFlag) {
-            triggerTermination(
-              buildUrgencyTermination(urgencyFlag, ruleData, phase),
-              nextAnswers
-            );
-            return;
-          }
           // OPD action from OLDCARTS — go to past history first (phase 5)
           setPhase(5);
           return;
@@ -807,18 +777,12 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     ]
   );
 
-  /** Handle a ResolveResult and update state accordingly.
-   *  urgencyOverride allows passing a just-set urgency flag that hasn't
-   *  been committed to React state yet (avoids stale closure). */
+  /** Handle a ResolveResult and update state accordingly. */
   const handleResolveResult = useCallback(
     (
       resolved: ReturnType<typeof resolveNext>,
       answers: Record<string, unknown>,
-      urgencyOverride?: string[] | null
     ) => {
-      // Use override if provided, otherwise fall back to state
-      const urg = urgencyOverride !== undefined ? urgencyOverride : urgencyFlag;
-
       if (resolved.kind === "question") {
         setCurrentQuestion(resolved.question);
         setPending(resolved.pending);
@@ -826,27 +790,11 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         triggerTermination(resolved.termination, answers);
         setPending(resolved.pending);
       } else if (resolved.kind === "advance_to_opd") {
-        // Check urgency flag before advancing to past history
-        if (urg) {
-          triggerTermination(
-            buildUrgencyTermination(urg, ruleData, phase),
-            answers
-          );
-          return;
-        }
         // OPD action from OLDCARTS — go to past history first (phase 5)
         setPhase(5);
       } else {
         // exhausted
         if (phase === 4) {
-          // Check urgency flag before advancing
-          if (urg) {
-            triggerTermination(
-              buildUrgencyTermination(urg, ruleData, phase),
-              answers
-            );
-            return;
-          }
           // OLDCARTS exhausted — go to past history (phase 5)
           setPhase(5);
         } else {
@@ -861,7 +809,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         }
       }
     },
-    [phase, primarySymptom, demographics, enterSequentialPhase, triggerTermination, urgencyFlag, ruleData]
+    [phase, primarySymptom, demographics, enterSequentialPhase, triggerTermination, ruleData]
   );
 
   // --- Back navigation ---
@@ -887,7 +835,6 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     setErChecklistFlags({});
     setPastHistoryData({});
     setPersonalHistoryData({});
-    setUrgencyFlag(null);
     setPending([]);
     setTerminated(false);
     setResult(null);

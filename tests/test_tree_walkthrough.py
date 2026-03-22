@@ -156,8 +156,6 @@ def _walk_tree(store, evaluator, source, symptom, demographics, rng,
     answers = dict(prior_answers) if prior_answers else {}
     pending = [store.get_first_qid(source, symptom)]
     steps = 0
-    # Track whether urgency was flagged — affects terminal outcome
-    urgency_flagged = False
 
     while pending and steps < MAX_STEPS:
         qid = pending.pop(0)
@@ -192,26 +190,18 @@ def _walk_tree(store, evaluator, source, symptom, demographics, rng,
                         if q not in answers and q not in pending]
             pending[0:0] = new_qids
         elif isinstance(action, OPDAction):
-            # If urgency was flagged, the engine terminates here instead of advancing
-            if urgency_flagged:
-                return ("terminate", steps, answers)
             return ("opd", steps, answers)
         elif isinstance(action, TerminateAction):
             return ("terminate", steps, answers)
         elif isinstance(action, UrgencyAction):
-            # Flag-and-continue: urgency doesn't navigate, just flags.
-            # When OPD or pending exhaustion occurs, this triggers termination.
-            urgency_flagged = True
+            # Immediate termination (like EmergencyAction)
+            return ("terminate", steps, answers)
         elif isinstance(action, EmergencyAction):
-            # Immediate termination
             return ("terminate", steps, answers)
 
     assert steps < MAX_STEPS, (
         f"Possible infinite loop in {source}/{symptom} after {steps} steps"
     )
-    # If urgency was flagged and pending exhausted, the engine terminates
-    if urgency_flagged:
-        return ("terminate", steps, answers)
     return ("exhausted", steps, answers)
 
 

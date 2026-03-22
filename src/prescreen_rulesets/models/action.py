@@ -5,7 +5,7 @@ question resolves):
   - GotoAction: navigate to one or more follow-up questions by qid
   - OPDAction: hand off to the OPD phase (phase 5)
   - TerminateAction: end the session with department routing and optional severity
-  - UrgencyAction: flag session for urgent termination post-OLDCARTS (sev002_5)
+  - UrgencyAction: immediate termination with urgency severity (sev002_5)
   - EmergencyAction: immediate termination with Emergency severity (sev003/dept002)
 
 The discriminated ``Action`` union uses the ``action`` field as its discriminator
@@ -81,11 +81,11 @@ class UrgencyMetadata(BaseModel):
 
 
 class UrgencyAction(BaseModel):
-    """Flag session for urgent termination post-OLDCARTS.
+    """Immediate termination with urgency severity (sev002_5).
 
-    Does NOT terminate immediately. Sets an urgency flag that causes
-    termination when the OLDCARTS phase ends (at opd or pending exhaustion).
-    Severity is always sev002_5. Department from metadata or empty.
+    Terminates the session immediately (like EmergencyAction) with severity
+    sev002_5 (Visit Hospital/Clinic Urgently). Departments are taken from
+    metadata if provided, or empty otherwise.
     """
 
     action: Literal["urgency"] = "urgency"

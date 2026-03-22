@@ -36,8 +36,7 @@ PHASE_NAMES: dict[int, str] = {
 }
 
 # Fixed severity for urgency actions in OLDCARTS (always "Visit Urgently").
-# Urgency is a flag-and-continue pattern: records the flag, OLDCARTS continues,
-# and terminates with this severity when the phase ends.
+# Urgency terminates the session immediately with this severity level.
 DEFAULT_URGENCY_SEVERITY = "sev002_5"
 
 # Auto-evaluated question types that the engine resolves without user input.
