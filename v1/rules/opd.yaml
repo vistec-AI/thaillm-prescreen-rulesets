@@ -1,1822 +1,56 @@
 Headache:
-- qid: hea_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: gte_15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - hea_opd_002
 - qid: hea_opd_002
-  question: มีอาการรุนแรงผิดปกติ เช่น ปวดหัวรุนแรงที่สุดในชีวิต, เกิดขึ้นเฉียบพลัน,
-    หรือมีอาการทางระบบประสาทร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: hea_s_001
-      op: ge
-      value: 7
-    then:
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+  - id: male
+    label: male
+    action:
+      action: goto
+      qid:
+      - hea_opd_003
+  - id: female
+    label: female
+    action:
+      action: goto
+      qid:
+      - hea_opd_002-1
+- qid: hea_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรืออยู่ในช่วงหลังคลอดไม่เกิน 6 สัปดาห์ ใช่หรือไม่?
+  question_type: single_select
+  options:
+  - id: ใช่
+    label: ใช่
+    action:
       action: terminate
       metadata:
         department:
-        - id: dept002
-  - when:
-    - qid: hea_o_003
-      op: eq
-      value: เฉียบพลัน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  - when:
-    - qid: hea_as_001
-      op: contains_any
-      value:
-      - แขนขาอ่อนแรง
-      - ชา
-      - ปากเบี้ยว
-      - คอแข็ง
-      - พูดไม่ชัด
-      - อาเจียนพุ่ง
-      - เห็นภาพซ้อน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  default:
-    action: goto
-    qid:
-    - hea_opd_003
+          - id: dept005
+  - id: ไม่ใช่
+    label: ไม่ใช่
+    action:
+      action: goto
+      qid: 
+        - hea_opd_003
 - qid: hea_opd_003
-  question: มีปัญหาเกี่ยวกับการมองเห็น ปวดตา หรือเห็นแสงจ้าไม่ได้หรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: hea_as_001
-      op: contains_any
-      value:
-      - ตาพร่า
-      - ปวดตา
-      - ตาแดง
-      - น้ำตาไหล
-      - ตาแพ้แสง
-    then:
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
       action: terminate
       metadata:
         department:
-        - id: dept006
-  default:
-    action: goto
-    qid:
-    - hea_opd_004
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - hea_opd_004
 - qid: hea_opd_004
-  question: มีอาการเวียนศีรษะ บ้านหมุน และมีปัญหาเกี่ยวกับการได้ยินร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: hea_as_001
-      op: contains_any
-      value:
-      - เวียนศีรษะ
-      - มีปัญหาการได้ยิน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept008
-  - when:
-    - qid: hea_as_001
-      op: contains_any
-      value:
-      - บ้านหมุน
-      - มีปัญหาการได้ยิน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept008
-  default:
-    action: goto
-    qid:
-    - hea_opd_005
-- qid: hea_opd_005
-  question: มีไข้ ไอ เจ็บคอ หรืออาการเหมือนเป็นหวัดร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: hea_as_001
-      op: contains_any
-      value:
-      - ไข้
-      - ไอ
-      - เจ็บคอ
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: goto
-    qid:
-    - hea_opd_006
-- qid: hea_opd_006
-  question: มีปวดหัวเรื้อรังมานานหรือเป็นๆ หายๆ บ่อยไหม?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: hea_o_002
-      op: eq
-      value: ไม่เคย
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - when:
-    - qid: hea_o_002
-      op: eq
-      value: เคย
-    then:
-      action: goto
-      qid:
-      - hea_opd_007
-- qid: hea_opd_007
-  question: มีความเครียด วิตกกังวล หรือปัญหาการนอนหลับหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: hea_as_001
-      op: contains_any
-      value:
-      - เครียด
-      - วิตกกังวล
-      - มีปัญหาด้านการนอนหลับ
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept010
-  default:
-    action: terminate
-    metadata:
-      department:
-      - id: dept004
-Dizziness:
-- qid: diz_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: gte_15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - diz_opd_002
-- qid: diz_opd_002
-  question: อาการเวียนหัวเป็นแบบบ้านหมุน (รู้สึกสิ่งแวดล้อมหมุน) หรือเป็นแบบมึนงง
-    โคลงเคลง?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: diz_c_001
-      op: eq
-      value: บ้านหมุน เหมือนสิ่งรอบตัวหมุน
-    then:
-      action: goto
-      qid:
-      - diz_opd_003
-  - when:
-    - qid: diz_c_001
-      op: eq
-      value: มึนศีรษะ
-    then:
-      action: goto
-      qid:
-      - diz_opd_004
-  - when:
-    - qid: diz_c_001
-      op: eq
-      value: โคลงเคลง
-    then:
-      action: goto
-      qid:
-      - diz_opd_004
-  default:
-    action: goto
-    qid:
-    - diz_opd_004
-- qid: diz_opd_003
-  question: อาการเวียนหัวสัมพันธ์กับการเปลี่ยนท่าทาง (เช่น ลุก นั่ง ก้ม เงย) หรือไม่?
-    มีปัญหาการได้ยิน หรือเสียงดังในหูร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: diz_as_001
-      op: contains_any
-      value:
-      - หูอื้อ
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept008
-  default:
-    action: goto
-    qid:
-    - diz_opd_004
-- qid: diz_opd_004
-  question: มีอาการปวดหัวรุนแรงร่วมด้วยหรือไม่
-  question_type: conditional
-  rules:
-  - when:
-    - qid: diz_as_001
-      op: contains_any
-      value:
-      - ปวดศีรษะ
-    then:
-      action: goto
-      qid:
-      - diz_opd_004-1
-  default:
-    action: goto
-    qid:
-    - diz_opd_004-2
-- qid: diz_opd_004-1
-  question: อาการปวดศีรษะร่วมด้วยกับเวียนหัว มีระดับความปวดเท่าไร ต่อสุด (ไม่ปวด)
-    0 คะแนน สูงสุด 10 คะแนน
-  question_type: number_range
-  min_value: 0
-  max_value: 10
-  step: 1
-  inclusive: true
-  on_submit:
-    action: goto
-    qid:
-    - diz_opd_004-1-2
-- qid: diz_opd_004-1-2
-  question: มีอาการปวดหัวรุนแรง ในระดับความปวดหัวมากกว่า 7/10 คะแนน (pain score >
-    7/10) หรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: diz_opd_004-1
-      op: ge
-      value: 7
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  default:
-    action: goto
-    qid:
-    - diz_opd_004-2
-- qid: diz_opd_004-2
-  question: มีอาการเห็นภาพซ้อน พูดไม่ชัด ซึมลง หรือแขนขาอ่อนแรงร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: diz_as_001
-      op: contains_any
-      value:
-      - ปวดศีรษะ
-      - สายตาพร่ามัว
-      - พูดไม่ชัด
-      - อ่อนแรง
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  default:
-    action: goto
-    qid:
-    - diz_opd_005
-- qid: diz_opd_005
-  question: มีอาการหน้ามืดคล้ายจะเป็นลม เจ็บหน้าอก ใจสั่น หรือเหนื่อยง่ายร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: diz_as_001
-      op: contains_any
-      value:
-      - หน้ามืด
-      - เจ็บหน้าอก
-      - ใจสั่น
-      - เหนื่อยง่าย
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  default:
-    action: terminate
-    metadata:
-      department:
-      - id: dept004
-Pain in Joint:
-- qid: pai_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: ge15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - pai_opd_002
-- qid: pai_opd_002
-  question: อาการปวดข้อเกิดจากอุบัติเหตุ หรือการบาดเจ็บหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: pai_o_004
-      op: eq
-      value: เคย
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept007
-  - when:
-    - qid: pai_o_004
-      op: eq
-      value: ไม่เคย
-    then:
-      action: goto
-      qid:
-      - pai_opd_003
-- qid: pai_opd_003
-  question: ปวดข้อเดียว หรือปวดหลายข้อ?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: pai_l_001
-      op: eq
-      value: ปวดข้อเดียว
-    then:
-      action: goto
-      qid:
-      - pai_opd_004
-  - when:
-    - qid: pai_l_001
-      op: eq
-      value: ปวดหลายข้อ
-    then:
-      action: goto
-      qid:
-      - pai_opd_005
-- qid: pai_opd_004
-  question: มีอาการบวม แดง ร้อน ที่ข้อหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: pai_as_001
-      op: contains_any
-      value:
-      - ข้อบวม
-      - แดง
-      - ร้อน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: terminate
-    metadata:
-      department:
-      - id: dept007
-- qid: pai_opd_005
-  question: มีอาการข้อติดขัดตอนเช้า (ตื่นนอนแล้วขยับข้อยาก) นานเกิน 30 นาทีหรือไม่?
-    มีไข้ ผื่น หรืออาการผิดปกติอื่นๆ ร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: pai_as_001
-      op: contains_any
-      value:
-      - มีไข้
-      - ผื่น
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: goto
-    qid:
-    - pai_opd_005-1
-- qid: pai_opd_005-1
-  question: มีอาการข้อติดขัดตอนเช้า (ตื่นนอนแล้วขยับข้อยาก) นานเกิน 30 นาทีหรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช
-    label: ใช่
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - id: ไม_ใช
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - pai_opd_006
-- qid: pai_opd_006
-  question: อายุของผู้ป่วยมากกว่า 50 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: '50'
-    label: '>50'
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept007
-  - id: '50'
-    label: <=50
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-Muscle Pain:
-- qid: mus_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: ge15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - mus_opd_002
-- qid: mus_opd_002
-  question: อาการเจ็บกล้ามเนื้อเกิดจากการใช้งานหนัก ออกกำลังกาย หรือการบาดเจ็บหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: mus_o_004
-      op: eq
-      value: เคย
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept007
-  - when:
-    - qid: mus_as_002
-      op: eq
-      value: บ่อย
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept007
-  default:
-    action: goto
-    qid:
-    - mus_opd_003
-- qid: mus_opd_003
-  question: มีไข้ อ่อนเพลีย หรืออาการระบบอื่นๆ ร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: mus_as_001
-      op: contains_any
-      value:
-      - ชา
-      - ขับถ่ายปัสสาวะหรืออุจจาระผิดปกติ
-      - น้ำหนักลดผิดปกติ
-      - ไข้
-      - อ่อนเพลีย
-      - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: goto
-    qid:
-    - mus_opd_004
-- qid: mus_opd_004
-  question: อาการเจ็บกล้ามเนื้อเป็นเฉพาะที่ หรือเป็นทั่วๆ ไปตามตัว?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: mus_l_001
-      op: eq
-      value: เฉพาะที่
-    then:
-      action: goto
-      qid:
-      - mus_opd_005
-  - when:
-    - qid: mus_l_001
-      op: eq
-      value: กระจายทั่วๆไปตามตัว
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-- qid: mus_opd_005
-  question: ปวดกล้ามเนื้อเฉพาะที่เล็กน้อยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: mus_s_001
-      op: eq
-      value: ไม่รบกวน
-    then:
-      action: terminate
-      metadata:
-        severity:
-        - id: sev001
-        department: []
-  - when:
-    - qid: mus_s_001
-      op: eq
-      value: รบกวน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept007
-Fever:
-- qid: fev_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: gte_15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - fev_opd_002
-- qid: fev_opd_002
-  question: ไข้สูงมาก (เกิน 39°C) หรือมีอาการหนาวสั่นรุนแรงหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: fev_s_001
-      op: ge
-      value: 39
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  - when:
-    - qid: fev_as_001
-      op: contains_any
-      value:
-      - หนาวสั่น
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  default:
-    action: goto
-    qid:
-    - fev_opd_003
-- qid: fev_opd_003
-  question: มีอาการปวดบริเวณท้องน้อยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: fev_as_001
-      op: contains_any
-      value:
-      - ปวดท้อง
-    then:
-      action: goto
-      qid:
-      - fev_opd_003-1
-  default:
-    action: goto
-    qid:
-    - fev_opd_005
-- qid: fev_opd_003-1
-  question: มีประวัติกำลังตั้งครรภ์หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่
-    label: ใช่
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept005
-  - id: ไม่ใช่
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - fev_opd_004
-- qid: fev_opd_004
-  question: อาการปวดท้องมีความปวดรุนแรงเท่าเต็ม 10?
-  question_type: number_range
-  min_value: 0
-  max_value: 10
-  step: 1
-  inclusive: true
-  on_submit:
-    action: goto
-    qid:
-    - fev_opd_004-1
-- qid: fev_opd_004-1
-  question: PS > 7/10?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: fev_opd_004
-      op: ge
-      value: 7
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  default:
-    action: goto
-    qid:
-    - fev_opd_004-2
-- qid: fev_opd_004-2
-  question: มีอาการปวดท้อง กดแล้วเจ็บท้อง หรือปวดบริเวณด้านขวาล่าง หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่
-    label: มีอาการดังกล่าว
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  - id: ไม่
-    label: ไม่มีอาการดังกล่าว
-    action:
-      action: goto
-      qid:
-      - fev_opd_005
-- qid: fev_opd_005
-  question: มีอาการเกี่ยวกับระบบตา เช่น มองเห็นภาพไม่ชัด ตาพร่ามัว หรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: fev_as_001
-      op: contains_any
-      value:
-      - มองเห็นภาพไม่ชัด
-      - ตาพร่ามัว
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept006
-  default:
-    action: goto
-    qid:
-    - fev_opd_006
-- qid: fev_opd_006
-  question: มีอาการเกี่ยวกับระบบหู เช่น ปวดหู หูอื้อ ไม่ได้ยินเสียง หรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: fev_as_001
-      op: contains_any
-      value:
-      - ปวดหู
-      - หูอื้อ
-      - ปัญหาการได้ยิน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept008
-  default:
-    action: goto
-    qid:
-    - fev_opd_007
-- qid: fev_opd_007
-  question: มีอาการอื่นๆ ร่วมด้วย ได้แก่ ไอ เจ็บคอ ปวดหัว ปวดท้อง เจ็บตามตัว ผื่น
-    ปัสสาวะแสบขัด หรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: fev_as_001
-      op: contains_any
-      value:
-      - ไอ
-      - เจ็บคอ
-      - ปวดศีรษะ
-      - ปวดท้อง
-      - ปวดข้อ
-      - ผื่นขึ้น
-      - ปัสสาวะแสบขัด
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: terminate
-    metadata:
-      severity:
-      - id: sev001
-      department: []
-Cough:
-- qid: cou_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: gte_15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - cou_opd_002
-- qid: cou_opd_002
-  question: มีไข้ เจ็บคอ หรือน้ำมูกร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: cou_as_001
-      op: contains_any
-      value:
-      - ไข้
-      - เจ็บคอ
-      - มีน้ำมูก
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: goto
-    qid:
-    - cou_opd_003
-- qid: cou_opd_003
-  question: ไอมีเสมหะหรือไม่? ถ้ามี เสมหะสีอะไร (เช่น ใส ขาว เหลือง เขียว หรือมีเลือดปน)?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: cou_c_001
-      op: eq
-      value: ไอเป็นเลือด
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - when:
-    - qid: cou_c_001-01
-      op: eq
-      value: สีเหลือง
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - when:
-    - qid: cou_c_001-01
-      op: eq
-      value: สีเขียว
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: goto
-    qid:
-    - cou_opd_004
-- qid: cou_opd_004
-  question: ไอเรื้อรัง (นานกว่า 1-2 สัปดาห์) หรือไม่? มีอาการเหนื่อยหอบ หรือเจ็บหน้าอกร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: cou_as_001
-      op: contains_any
-      value:
-      - เหนื่อยง่ายขึ้น
-      - หอบ
-      - เจ็บหน้าอก
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - when:
-    - qid: cou_d_001
-      op: eq
-      value: นานเกิน 1 สัปดาห์
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: goto
-    qid:
-    - cou_opd_005
-- qid: cou_opd_005
-  question: มีอาการแสบคอ คันคอ หรือรู้สึกเหมือนมีอะไรติดคอร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: cou_as_001
-      op: contains_any
-      value:
-      - แสบคอ
-      - คันคอ
-      - มีอะไรติดคอ
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept008
-  default:
-    action: terminate
-    metadata:
-      department:
-      - id: dept004
-Sore Throat:
-- qid: sor_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: gte_15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - sor_opd_002
-- qid: sor_opd_002
-  question: มีไข้ ไอ หรือน้ำมูก คล้ายหวัดร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: sor_as_001
-      op: contains_any
-      value:
-      - ไข้
-      - ไอ
-      - น้ำมูก
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: goto
-    qid:
-    - sor_opd_003
-- qid: sor_opd_003
-  question: เจ็บคอมาก กลืนลำบากจนรับประทานอาหารหรือน้ำไม่ได้หรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: sor_as_001
-      op: contains_any
-      value:
-      - กลืนลำบาก
-      - กลืนเจ็บ
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept008
-  default:
-    action: goto
-    qid:
-    - sor_opd_004
-- qid: sor_opd_004
-  question: อาการเสียงแหบ หรือรู้สึกมีก้อนในคอร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: sor_as_001
-      op: contains_any
-      value:
-      - เสียงเปลี่ยน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept008
-  default:
-    action: terminate
-    metadata:
-      department:
-      - id: dept004
-Stomachache:
-- qid: sto_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: ge_15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - sto_opd_002
-- qid: sto_opd_002
-  question: ท่านเป็นเพศหญิงหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - sto_opd_004
-  - id: female
-    label: female
-    action:
-      action: goto
-      qid:
-      - sto_opd_002-1
-- qid: sto_opd_002-1
-  question: มีประวัติกำลังตั้งครรภ์หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่ กำลังตั้งครรภ์อยู่
-    label: ใช่ กำลังตั้งครรภ์อยู่
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept005
-  - id: ไม่
-    label: ไม่
-    action:
-      action: goto
-      qid:
-      - sto_opd_003
-- qid: sto_opd_003
-  question: มีเลือดออกผิดปกติทางช่องคลอด หรือตกขาวผิดปกติร่วมด้วยหรือไม่? อาการปวดสัมพันธ์กับรอบเดือนหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: sto_as_001
-      op: contains_any
-      value:
-      - ตกขาวผิดปกติ
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept005
-  default:
-    action: goto
-    qid:
-    - sto_opd_004
-- qid: sto_opd_004
-  question: อาการปวดท้องรุนแรงมาก (PS > 7/10) หรือปวดเฉียบพลัน กดเจ็บ หรือมีเลือดออก
-    เช่น อาเจียนหรือถ่ายเป็นเลือดสด หรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: sto_s_001
-      op: ge
-      value: 7
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  - when:
-    - qid: sto_o_003
-      op: eq
-      value: เฉียบพลัน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  - when:
-    - qid: sto_as_001
-      op: contains_any
-      value:
-      - อาเจียน
-      - ถ่ายเป็นเลือด
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  default:
-    action: goto
-    qid:
-    - sto_opd_005
-- qid: sto_opd_005
-  question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: sto_l_001
-      op: contains_any
-      value:
-      - ท้องน้อยด้านขวา
-      - รอบสะดือ
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - when:
-    - qid: sto_l_001
-      op: contains_any
-      value:
-      - ท้องส่วนบนด้านซ้าย
-    then:
-      action: goto
-      qid:
-      - sto_opd_006
-  default:
-    action: terminate
-    metadata:
-      department:
-      - id: dept004
-- qid: sto_opd_006
-  question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: sto_as_001
-      op: contains_any
-      value:
-      - ไข้
-      - ตัวเหลือง
-      - ตาเหลือง
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept012
-  default:
-    action: goto
-    qid:
-    - sto_opd_006-2
-- qid: sto_opd_006-2
-  question: มีอาการอื่นๆ ร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: sto_as_001
-      op: contains_any
-      value:
-      - มีไข้
-      - ตัวเหลือง
-      - ตาเหลือง
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept012
-  default:
-    action: terminate
-    metadata:
-      department:
-      - id: dept004
-Constipation:
-- qid: con_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: _15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: _15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - con_opd_002
-- qid: con_opd_002
-  question: อาการท้องผูกเป็นมานานหลายวัน (> 2 วัน) หรือ ปวดท้องรุนแรง?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: con_d_001
-      op: eq
-      value: น้อยกว่า 2 วัน
-    then:
-      action: goto
-      qid:
-      - con_opd_002-1
-  - when:
-    - qid: con_d_001
-      op: eq
-      value: เป็นมามากกว่า 2 วัน
-    then:
-      action: goto
-      qid:
-      - con_opd_003
-  default:
-    action: goto
-    qid:
-    - con_opd_003
-- qid: con_opd_002-1
-  question: อายุมากกว่า 50 ปีหรือไม่
-  question_type: age_filter
-  options:
-  - id: lt50
-    label: <50
-    action:
-      action: terminate
-      metadata:
-        severity:
-        - id: sev001
-        department: []
-  - id: ge50
-    label: '>=15'
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept012
-- qid: con_opd_003
-  question: มีอาการปวดท้องรุนแรง อืดแน่นท้องมาก ไม่ผายลม หรืออาเจียนร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: con_as_001
-      op: contains_any
-      value:
-      - ปวดท้อง
-      - ท้องอืด
-      - แน่น
-      - คลื่นไส้
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept012
-  default:
-    action: goto
-    qid:
-    - con_opd_004
-- qid: con_opd_004
-  question: มีถ่ายเป็นเลือดออกมามากหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: con_c_001-03
-      op: eq
-      value: มี
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  - when:
-    - qid: con_as_001
-      op: contains_any
-      value:
-      - ปวดท้อง
-    then:
-      action: goto
-      qid:
-      - con_opd_005
-  - when:
-    - qid: con_c_001-03
-      op: eq
-      value: ไม่มี
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-- qid: con_opd_005
-  question: อาการปวดท้องรุนแรงแค่ไหน?
-  question_type: number_range
-  min_value: 0
-  max_value: 10
-  step: 1
-  inclusive: true
-  on_submit:
-    action: goto
-    qid:
-    - con_opd_005-01
-- qid: con_opd_005-01
-  question: อาการปวดท้องรุนแรง (PS > 7/10)?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: con_opd_005
-      op: ge
-      value: 7
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  - when:
-    - qid: con_opd_005
-      op: lt
-      value: 7
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-Diarrhea:
-- qid: dia_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: gte_15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - dia_opd_002
-- qid: dia_opd_002
-  question: มีอาการขาดน้ำรุนแรงหรือไม่? (เช่น ปากแห้ง คอแห้ง ปัสสาวะน้อยลง อ่อนเพลียมาก
-    หน้ามืด)
-  question_type: conditional
-  rules:
-  - when:
-    - qid: dia_as_001
-      op: contains_any
-      value:
-      - ปากแห้ง
-      - คอแห้ง
-      - ปัสสาวะน้อยลง
-      - อ่อนเพลียมาก
-      - หน้ามืด
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  default:
-    action: goto
-    qid:
-    - dia_opd_003
-- qid: dia_opd_003
-  question: ถ่ายเหลวเป็นน้ำ หรือมีมูกเลือดปนในอุจจาระ?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: dia_c_001
-      op: eq
-      value: มีมูกเลือด
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - when:
-    - qid: dia_c_001
-      op: eq
-      value: เลือดสด
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - when:
-    - qid: dia_c_001
-      op: eq
-      value: ถ่ายเป็นน้ำ
-    then:
-      action: goto
-      qid:
-      - dia_opd_004
-  default:
-    action: goto
-    qid:
-    - dia_opd_004
-- qid: dia_opd_004
-  question: มีไข้ ปวดท้องรุนแรง หรืออาเจียนร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: dia_as_001
-      op: contains_any
-      value:
-      - ไข้
-      - ปวดท้อง
-      - อาเจียน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: terminate
-    metadata:
-      severity:
-      - id: sev001
-      department: []
-Dysuria:
-- qid: dys_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: gte_15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - dys_opd_002
-- qid: dys_opd_002
-  question: ท่านเป็นเพศหญิงหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - dys_opd_004
-  - id: female
-    label: female
-    action:
-      action: goto
-      qid:
-      - dys_opd_003
-- qid: dys_opd_003
-  question: มีประวัติกำลังตั้งครรภ์หรือไม่?
-  question_type: single_select
-  options:
-  - id: mee
-    label: มี
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept005
-  - id: mai_mee
-    label: ไม่มี
-    action:
-      action: goto
-      qid:
-      - dys_opd_003-1
-- qid: dys_opd_003-1
-  question: มีตกขาวผิดปกติ ปวดท้องน้อยร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: dys_as_001
-      op: contains_any
-      value:
-      - ตกขาวผิดปกติ
-      - ปวดท้องน้อย
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept005
-  default:
-    action: goto
-    qid:
-    - dys_opd_005
-- qid: dys_opd_004
-  question: มีหนองไหลออกจากอวัยวะเพศหรือไม่? มีอาการปวดอัณฑะร่วมด้วยหรือไม่?
-  question_type: single_select
-  options:
-  - id: mee_nong_lhai
-    label: มีหนองไหล
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - id: puad_untha
-    label: ปวดอัณฑะ
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept012
-  - id: mai_mee
-    label: ไม่มี
-    action:
-      action: goto
-      qid:
-      - dys_opd_005
-- qid: dys_opd_005
-  question: มีไข้ หนาวสั่น หรือปวดหลังบริเวณเอวร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: dys_as_001
-      op: contains_any
-      value:
-      - ปวดหลัง
-    then:
-      action: goto
-      qid:
-      - dys_opd_005-1
-  - when:
-    - qid: dys_as_001
-      op: contains_any
-      value:
-      - ไข้
-      - หนาวสั่น
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: goto
-    qid:
-    - dys_opd_006
-- qid: dys_opd_005-1
-  question: ปวดหลังบริเวณเอวร่วมด้วยหรือไม่?
-  question_type: single_select
-  options:
-  - id: chai
-    label: ใช่
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - id: mai_chai
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - dys_opd_006
-- qid: dys_opd_006
-  question: ปัสสาวะมีเลือดปน หรือสีขุ่นผิดปกติหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: dys_c_001
-      op: eq
-      value: ขุ่น
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - when:
-    - qid: dys_c_001
-      op: eq
-      value: มีเลือดปน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: goto
-    qid:
-    - dys_opd_007
-- qid: dys_opd_007
-  question: อายุมากกว่า 50 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_50
-    label: <50
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  - id: gte_50
-    label: '>=50'
-    action:
-      action: goto
-      qid:
-      - dys_opd_007-1
-- qid: dys_opd_007-1
-  question: ท่านเป็นเพศชายหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - dys_opd_007-2
-  - id: female
-    label: female
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-- qid: dys_opd_007-2
-  question: กลั้นปัสสาวะไม่ได้หรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: dys_c_001-01
-      op: eq
-      value: ไม่ได้
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept012
-  default:
-    action: goto
-    qid:
-    - dys_opd_007-3
-- qid: dys_opd_007-3
-  question: มีอาการเฉพาะปัสสาวะลำบาก ปัสสาวะไม่พุ่ง หรือไม่?
-  question_type: single_select
-  options:
-  - id: chai
-    label: ใช่
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept012
-  - id: mai_chai
-    label: ไม่ใช่
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-Vaginal Discharge:
-- qid: vag_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: lt_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: gte_15
-    label: '>=15'
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept005
-Skin Rash/Lesion:
-- qid: rash_opd_001
-  question: ท่านอายุต่ำกว่า 15 ปีหรือไม่?
-  question_type: age_filter
-  options:
-  - id: less_than_15
-    label: <15
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept009
-  - id: greater_than_or_equal_to_15
-    label: '>=15'
-    action:
-      action: goto
-      qid:
-      - rash_opd_002
-- qid: rash_opd_002
-  question: ผื่น/รอยโรค เกิดขึ้นเฉียบพลัน และลุกลามรวดเร็วในหลักนาที หรือชั่วโมงหรือไม่?
-    มีอาการอื่นๆ ร่วมด้วยหรือไม่ เช่น ไข้สูง หายใจลำบาก ปากบวม หน้าบวม?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: rash_o_003
-      op: eq
-      value: เฉียบพลัน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  - when:
-    - qid: rash_as_001
-      op: contains_any
-      value:
-      - ไข้
-      - หายใจลำบาก
-      - ปากบวม
-      - หน้าบวม
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  default:
-    action: goto
-    qid:
-    - rash_opd_003
-- qid: rash_opd_003
-  question: มีไข้ หรืออาการผิดปกติระบบอื่นๆ ทั่วร่างกายร่วมด้วยหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: rash_as_001
-      op: contains_any
-      value:
-      - ไข้
-      - หายใจลำบาก
-      - ปากบวม
-      - หน้าบวม
-      - ปวดศีรษะ
-      - ปวดเมื่อย
-      - ไอ
-      - อ่อนเพลีย
-      - น้ำมูก
-      - คัดจมูก
-      - แสบคันตา
-      - ปัสสาวะผิดปกติ
-      - ขาบวม
-      - น้ำหนักลด
-      - มีอาการอื่นๆ นอกจากที่ระบุในตัวเลือก
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept004
-  default:
-    action: terminate
-    metadata:
-      department:
-      - id: dept001
-Wound:
-- qid: wou_opd_001
-  question: บาดแผลเกิดจากอะไร? และเกิดเหตุภายใน 24 ชม. แรก?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: wou_o_004
-      op: eq
-      value: เคย
-    then:
-      action: goto
-      qid:
-      - wou_opd_001-1
-  default:
-    action: goto
-    qid:
-    - wou_opd_002
-- qid: wou_opd_001-1
-  question: เกิดเหตุภายใน 24 ชม. แรกหรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่_เกิดเหตุการณ์ที่เกี่ยวข้องภายใน_24_ชั่วโมง
-    label: ใช่ เกิดเหตุการณ์ที่เกี่ยวข้องภายใน 24 ชั่วโมง
-    action:
-      action: terminate
-      metadata:
-        department:
-        - id: dept002
-  - id: ไม่ใช่
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - wou_opd_002
-- qid: wou_opd_002
-  question: แผลมีเลือดออกมาก หรือหยุดไหลแล้ว?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: wou_c_002
-      op: eq
-      value: บาดแผลมีเลือดออดขนาดเล็กถึงปานกลาง
-    then:
-      action: goto
-      qid:
-      - wou_opd_002-1
-  default:
-    action: goto
-    qid:
-    - wou_opd_003
-- qid: wou_opd_002-1
-  question: เลือดหลุดไหลหรือยัง?
-  question_type: single_select
-  options:
-  - id: หยุดแล้ว
-    label: หยุดแล้ว
-    action:
-      action: goto
-      qid:
-      - wou_opd_004
-  - id: ยังไม่หยุด
-    label: ยังไม่หยุด
-    action:
-      action: goto
-      qid:
-      - wou_opd_004
-- qid: wou_opd_003
-  question: บาดแผลลึก หรือกว้างมากหรือไม่? มองเห็นกระดูก เอ็น หรืออวัยวะภายในหรือไม่?
-  question_type: conditional
-  rules:
-  - when:
-    - qid: wou_c_002
-      op: eq
-      value: บาดแผลมีขนาดใหญ่และลึก
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept012
-  - when:
-    - qid: wou_c_002
-      op: eq
-      value: บาดแผลรุนแรง มองเห็นกระดูก เอ็น หรืออวัยวะภายใน
-    then:
-      action: terminate
-      metadata:
-        department:
-        - id: dept012
-  default:
-    action: goto
-    qid:
-    - wou_opd_004
-- qid: wou_opd_004
-  question: บาดแผลสกปรก หรือมีสิ่งแปลกปลอมติดอยู่หรือไม่?
+  question: มีประวัติเคยผ่าตัดสมองหรือไม่?
   question_type: single_select
   options:
   - id: มี
@@ -1825,84 +59,2886 @@ Wound:
       action: terminate
       metadata:
         department:
-        - id: dept012
+          - id: dept012
   - id: ไม่มี
     label: ไม่มี
     action:
       action: goto
       qid:
-      - wou_opd_005
-- qid: wou_opd_005
-  question: มีอาการปวด บวม แดง ร้อน รอบแผล หรือมีหนองไหลหรือไม่?
+      - hea_opd_005
+- qid: hea_opd_005
+  question: มีโรคประจำตัวอย่างน้อย 1 โรค ได้แก่ ความดันโลหิตสูง เบาหวาน ไขมันสูง โรคหลอดเลือดสมอง โรคทางระบบประสาท โรคที่เกี่ยวกับภูมิคุ้นกันบกพร่อง มีเนื้องอกในสมอง
+  question_type: single_select
+  options:
+  - id: มี
+    label: มี
+    action:
+      action: terminate
+      metadata:
+        department:
+          - id: dept004
+  - id: ไม่มี
+    label: ไม่มี
+    action:
+      action: goto
+      qid:
+      - hea_opd_006
+- qid: hea_opd_006
+  question: มีอาการอื่นหรือประวัติดังนี้ร่วมหรือไม่?
+  question_type: multi_select
+  options:
+  - id: มีปัญหาค่าสายตา หรือใช้สายตานาน ๆ
+    label: มีปัญหาค่าสายตา หรือใช้สายตานาน ๆ
+  - id: มีประวัติโรคประจำตัวเกี่ยวกับตา
+    label: มีประวัติโรคประจำตัวเกี่ยวกับตา
+  - id: ไม่มี
+    label: ไม่มี
+  next:
+    action: goto
+    qid:
+    - hea_opd_006-1
+- qid: hea_opd_006-1
+  question: มีอาการเข้าได้กับแผนกจักษุวิทยาหรือไม่ ?
   question_type: conditional
   rules:
   - when:
-    - qid: wou_as_001
+    - qid: hea_opd_006
       op: contains_any
       value:
-      - หนอง
-      - บวมแดงร้อน
+        - มีปัญหาค่าสายตา หรือใช้สายตานาน ๆ
+        - มีประวัติโรคประจำตัวเกี่ยวกับตา
     then:
       action: terminate
       metadata:
         department:
-        - id: dept004
+          - id: dept006
   default:
     action: goto
     qid:
-    - wou_opd_006
-- qid: wou_opd_006
-  question: บาดแผลเกิดที่บริเวณใบหน้า ข้อต่อ มือ เท้า อวัยวะเพศ หรือไม่?
+    - hea_opd_007
+- qid: hea_opd_007
+  question: มีอาการอื่นหรือประวัติดังนี้ร่วมหรือไม่?
+  question_type: multi_select
+  options:
+  - id: มีอาการปวด หรือ แน่น บริเวณหน้าแก้ม หรือหน้าผาก หรือรอบดวงตา
+    label: มีอาการปวด หรือ แน่น บริเวณหน้าแก้ม หรือหน้าผาก หรือรอบดวงตา
+  - id: มีอาการทางหู
+    label: มีอาการทางหู
+  - id: มีปัญหาการได้ยิน
+    label: มีปัญหาการได้ยิน
+  - id: มีประวัติโรคประจำตัวเกี่ยวกับหู
+    label: มีประวัติโรคประจำตัวเกี่ยวกับหู
+  - id: ไม่มี
+    label: ไม่มี
+  next:
+    action: goto
+    qid:
+    - hea_opd_007-1
+- qid: hea_opd_007-1
+  question: มีอาการเข้าได้กับแผนกหูคอจมูกหรือไม่ ?
+  question_type: conditional
+  rules:
+  - when:
+    - qid: hea_opd_007
+      op: contains_any
+      value:
+        - มีอาการปวด หรือ แน่น บริเวณหน้าแก้ม หรือหน้าผาก หรือรอบดวงตา
+        - มีอาการทางหู
+        - มีปัญหาการได้ยิน
+        - มีประวัติโรคประจำตัวเกี่ยวกับหู
+    then:
+      action: terminate
+      metadata:
+        department:
+          - id: dept008
+  default:
+    action: terminate
+    metadata:
+      department:
+        - id: dept013
+
+Dizziness:
+- qid: diz_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - diz_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - diz_opd_002-1
+- qid: diz_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
   question_type: single_select
   options:
-  - id: มีแผลบริเวณดังกล่าว (ใบหน้า ข้อต่อ มือ เท้า อวัยวะเพศ)
-    label: มีแผลบริเวณดังกล่าว (ใบหน้า ข้อต่อ มือ เท้า อวัยวะเพศ)
+    - id: ใช่
+      label: ใช่
+      action:
+        action: goto
+        qid:
+          - diz_opd_002-2
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - diz_opd_003
+- qid: diz_opd_002-2
+  question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - diz_opd_003
+- qid: diz_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
     action:
       action: terminate
       metadata:
         department:
-        - id: dept012
-  - id: บริเวณอื่น (ผิวหนังทั่วไป)
-    label: บริเวณอื่น (ผิวหนังทั่วไป)
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
     action:
       action: goto
       qid:
-      - wou_opd_007
-- qid: wou_opd_007
-  question: ท่านอายุเท่าไร?
+        - diz_opd_004
+- qid: diz_opd_004
+  question: มีประวัติเคยผ่าตัดสมองหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - diz_opd_005
+- qid: diz_opd_005
+  question: มีโรคประจำตัวอย่างน้อย 1 โรค ได้แก่ ความดันโลหิตสูง เบาหวาน ไขมันสูง โรคหัวใจ โรคหลอดเลือดสมอง โรคทางระบบประสาท โรคที่เกี่ยวกับภูมิคุ้มกันบกพร่อง มีเนื้องอกในสมอง ไทรอยด์ โลหิตจาง
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - diz_opd_006
+- qid: diz_opd_006
+  question: มีอาการอื่นร่วมดังนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: บ้านหมุน หรือ เวียนศีรษะเวลาเปลี่ยนท่าทาง (เช่น ลุกขึ้น นอน พลิกตัว)
+      label: บ้านหมุน หรือ เวียนศีรษะเวลาเปลี่ยนท่าทาง (เช่น ลุกขึ้น นอน พลิกตัว)
+    - id: มีอาการทางหู
+      label: มีอาการทางหู
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - diz_opd_006-1
+- qid: diz_opd_006-1
+  question: มีอาการเข้าได้กับแผนกหูคอจมูกหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: diz_opd_006
+          op: contains_any
+          value:
+            - บ้านหมุน หรือ เวียนศีรษะเวลาเปลี่ยนท่าทาง (เช่น ลุกขึ้น นอน พลิกตัว)
+            - มีอาการทางหู
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept008
+  default:
+    action: goto
+    qid:
+      - diz_opd_007
+- qid: diz_opd_007
+  question: มีอาการเวียนศีรษะ และ มีปัญหาค่าสายตา หรือใช้สายตานาน ๆ หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept006
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+
+Pain in Joint:
+- qid: pai_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - pai_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - pai_opd_002-1
+- qid: pai_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: goto
+        qid:
+          - pai_opd_002-2
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - pai_opd_003
+- qid: pai_opd_002-2
+  question: มีปวดข้อ/เชิงกราน/หลัง ที่สัมพันธ์กับการตั้งครรภ์ หรือมีอาการ ปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - pai_opd_003
+- qid: pai_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
   question_type: age_filter
   options:
-  - id: lt_15
-    label: <15
+  - id: lt_18
+    label: <18
+    action:
+      action: goto
+      qid:
+        - pai_opd_003-1
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - pai_opd_004
+- qid: pai_opd_003-1
+  question: มีอาการปวดเกิดขึ้นทันทีหลังจากได้รับบาดเจ็บ หรือกระแทกหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept002
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept009
+- qid: pai_opd_004
+  question: มีอาการหลังเกิดอุบัติเหตุ เช่น ล้ม ข้อกระแทก/บิด ข้อเท้าแพลง หรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: goto
+        qid:
+          - pai_opd_004-1
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - pai_opd_005
+- qid: pai_opd_004-1
+  question: เกิดอุบัติเหตุภายใน 24 ชั่วโมงหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept002
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept007
+            - id: dept013
+- qid: pai_opd_005
+  question: อาการปวดข้อเข้าได้กับข้อใดข้อหนึ่งต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ปวดหลายข้อ
+      label: ปวดหลายข้อ
+    - id: ปวดข้อร่วมกับข้อฝืดตอนเช้านาน > 30 นาที
+      label: ปวดข้อร่วมกับข้อฝืดตอนเช้านาน > 30 นาที
+    - id: มีโรคประจำตัวเกี่ยวกับข้อ และภูมิคุ้มกัน เช่น โรคเกาต์ โรค SLE โรครูมาตอยด์
+      label: มีโรคประจำตัวเกี่ยวกับข้อ และภูมิคุ้มกัน เช่น โรคเกาต์ โรค SLE โรครูมาตอยด์
+    - id: ปวดข้อ และ อาการอื่น ๆ ได้แก่ ผื่นแพ้แสงแดด หรือ แผลในปาก หรือ แผลที่ใบหู หรือ อ่อนเพลีย หรือ เหนื่อยง่าย หรือ ตาแดง หรือ พฤติกรรมเปลี่ยนแปลง
+      label: ปวดข้อ และ อาการอื่น ๆ ได้แก่ ผื่นแพ้แสงแดด หรือ แผลในปาก หรือ แผลที่ใบหู หรือ อ่อนเพลีย หรือ เหนื่อยง่าย หรือ ตาแดง หรือ พฤติกรรมเปลี่ยนแปลง
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - pai_opd_005-1
+- qid: pai_opd_005-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: pai_opd_005
+          op: contains_any
+          value:
+            - ปวดหลายข้อ
+            - ปวดข้อร่วมกับข้อฝืดตอนเช้านาน > 30 นาที
+            - มีโรคประจำตัวเกี่ยวกับข้อ และภูมิคุ้มกัน เช่น โรคเกาต์ โรค SLE โรครูมาตอยด์
+            - ปวดข้อ และ อาการอื่น ๆ ได้แก่ ผื่นแพ้แสงแดด หรือ แผลในปาก หรือ แผลที่ใบหู หรือ อ่อนเพลีย หรือ เหนื่อยง่าย หรือ ตาแดง หรือ พฤติกรรมเปลี่ยนแปลง
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - pai_opd_006
+- qid: pai_opd_006
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ปวดข้อเดียว มีข้อบวม แดง หรือร้อน หรือมีไข้
+      label: ปวดข้อเดียว มีข้อบวม แดง หรือร้อน หรือมีไข้
+    - id: มีประวัติปวดข้อจากการใช้งาน
+      label: มีประวัติปวดข้อจากการใช้งาน
+    - id: เคยมีปัญหาปวดข้อเดิมมาก่อน เช่น ปวดข้อข้อเดียว (เข่า สะโพก ไหล่ ข้อเข่า ฯลฯ)
+      label: เคยมีปัญหาปวดข้อเดิมมาก่อน เช่น ปวดข้อข้อเดียว (เข่า สะโพก ไหล่ ข้อเข่า ฯลฯ)
+    - id: อาการปวดมากขึ้นเมื่อใช้งาน ดีขึ้นเมื่อพัก และอายุมากกว่า 50 ปี
+      label: อาการปวดมากขึ้นเมื่อใช้งาน ดีขึ้นเมื่อพัก และอายุมากกว่า 50 ปี
+    - id: มีประวัติ เคยผ่าตัดกระดูก หรือข้อ บริเวณที่ปวด
+      label: มีประวัติ เคยผ่าตัดกระดูก หรือข้อ บริเวณที่ปวด
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - pai_opd_006-1
+- qid: pai_opd_006-1
+  question: มีอาการเข้าได้กับแผนกออร์โธปิดิกส์หรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: pai_opd_006
+          op: contains_any
+          value:
+            - ปวดข้อเดียว มีข้อบวม แดง หรือร้อน หรือมีไข้
+            - มีประวัติปวดข้อจากการใช้งาน
+            - เคยมีปัญหาปวดข้อเดิมมาก่อน เช่น ปวดข้อข้อเดียว (เข่า สะโพก ไหล่ ข้อเข่า ฯลฯ)
+            - อาการปวดมากขึ้นเมื่อใช้งาน ดีขึ้นเมื่อพัก และอายุมากกว่า 50 ปี
+            - มีประวัติ เคยผ่าตัดกระดูก หรือข้อ บริเวณที่ปวด
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept007
+  default:
+    action: terminate
+    metadata:
+      department:
+        - id: dept013
+
+Muscle Pain:
+- qid: mus_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - mus_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - mus_opd_002-1
+- qid: mus_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: goto
+        qid:
+          - mus_opd_002-2
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - mus_opd_003
+- qid: mus_opd_002-2
+  question: มีอาการปวดหลัง หรือ สะโพก หรือ ขาหนีบ ที่สัมพันธ์กับการตั้งครรภ์ หรือมีอาการ ปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - mus_opd_003
+- qid: mus_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: goto
+      qid:
+        - mus_opd_003-1
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - mus_opd_004
+- qid: mus_opd_003-1
+  question: มีอาการปวดเกิดขึ้นทันทีหลังจากได้รับบาดเจ็บ หรือกระแทกหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept002
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept009
+- qid: mus_opd_004
+  question: มีอาการหลังเกิดอุบัติเหตุ เช่น ล้ม ข้อกระแทก/บิด ข้อเท้าแพลง หรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: goto
+        qid:
+          - mus_opd_004-1
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - mus_opd_005
+- qid: mus_opd_004-1
+  question: เกิดอุบัติเหตุภายใน 24 ชั่วโมงหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept002
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept007
+            - id: dept013
+- qid: mus_opd_005
+  question: มีอาการดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีไข้เรื้อรัง
+      label: มีไข้เรื้อรัง
+    - id: ปวดกล้ามเนื้อหลายตำแหน่ง
+      label: ปวดกล้ามเนื้อหลายตำแหน่ง
+    - id: ผื่นแพ้แสงแดด
+      label: ผื่นแพ้แสงแดด
+    - id: แผลในปาก
+      label: แผลในปาก
+    - id: แผลที่ใบหู
+      label: แผลที่ใบหู
+    - id: อ่อนเพลีย
+      label: อ่อนเพลีย
+    - id: เหนื่อยง่าย
+      label: เหนื่อยง่าย
+    - id: ตาแดง
+      label: ตาแดง
+    - id: พฤติกรรมเปลี่ยนแปลง
+      label: พฤติกรรมเปลี่ยนแปลง
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - mus_opd_005-1
+- qid: mus_opd_005-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: mus_opd_005
+          op: contains_any
+          value:
+            - มีไข้เรื้อรัง
+            - ปวดกล้ามเนื้อหลายตำแหน่ง
+            - ผื่นแพ้แสงแดด
+            - แผลในปาก
+            - แผลที่ใบหู
+            - อ่อนเพลีย
+            - เหนื่อยง่าย
+            - ตาแดง
+            - พฤติกรรมเปลี่ยนแปลง
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - mus_opd_006
+- qid: mus_opd_006
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: คลำพบก้อนตำแหน่งที่ปวด
+      label: คลำพบก้อนตำแหน่งที่ปวด
+    - id: มีไข้ และ ตำแหน่งที่ปวด บวม แดง ร้อน
+      label: มีไข้ และ ตำแหน่งที่ปวด บวม แดง ร้อน
+    - id: มีประวัติ เคยผ่าตัดตำแหน่งที่ปวด
+      label: มีประวัติ เคยผ่าตัดตำแหน่งที่ปวด
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - mus_opd_006-1
+- qid: mus_opd_006-1
+  question: มีอาการเข้าได้กับแผนกศัลยกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: mus_opd_006
+          op: contains_any
+          value:
+            - คลำพบก้อนตำแหน่งที่ปวด
+            - มีไข้ และ ตำแหน่งที่ปวด บวม แดง ร้อน
+            - มีประวัติ เคยผ่าตัดตำแหน่งที่ปวด
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+  default:
+    action: goto
+    qid:
+      - mus_opd_007
+- qid: mus_opd_007
+  question: ปวดรอบดวงตา หรือ เจ็บตา หรือ มองเห็นผิดปกติหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept006
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - mus_opd_008
+- qid: mus_opd_008
+  question: ปวดขากรรไกร หรือ รอบใบหู หรือ ปวดเวลาเคี้ยวหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept008
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - mus_opd_009
+- qid: mus_opd_009
+  question: มีผื่น ผิวหนังแดง เจ็บแสบร่วมกับปวดหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept001
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - mus_opd_010
+- qid: mus_opd_010
+  question: มีอาการดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีไข้ อ่อนเพลีย
+      label: มีไข้ อ่อนเพลีย
+    - id: อาการเจ็บกล้ามเนื้อเป็นทั่ว ๆ ไปตามตัว
+      label: อาการเจ็บกล้ามเนื้อเป็นทั่ว ๆ ไปตามตัว
+    - id: ปวดเยอะ ร่วมกับมีการใช้งานหนัก / ออกกำลังกาย / ยกของหนัก
+      label: ปวดเยอะ ร่วมกับมีการใช้งานหนัก / ออกกำลังกาย / ยกของหนัก
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - mus_opd_010-1
+- qid: mus_opd_010-1
+  question: มีอาการที่ควรไปหน่วยบริการปฐมภูมิหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: mus_opd_010
+          op: contains_any
+          value:
+            - มีไข้ อ่อนเพลีย
+            - อาการเจ็บกล้ามเนื้อเป็นทั่ว ๆ ไปตามตัว
+            - ปวดเยอะ ร่วมกับมีการใช้งานหนัก / ออกกำลังกาย / ยกของหนัก
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+  default:
+    action: goto
+    qid:
+      - mus_opd_011
+- qid: mus_opd_011
+  question: ปวดเล็กน้อย เป็นเฉพาะจุด (คอ หลัง แขน ขา) และเป็นมากขึ้นเวลาเคลื่อนไหวหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          advice: พักผ่อน ทานยาลดปวด และสังเกตอาการ หากไม่ดีขึ้นควรพบแพทย์ตรวจเพิ่มเติม
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+
+Fever:
+- qid: fev_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - fev_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - fev_opd_002-1
+- qid: fev_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด หรือหลังคลอดหรือแท้งภายใน 6 สัปดาห์ ใช่หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: goto
+        qid:
+          - fev_opd_002-2
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - fev_opd_003
+- qid: fev_opd_002-2
+  question: ปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - fev_opd_003
+- qid: fev_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
     action:
       action: terminate
       metadata:
         department:
-        - id: dept009
-  - id: gte_15
-    label: '>=15'
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - fev_opd_004
+- qid: fev_opd_004
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีไข้นานเกิน 1 สัปดาห์
+      label: มีไข้นานเกิน 1 สัปดาห์
+    - id: มีอาการ ตัวหรือตาเหลือง
+      label: มีอาการ ตัวหรือตาเหลือง
+    - id: มีปวดข้อหลายตำแหน่ง หรือ ผื่นแพ้แสงแดด หรือ แผลในปาก หรือ แผลที่ใบหู หรือ อ่อนเพลีย หรือ เหนื่อยง่าย หรือ ตาแดง หรือ พฤติกรรมเปลี่ยนแปลง
+      label: มีปวดข้อหลายตำแหน่ง หรือ ผื่นแพ้แสงแดด หรือ แผลในปาก หรือ แผลที่ใบหู หรือ อ่อนเพลีย หรือ เหนื่อยง่าย หรือ ตาแดง หรือ พฤติกรรมเปลี่ยนแปลง
+    - id: ท้องเสียรุนแรง อ่อนเพลีย
+      label: ท้องเสียรุนแรง อ่อนเพลีย
+    - id: มีโรคประจำตัว ได้แก่ เบาหวาน ไตวายเรื้อรัง โรคหัวใจ โรคมะเร็ง โรคที่เกี่ยวข้องกับภูมิคุ้มกัน
+      label: มีโรคประจำตัว ได้แก่ เบาหวาน ไตวายเรื้อรัง โรคหัวใจ โรคมะเร็ง โรคที่เกี่ยวข้องกับภูมิคุ้มกัน
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - fev_opd_004-1
+- qid: fev_opd_004-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: fev_opd_004
+          op: contains_any
+          value:
+            - มีไข้นานเกิน 1 สัปดาห์
+            - มีอาการ ตัวหรือตาเหลือง
+            - มีปวดข้อหลายตำแหน่ง หรือ ผื่นแพ้แสงแดด หรือ แผลในปาก หรือ แผลที่ใบหู หรือ อ่อนเพลีย หรือ เหนื่อยง่าย หรือ ตาแดง หรือ พฤติกรรมเปลี่ยนแปลง
+            - ท้องเสียรุนแรง อ่อนเพลีย
+            - มีโรคประจำตัว ได้แก่ เบาหวาน ไตวายเรื้อรัง โรคหัวใจ โรคมะเร็ง โรคที่เกี่ยวข้องกับภูมิคุ้มกัน
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - fev_opd_005
+- qid: fev_opd_005
+  question: หลังผ่าตัด มีไข้ หรือแผลมีหนอง หรือปวดมากบริเวณแผล หรือตำแหน่งที่ผ่าตัดหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - fev_opd_006
+- qid: fev_opd_006
+  question: ปวดรอบดวงตา หรือ ตาแดง ปวดมาก หรือ มองเห็นภาพไม่ชัด ตามัว หรือ ขี้ตาเยอะผิดปกติ หรือ ตาบวมหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept006
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - fev_opd_007
+- qid: fev_opd_007
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ปวดหู หรือ หูอื้อ ไม่ได้ยินเสียง หรือ ปวดขากรรไกร หรือปวดเวลาเคี้ยว
+      label: ปวดหู หรือ หูอื้อ ไม่ได้ยินเสียง หรือ ปวดขากรรไกร หรือปวดเวลาเคี้ยว
+    - id: ปวดหรือแน่น บริเวณ โหนกแก้ม หน้าผาก และคัดจมูก น้ำมูกเยอะ
+      label: ปวดหรือแน่น บริเวณ โหนกแก้ม หน้าผาก และคัดจมูก น้ำมูกเยอะ
+    - id: กลืนน้ำลายไม่ได้ อ้าปากไม่ได้
+      label: กลืนน้ำลายไม่ได้ อ้าปากไม่ได้
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - fev_opd_007-1
+- qid: fev_opd_007-1
+  question: มีอาการเข้าได้กับแผนกหูคอจมูกหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: fev_opd_007
+          op: contains_any
+          value:
+            - ปวดหู หรือ หูอื้อ ไม่ได้ยินเสียง หรือ ปวดขากรรไกร หรือปวดเวลาเคี้ยว
+            - ปวดหรือแน่น บริเวณ โหนกแก้ม หน้าผาก และคัดจมูก น้ำมูกเยอะ
+            - กลืนน้ำลายไม่ได้ อ้าปากไม่ได้
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept008
+  default:
+    action: goto
+    qid:
+      - fev_opd_008
+- qid: fev_opd_008
+  question: มีผื่น/ผิวหนังอักเสบ ที่ลุกลามอย่างรวดเร็ว หรือเป็นตุ่มน้ำหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept001
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - fev_opd_009
+- qid: fev_opd_009
+  question: มีอาการปวดข้อ หรือ กระดูกตำแหน่งเดียวชัดเจน และ อาจมีอาการอื่น ๆ ได้แก่ ข้อบวม แดง ร้อน หรือมีหนองบริเวณข้อนั้นหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept007
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - fev_opd_010
+- qid: fev_opd_010
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - fev_opd_011
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - fev_opd_010-1
+- qid: fev_opd_010-1
+  question: มีตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดผิดปกติ หรือ มีความผิดปกติบริเวณอวัยวะเพศหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - fev_opd_012
+- qid: fev_opd_011
+  question: ท่านเป็นเพศชายหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - fev_opd_011-1
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - fev_opd_012
+- qid: fev_opd_011-1
+  question: ปวดอัณฑะ หรือ มีความผิดปกติบริเวณอวัยวะเพศหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - fev_opd_012
+- qid: fev_opd_012
+  question: มีอาการแค่ไข้ต่ำ ๆ เพียงอย่างเดียว หรือไม่มีอาการอื่น ๆ หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          advice: พักผ่อน ทานยาลดไข้ และสังเกตอาการ หากไม่ดีขึ้นควรพบแพทย์ตรวจเพิ่มเติม
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+
+Cough:
+- qid: cou_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - cou_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - cou_opd_002-1
+- qid: cou_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: goto
+        qid:
+          - cou_opd_002-2
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - cou_opd_003
+- qid: cou_opd_002-2
+  question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - cou_opd_003
+- qid: cou_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
     action:
       action: terminate
       metadata:
         department:
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - cou_opd_004
+- qid: cou_opd_004
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีไอเรื้อรัง (นานกว่า 8 สัปดาห์)
+      label: มีไอเรื้อรัง (นานกว่า 8 สัปดาห์)
+    - id: ไอปนเลือด หรือเหนื่อยง่ายขึ้น หรือ มีน้ำหนักลดผิดปกติ
+      label: ไอปนเลือด หรือเหนื่อยง่ายขึ้น หรือ มีน้ำหนักลดผิดปกติ
+    - id: มีโรคประจำตัว ได้แก่ โรคหอบหืด โรคปอดอุดกั้นเรื้อรัง โรคหัวใจ โรคไตเรื้อรัง โรคที่เกี่ยวข้องกับภูมิคุ้มกันต่ำ โรคมะเร็งปอด
+      label: มีโรคประจำตัว ได้แก่ โรคหอบหืด โรคปอดอุดกั้นเรื้อรัง โรคหัวใจ โรคไตเรื้อรัง โรคที่เกี่ยวข้องกับภูมิคุ้มกันต่ำ โรคมะเร็งปอด
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - cou_opd_004-1
+- qid: cou_opd_004-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: cou_opd_004
+          op: contains_any
+          value:
+            - มีไอเรื้อรัง (นานกว่า 8 สัปดาห์)
+            - ไอปนเลือด หรือเหนื่อยง่ายขึ้น หรือ มีน้ำหนักลดผิดปกติ
+            - มีโรคประจำตัว ได้แก่ โรคหอบหืด โรคปอดอุดกั้นเรื้อรัง โรคหัวใจ โรคไตเรื้อรัง โรคที่เกี่ยวข้องกับภูมิคุ้มกันต่ำ โรคมะเร็งปอด
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - cou_opd_005
+- qid: cou_opd_005
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีอาการแสบคอ คันคอ หรือรู้สึกเหมือนมีอะไรติดคอร่วมด้วย หรือ เสียงแหบ หรือเจ็บคอเรื้อรัง หรือมีน้ำมูกไหลลงคอ
+      label: มีอาการแสบคอ คันคอ หรือรู้สึกเหมือนมีอะไรติดคอร่วมด้วย หรือ เสียงแหบ หรือเจ็บคอเรื้อรัง หรือมีน้ำมูกไหลลงคอ
+    - id: กลืนน้ำลายไม่ได้ อ้าปากไม่ได้
+      label: กลืนน้ำลายไม่ได้ อ้าปากไม่ได้
+    - id: โรคประจำตัว มะเร็งในโพรงจมูก ช่องคอ
+      label: โรคประจำตัว มะเร็งในโพรงจมูก ช่องคอ
+    - id: สงสัยมีสิ่งแปลกปลอมในคอ
+      label: สงสัยมีสิ่งแปลกปลอมในคอ
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - cou_opd_005-1
+- qid: cou_opd_005-1
+  question: มีอาการเข้าได้กับแผนกหูคอจมูกหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: cou_opd_005
+          op: contains_any
+          value:
+            - มีอาการแสบคอ คันคอ หรือรู้สึกเหมือนมีอะไรติดคอร่วมด้วย หรือ เสียงแหบ หรือเจ็บคอเรื้อรัง หรือมีน้ำมูกไหลลงคอ
+            - กลืนน้ำลายไม่ได้ อ้าปากไม่ได้
+            - โรคประจำตัว มะเร็งในโพรงจมูก ช่องคอ
+            - สงสัยมีสิ่งแปลกปลอมในคอ
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept008
+  default:
+    action: goto
+    qid:
+      - cou_opd_006
+- qid: cou_opd_006
+  question: มีไข้ เจ็บคอ มีเสมหะ มีน้ำมูกร่วม หรือคลื่นไส้อาเจียน หรือเรอเปรี้ยว แสบร้อนกลางอกหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - cou_opd_007
+- qid: cou_opd_007
+  question: มีไอเล็กน้อย หายใจปกติ ไม่เหนื่อย ไม่มีไข้ และมีประวัติเป็นภูมิแพ้อากาศหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          advice: พักผ่อน ทานยาแก้แพ้ และสังเกตอาการ หากไม่ดีขึ้นควรพบแพทย์ตรวจเพิ่มเติม
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+
+Sore Throat:
+- qid: sor_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - sor_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - sor_opd_002-1
+- qid: sor_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: goto
+        qid:
+          - sor_opd_002-2
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - sor_opd_003
+- qid: sor_opd_002-2
+  question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - sor_opd_003
+- qid: sor_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: terminate
+      metadata:
+        department:
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - sor_opd_004
+- qid: sor_opd_004
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีแผลในปาก หรือ ผื่นตามตัว หรือ ตาแดง
+      label: มีแผลในปาก หรือ ผื่นตามตัว หรือ ตาแดง
+    - id: ปวดข้อ เหนื่อยง่าย
+      label: ปวดข้อ เหนื่อยง่าย
+    - id: มีโรคประจำตัว ได้แก่ โรคมะเร็ง โรคที่เกี่ยวข้องกับภูมิคุ้มกันต่ำ
+      label: มีโรคประจำตัว ได้แก่ โรคมะเร็ง โรคที่เกี่ยวข้องกับภูมิคุ้มกันต่ำ
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - sor_opd_004-1
+- qid: sor_opd_004-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: sor_opd_004
+          op: contains_any
+          value:
+            - มีแผลในปาก หรือ ผื่นตามตัว หรือ ตาแดง
+            - ปวดข้อ เหนื่อยง่าย
+            - มีโรคประจำตัว ได้แก่ โรคมะเร็ง โรคที่เกี่ยวข้องกับภูมิคุ้มกันต่ำ
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - sor_opd_005
+- qid: sor_opd_005
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีก้อนที่คอ หรือ ต่อมน้ำเหลืองโตเรื้อรัง หรือน้ำหนักลดลง หรือ เหงื่อออกกลางคืนร่วมด้วย
+      label: มีก้อนที่คอ หรือ ต่อมน้ำเหลืองโตเรื้อรัง หรือน้ำหนักลดลง หรือ เหงื่อออกกลางคืนร่วมด้วย
+    - id: เจ็บคอ นาน > 1 สัปดาห์ หรือเป็น ๆ หาย ๆ บ่อยผิดปกติ
+      label: เจ็บคอ นาน > 1 สัปดาห์ หรือเป็น ๆ หาย ๆ บ่อยผิดปกติ
+    - id: เสียงแหบ/เสียงเปลี่ยน นาน > 2 สัปดาห์
+      label: เสียงแหบ/เสียงเปลี่ยน นาน > 2 สัปดาห์
+    - id: รู้สึกมีก้อนในคอ
+      label: รู้สึกมีก้อนในคอ
+    - id: เจ็บคอข้างเดียวเรื้อรัง + ปวดร้าวไปหูข้างเดียว
+      label: เจ็บคอข้างเดียวเรื้อรัง + ปวดร้าวไปหูข้างเดียว
+    - id: กลืนน้ำลายไม่ได้ อ้าปากไม่ได้
+      label: กลืนน้ำลายไม่ได้ อ้าปากไม่ได้
+    - id: สงสัยมีสิ่งแปลกปลอมในคอ
+      label: สงสัยมีสิ่งแปลกปลอมในคอ
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - sor_opd_005-1
+- qid: sor_opd_005-1
+  question: มีอาการเข้าได้กับแผนกหูคอจมูกหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: sor_opd_005
+          op: contains_any
+          value:
+            - มีก้อนที่คอ หรือ ต่อมน้ำเหลืองโตเรื้อรัง หรือน้ำหนักลดลง หรือ เหงื่อออกกลางคืนร่วมด้วย
+            - เจ็บคอ นาน > 1 สัปดาห์ หรือเป็น ๆ หาย ๆ บ่อยผิดปกติ
+            - เสียงแหบ/เสียงเปลี่ยน นาน > 2 สัปดาห์
+            - รู้สึกมีก้อนในคอ
+            - เจ็บคอข้างเดียวเรื้อรัง + ปวดร้าวไปหูข้างเดียว
+            - กลืนน้ำลายไม่ได้ อ้าปากไม่ได้
+            - สงสัยมีสิ่งแปลกปลอมในคอ
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept008
+  default:
+    action: goto
+    qid:
+      - sor_opd_006
+- qid: sor_opd_006
+  question: มีไข้ ไอ มีเสมหะ มีน้ำมูกร่วม หรือคลื่นไส้อาเจียน หรือเรอเปรี้ยว แสบร้อนกลางอกหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          advice: พักผ่อน กินยาตามอาการ และสังเกตอาการ หากไม่ดีขึ้นควรพบแพทย์ตรวจเพิ่มเติม
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+
+Stomachache:
+- qid: sto_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - sto_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - sto_opd_002-1
+- qid: sto_opd_002-1
+  question: มีข้อใดข้อหนึ่งต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ตั้งครรภ์ / ประจำเดือนขาด
+      label: ตั้งครรภ์ / ประจำเดือนขาด
+    - id: มีเลือดออกผิดปกติทางช่องคลอด หรือ ตกขาวผิดปกติ หรือ ปวดท้องมากโดยอาการสัมพันธ์กับรอบเดือน หรือมีประจำเดือนมาผิดปกติ
+      label: มีเลือดออกผิดปกติทางช่องคลอด หรือ ตกขาวผิดปกติ หรือ ปวดท้องมากโดยอาการสัมพันธ์กับรอบเดือน หรือมีประจำเดือนมาผิดปกติ
+    - id: ปวดแผลผ่าตัดทางสูติ-นรีเวช (เช่น ผ่าตัดคลอด ผ่าตัดมดลูก) หรือแผลผ่าตัด บวม แดง ร้อน มีหนอง
+      label: ปวดแผลผ่าตัดทางสูติ-นรีเวช (เช่น ผ่าตัดคลอด ผ่าตัดมดลูก) หรือแผลผ่าตัด บวม แดง ร้อน มีหนอง
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - sto_opd_002-2
+- qid: sto_opd_002-2
+  question: มีอาการเข้าได้กับแผนกสูติ-นรีเวชหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: sto_opd_002-1
+          op: contains_any
+          value:
+            - ตั้งครรภ์ / ประจำเดือนขาด
+            - มีเลือดออกผิดปกติทางช่องคลอด หรือ ตกขาวผิดปกติ หรือ ปวดท้องมากโดยอาการสัมพันธ์กับรอบเดือน หรือมีประจำเดือนมาผิดปกติ
+            - ปวดแผลผ่าตัดทางสูติ-นรีเวช (เช่น ผ่าตัดคลอด ผ่าตัดมดลูก) หรือแผลผ่าตัด บวม แดง ร้อน มีหนอง
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+  default:
+    action: goto
+    qid:
+      - sto_opd_003
+- qid: sto_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: terminate
+      metadata:
+        department:
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - sto_opd_004
+- qid: sto_opd_004
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ปวดท้องด้านขวาล่าง และ มีไข้
+      label: ปวดท้องด้านขวาล่าง และ มีไข้
+    - id: ปวดท้องด้านขวาบน และ มีไข้ และตัวหรือตาเหลือง
+      label: ปวดท้องด้านขวาบน และ มีไข้ และตัวหรือตาเหลือง
+    - id: ปวดรุนแรงร้าวไปหลัง
+      label: ปวดรุนแรงร้าวไปหลัง
+    - id: ผายลมน้อยลง
+      label: ผายลมน้อยลง
+    - id: คลำได้ก้อนบริเวณช่องท้อง
+      label: คลำได้ก้อนบริเวณช่องท้อง
+    - id: มีประวัติเพิ่งผ่าตัดช่องท้อง หรือ ปวดบริเวณแผลผ่าตัด
+      label: มีประวัติเพิ่งผ่าตัดช่องท้อง หรือ ปวดบริเวณแผลผ่าตัด
+    - id: มีไส้เลื่อนที่ทราบมาก่อน หรือปวดบริเวณที่มีไส้เลื่อน หรือคลำเจอก้อนสงสัยไส้เลื่อน
+      label: มีไส้เลื่อนที่ทราบมาก่อน หรือปวดบริเวณที่มีไส้เลื่อน หรือคลำเจอก้อนสงสัยไส้เลื่อน
+    - id: มีโรคประจำตัว ดังนี้ โรคเกี่ยวกับหลอดเลือดในช่องท้อง นิ่วในถุงน้ำดี นิ่วในทางเดินปัสสาวะ ตับอ่อนอักเสบเรื้อรัง มะเร็งในช่องท้อง
+      label: มีโรคประจำตัว ดังนี้ โรคเกี่ยวกับหลอดเลือดในช่องท้อง นิ่วในถุงน้ำดี นิ่วในทางเดินปัสสาวะ ตับอ่อนอักเสบเรื้อรัง มะเร็งในช่องท้อง
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - sto_opd_004-1
+- qid: sto_opd_004-1
+  question: มีอาการเข้าได้กับแผนกศัลยกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: sto_opd_004
+          op: contains_any
+          value:
+            - ปวดท้องด้านขวาล่าง และ มีไข้
+            - ปวดท้องด้านขวาบน และ มีไข้ และตัวหรือตาเหลือง
+            - ปวดรุนแรงร้าวไปหลัง
+            - ผายลมน้อยลง
+            - คลำได้ก้อนบริเวณช่องท้อง
+            - มีประวัติเพิ่งผ่าตัดช่องท้อง หรือ ปวดบริเวณแผลผ่าตัด
+            - มีไส้เลื่อนที่ทราบมาก่อน หรือปวดบริเวณที่มีไส้เลื่อน หรือคลำเจอก้อนสงสัยไส้เลื่อน
+            - มีโรคประจำตัว ดังนี้ โรคเกี่ยวกับหลอดเลือดในช่องท้อง นิ่วในถุงน้ำดี นิ่วในทางเดินปัสสาวะ ตับอ่อนอักเสบเรื้อรัง มะเร็งในช่องท้อง
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+  default:
+    action: goto
+    qid:
+      - sto_opd_005
+- qid: sto_opd_005
+  question: ท่านเป็นเพศชายหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - sto_opd_005-1
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - sto_opd_006
+- qid: sto_opd_005-1
+  question: ปวดอัณฑะ หรือ มีความผิดปกติบริเวณอวัยวะเพศหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - sto_opd_006
+- qid: sto_opd_006
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีตัวเหลือง ตาเหลือง
+      label: มีตัวเหลือง ตาเหลือง
+    - id: ปวดท้องบริเวณลิ้นปี่ กินยาตามอาการไม่ดีขึ้น
+      label: ปวดท้องบริเวณลิ้นปี่ กินยาตามอาการไม่ดีขึ้น
+    - id: ท้องผูกสลับท้องเสีย
+      label: ท้องผูกสลับท้องเสีย
+    - id: เบื่ออาหาร หรือน้ำหนักลดผิดปกติ
+      label: เบื่ออาหาร หรือน้ำหนักลดผิดปกติ
+    - id: มีโรคประจำตัว ได้แก่ โรคเบาหวาน โรคหัวใจ โรคหลอดเลือด โรคไตเรื้อรัง (ที่ต้องฟอกไตทางหน้าท้อง) โรคตับเรื้อรัง โรคที่เกี่ยวข้องกับภูมิคุ้มกันต่ำ วัณโรค
+      label: มีโรคประจำตัว ได้แก่ โรคเบาหวาน โรคหัวใจ โรคหลอดเลือด โรคไตเรื้อรัง (ที่ต้องฟอกไตทางหน้าท้อง) โรคตับเรื้อรัง โรคที่เกี่ยวข้องกับภูมิคุ้มกันต่ำ วัณโรค
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - sto_opd_006-1
+- qid: sto_opd_006-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: sto_opd_006
+          op: contains_any
+          value:
+            - มีตัวเหลือง ตาเหลือง
+            - ปวดท้องบริเวณลิ้นปี่ กินยาตามอาการไม่ดีขึ้น
+            - ท้องผูกสลับท้องเสีย
+            - เบื่ออาหาร หรือน้ำหนักลดผิดปกติ
+            - มีโรคประจำตัว ได้แก่ โรคเบาหวาน โรคหัวใจ โรคหลอดเลือด โรคไตเรื้อรัง (ที่ต้องฟอกไตทางหน้าท้อง) โรคตับเรื้อรัง โรคที่เกี่ยวข้องกับภูมิคุ้มกันต่ำ วัณโรค
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - sto_opd_007
+- qid: sto_opd_007
+  question: มีผื่น และปวดแสบปวดร้อนเป็นแนวด้านเดียวบริเวณท้องหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept001
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - sto_opd_008
+- qid: sto_opd_008
+  question: ปวดมีเฉพาะตอนการขยับตัว/ยกของ/ใช้งานกล้ามเนื้อหน้าท้องชัดเจนหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - sto_opd_009
+- qid: sto_opd_009
+  question: มีไข้ และ ถ่ายเหลว หรือ คลื่นไส้อาเจียน หรือ ปัสสาวะผิดปกติหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          advice: พักผ่อน กินยาตามอาการ สังเกตอาการ หากไม่ดีขึ้นควรพบแพทย์เพื่อตรวจเพิ่มเติม
+
+Constipation:
+- qid: con_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - con_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - con_opd_002-1
+- qid: con_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: goto
+        qid:
+          - con_opd_002-2
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - con_opd_003
+- qid: con_opd_002-2
+  question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - con_opd_003
+- qid: con_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: terminate
+      metadata:
+        department:
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - con_opd_004
+- qid: con_opd_004
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ไม่ผายลม หรือ ผายลมน้อยลง
+      label: ไม่ผายลม หรือ ผายลมน้อยลง
+    - id: เจ็บทวารขณะถ่าย ปวดเบ่ง หรือถ่ายอุจจาระมีเลือดปน
+      label: เจ็บทวารขณะถ่าย ปวดเบ่ง หรือถ่ายอุจจาระมีเลือดปน
+    - id: คลำได้ก้อนบริเวณช่องท้อง
+      label: คลำได้ก้อนบริเวณช่องท้อง
+    - id: มีประวัติผ่าตัดบริเวณช่องท้อง ลำไส้ และมีอาการ คลื่นไส้อาเจียน หรือท้องอืด
+      label: มีประวัติผ่าตัดบริเวณช่องท้อง ลำไส้ และมีอาการ คลื่นไส้อาเจียน หรือท้องอืด
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - con_opd_004-1
+- qid: con_opd_004-1
+  question: มีอาการเข้าได้กับแผนกศัลยกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: con_opd_004
+          op: contains_any
+          value:
+            - ไม่ผายลม หรือ ผายลมน้อยลง
+            - เจ็บทวารขณะถ่าย ปวดเบ่ง หรือถ่ายอุจจาระมีเลือดปน
+            - คลำได้ก้อนบริเวณช่องท้อง
+            - มีประวัติผ่าตัดบริเวณช่องท้อง ลำไส้ และมีอาการ คลื่นไส้อาเจียน หรือท้องอืด
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+  default:
+    action: goto
+    qid:
+      - con_opd_005
+- qid: con_opd_005
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ท้องผูกเรื้อรัง (> 2 สัปดาห์)
+      label: ท้องผูกเรื้อรัง (> 2 สัปดาห์)
+    - id: ท้องผูกสลับท้องเสีย
+      label: ท้องผูกสลับท้องเสีย
+    - id: อุจจาระก้อนเล็กลงเรื่อย ๆ
+      label: อุจจาระก้อนเล็กลงเรื่อย ๆ
+    - id: เบื่ออาหาร หรือน้ำหนักลดผิดปกติ
+      label: เบื่ออาหาร หรือน้ำหนักลดผิดปกติ
+    - id: อ่อนเพลียง่าย ขี้หนาว ปวดหลัง
+      label: อ่อนเพลียง่าย ขี้หนาว ปวดหลัง
+    - id: โรคประจำตัว ดังนี้ เบาหวาน โรคไตเรื้อรัง โรคทางระบบประสาท โรคไทรอยด์
+      label: โรคประจำตัว ดังนี้ เบาหวาน โรคไตเรื้อรัง โรคทางระบบประสาท โรคไทรอยด์
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - con_opd_005-1
+- qid: con_opd_005-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: con_opd_005
+          op: contains_any
+          value:
+            - ท้องผูกเรื้อรัง (> 2 สัปดาห์)
+            - ท้องผูกสลับท้องเสีย
+            - อุจจาระก้อนเล็กลงเรื่อย ๆ
+            - เบื่ออาหาร หรือน้ำหนักลดผิดปกติ
+            - อ่อนเพลียง่าย ขี้หนาว ปวดหลัง
+            - โรคประจำตัว ดังนี้ เบาหวาน โรคไตเรื้อรัง โรคทางระบบประสาท โรคไทรอยด์
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - con_opd_006
+- qid: con_opd_006
+  question: อาการท้องผูกมากกว่า 3 วัน (> 2 วัน) หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          advice: แนะนำปรับพฤติกรรมดูก่อน (ดื่มน้ำ, เพิ่มใยอาหาร) หากไม่ดีขึ้นแนะนำพบแพทย์เพื่อตรวจเพิ่มเติม
+
+Diarrhea:
+- qid: dia_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - dia_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - dia_opd_002-1
+- qid: dia_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: goto
+        qid:
+          - dia_opd_002-2
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - dia_opd_003
+- qid: dia_opd_002-2
+  question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
+  question_type: single_select
+  options:
+    - id: มี
+      label: มี
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่มี
+      label: ไม่มี
+      action:
+        action: goto
+        qid:
+          - dia_opd_003
+- qid: dia_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: terminate
+      metadata:
+        department:
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - dia_opd_004
+- qid: dia_opd_004
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีประวัติผ่าตัดบริเวณช่องท้อง และมีอาการปวดท้อง
+      label: มีประวัติผ่าตัดบริเวณช่องท้อง และมีอาการปวดท้อง
+    - id: มีไข้ และปวดท้องด้านขวาล่าง
+      label: มีไข้ และปวดท้องด้านขวาล่าง
+    - id: คลำได้ก้อนบริเวณช่องท้อง
+      label: คลำได้ก้อนบริเวณช่องท้อง
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - dia_opd_004-1
+- qid: dia_opd_004-1
+  question: มีอาการเข้าได้กับแผนกศัลยกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: dia_opd_004
+          op: contains_any
+          value:
+            - มีประวัติผ่าตัดบริเวณช่องท้อง และมีอาการปวดท้อง
+            - มีไข้ และปวดท้องด้านขวาล่าง
+            - คลำได้ก้อนบริเวณช่องท้อง
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+  default:
+    action: goto
+    qid:
+      - dia_opd_005
+- qid: dia_opd_005
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ท้องเสียเรื้อรัง (มากกว่า 2 สัปดาห์)
+      label: ท้องเสียเรื้อรัง (มากกว่า 2 สัปดาห์)
+    - id: ท้องผูกสลับท้องเสีย หรือ เบื่ออาหาร หรือน้ำหนักลดผิดปกติ
+      label: ท้องผูกสลับท้องเสีย หรือ เบื่ออาหาร หรือน้ำหนักลดผิดปกติ
+    - id: ถ่ายอุจจาระมีเลือดปน
+      label: ถ่ายอุจจาระมีเลือดปน
+    - id: ไข้สูง
+      label: ไข้สูง
+    - id: มีโรคประจำตัว ได้แก่ เบาหวาน โรคไตเรื้อรัง มะเร็ง โรคที่เกี่ยวกับภูมิคุ้มกัน วัณโรค
+      label: มีโรคประจำตัว ได้แก่ เบาหวาน โรคไตเรื้อรัง มะเร็ง โรคที่เกี่ยวกับภูมิคุ้มกัน วัณโรค
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - dia_opd_005-1
+- qid: dia_opd_005-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: dia_opd_005
+          op: contains_any
+          value:
+            - ท้องเสียเรื้อรัง (มากกว่า 2 สัปดาห์)
+            - ท้องผูกสลับท้องเสีย หรือ เบื่ออาหาร หรือน้ำหนักลดผิดปกติ
+            - ถ่ายอุจจาระมีเลือดปน
+            - ไข้สูง
+            - มีโรคประจำตัว ได้แก่ เบาหวาน โรคไตเรื้อรัง มะเร็ง โรคที่เกี่ยวกับภูมิคุ้มกัน วัณโรค
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - dia_opd_006
+- qid: dia_opd_006
+  question: ถ่ายอุจจาระมากกว่าเท่ากับ 10 ครั้ง/วัน โดยยังไม่มีอาการขาดน้ำ คลื่นไส้อาเจียน มีไข้ ปวดเมื่อยตัวหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          advice: สามารถจิบน้ำเกลือแร่ งดอาหารรสจัด ยารักษาตามอาการ เช่น ยาแก้คลื่นไส้อาเจียน แต่ถ้ายังไม่ดีขึ้นควรพบแพทย์เพื่อตรวจเพิ่มเติม
+
+Dysuria:
+- qid: dys_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - dys_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - dys_opd_002-1
+- qid: dys_opd_002-1
+  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด หรือหลังผ่าตัดคลอด ทำแท้ง ไม่เกิน 6 สัปดาห์ ใช่หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - dys_opd_003
+- qid: dys_opd_003
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: terminate
+      metadata:
+        department:
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - dys_opd_004
+- qid: dys_opd_004
+  question: ท่านเป็นเพศชายหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - dys_opd_004-1
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - dys_opd_005
+- qid: dys_opd_004-1
+  question: ปวดอัณฑะ หรือ มีความผิดปกติบริเวณอวัยวะเพศหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - dys_opd_005
+- qid: dys_opd_005
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ปัสสาวะแสบ ขัด หรือขุ่น ร่วมกับ ไข้สูง หรือ หนาวสั่น หรือ ปวดหลัง หรือ ปัสสาวะออกลดลง หรือ คลื่นไส้อาเจียน
+      label: ปัสสาวะแสบ ขัด หรือขุ่น ร่วมกับ ไข้สูง หรือ หนาวสั่น หรือ ปวดหลัง หรือ ปัสสาวะออกลดลง หรือ คลื่นไส้อาเจียน
+    - id: มีไข้ออกผื่นร่วม
+      label: มีไข้ออกผื่นร่วม
+    - id: มีโรคประจำตัว ได้แก่ เบาหวาน หรือ โรคหัวใจ หรือ โรคที่เกี่ยวกับภูมิคุ้มกันบกพร่อง หรือ โรคมะเร็ง
+      label: มีโรคประจำตัว ได้แก่ เบาหวาน หรือ โรคหัวใจ หรือ โรคที่เกี่ยวกับภูมิคุ้มกันบกพร่อง หรือ โรคมะเร็ง
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - dys_opd_005-1
+- qid: dys_opd_005-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: dys_opd_005
+          op: contains_any
+          value:
+            - ปัสสาวะแสบ ขัด หรือขุ่น ร่วมกับ ไข้สูง หรือ หนาวสั่น หรือ ปวดหลัง หรือ ปัสสาวะออกลดลง หรือ คลื่นไส้อาเจียน
+            - มีไข้ออกผื่นร่วม
+            - มีโรคประจำตัว ได้แก่ เบาหวาน หรือ โรคหัวใจ หรือ โรคที่เกี่ยวกับภูมิคุ้มกันบกพร่อง หรือ โรคมะเร็ง
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - dys_opd_006
+- qid: dys_opd_006
+  question: ท่านเป็นเพศชายหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - dys_opd_006-1
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - dys_opd_007
+- qid: dys_opd_006-1
+  question: มีประวัติเป็นโรคต่อมลูกหมากโต หรืออายุ มากกว่า 50 ปี และปัสสาวะลำบาก ปัสสาวะไม่พุ่ง กลั้นปัสสาวะไม่ได้หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - dys_opd_006-2
+- qid: dys_opd_006-2
+  question: มีหนองไหลออกจากอวัยวะเพศหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - dys_opd_007
+- qid: dys_opd_007
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - dys_opd_008
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - dys_opd_007-1
+- qid: dys_opd_007-1
+  question: ตกขาวผิดปกติ หรือเลือดออกทางช่องคลอดผิดปกติ หรือมีโรคประจำตัว มะเร็งทางนรีเวชหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - dys_opd_008
+- qid: dys_opd_008
+  question: เคยตรวจพบนิ่วในทางเดินปัสสาวะ หรือมีโรคประจำตัวนิ่วในไตหรือทางเดินปัสสาวะหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+
+Vaginal Discharge:
+- qid: vag_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - vag_opd_002-1
+- qid: vag_opd_002-1
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ตกขาวมีเลือดปน หรือ กลิ่นเหม็นคาว หรือ มีไข้ หรือ คลื่นไส้ หรือ ปวดท้อง หรือปวดขณะมีเพศสัมพันธ์ หรือ คลำได้ก้อนที่ท้อง หรือ มีแผลที่อวัยวะเพศ หรือ เลือดออกทางช่องคลอดหลังมีเพศสัมพันธ์
+      label: ตกขาวมีเลือดปน หรือ กลิ่นเหม็นคาว หรือ มีไข้ หรือ คลื่นไส้ หรือ ปวดท้อง หรือปวดขณะมีเพศสัมพันธ์ หรือ คลำได้ก้อนที่ท้อง หรือ มีแผลที่อวัยวะเพศ หรือ เลือดออกทางช่องคลอดหลังมีเพศสัมพันธ์
+    - id: มีไข้ออกผื่นร่วม
+      label: มีไข้ออกผื่นร่วม
+    - id: ตั้งครรภ์ หรือ ขาดประจำเดือน หรือหลังคลอด หรือทำแท้ง ไม่เกิน 6 สัปดาห์
+      label: ตั้งครรภ์ หรือ ขาดประจำเดือน หรือหลังคลอด หรือทำแท้ง ไม่เกิน 6 สัปดาห์
+    - id: โรคประจำตัวเดิม ได้แก่ มะเร็งทางนรีเวช โรคทางนรีเวช
+      label: โรคประจำตัวเดิม ได้แก่ มะเร็งทางนรีเวช โรคทางนรีเวช
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - vag_opd_002-2
+- qid: vag_opd_002-2
+  question: มีอาการเข้าได้กับแผนกสูติ-นรีเวชหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: vag_opd_002-1
+          op: contains_any
+          value:
+            - ตกขาวมีเลือดปน หรือ กลิ่นเหม็นคาว หรือ มีไข้ หรือ คลื่นไส้ หรือ ปวดท้อง หรือปวดขณะมีเพศสัมพันธ์ หรือ คลำได้ก้อนที่ท้อง หรือ มีแผลที่อวัยวะเพศ หรือ เลือดออกทางช่องคลอดหลังมีเพศสัมพันธ์
+            - มีไข้ออกผื่นร่วม
+            - ตั้งครรภ์ หรือ ขาดประจำเดือน หรือหลังคลอด หรือทำแท้ง ไม่เกิน 6 สัปดาห์
+            - โรคประจำตัวเดิม ได้แก่ มะเร็งทางนรีเวช โรคทางนรีเวช
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+  default:
+    action: terminate
+    metadata:
+      department:
+        - id: dept013
+
+Skin Rash/Lesion:
+- qid: rash_opd_002
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - rash_opd_003
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - rash_opd_002-1
+- qid: rash_opd_002-1
+  question: มีข้อใดข้อหนึ่งต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ตั้งครรภ์ หรือขาดประจำเดือน (สงสัยตั้งครรภ์) และ มีไข้ ผื่นทั่วตัว สงสัยไข้ออกผื่น มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอด
+      label: ตั้งครรภ์ หรือขาดประจำเดือน (สงสัยตั้งครรภ์) และ มีไข้ ผื่นทั่วตัว สงสัยไข้ออกผื่น มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอด
+    - id: ผื่นบริเวณอวัยวะเพศ
+      label: ผื่นบริเวณอวัยวะเพศ
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - rash_opd_002-2
+- qid: rash_opd_002-2
+  question: มีอาการเข้าได้กับแผนกสูติ-นรีเวชหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: rash_opd_002-1
+          op: contains_any
+          value:
+            - ตั้งครรภ์ หรือขาดประจำเดือน (สงสัยตั้งครรภ์) และ มีไข้ ผื่นทั่วตัว สงสัยไข้ออกผื่น มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอด
+            - ผื่นบริเวณอวัยวะเพศ
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+  default:
+    action: goto
+    qid:
+      - rash_opd_003
+- qid: rash_opd_003
+  question: บริเวณผื่นมีแผล บวม แดง ร้อนหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - rash_opd_004
+- qid: rash_opd_004
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: terminate
+      metadata:
+        department:
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - rash_opd_005
+- qid: rash_opd_005
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ลักษณะผื่นแบบผื่นแพ้แสง หรือมีผื่นที่หู มีไข้สูง ปวดข้อ อ่อนเพลีย แผลในปาก ขาบวม ปัสสาวะผิดปกติ
+      label: ลักษณะผื่นแบบผื่นแพ้แสง หรือมีผื่นที่หู มีไข้สูง ปวดข้อ อ่อนเพลีย แผลในปาก ขาบวม ปัสสาวะผิดปกติ
+    - id: โรคประจำตัว ได้แก่ โรคที่เกี่ยวข้องกับภูมิคุ้มกัน
+      label: โรคประจำตัว ได้แก่ โรคที่เกี่ยวข้องกับภูมิคุ้มกัน
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - rash_opd_005-1
+- qid: rash_opd_005-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: rash_opd_005
+          op: contains_any
+          value:
+            - ลักษณะผื่นแบบผื่นแพ้แสง หรือมีผื่นที่หู มีไข้สูง ปวดข้อ อ่อนเพลีย แผลในปาก ขาบวม ปัสสาวะผิดปกติ
+            - โรคประจำตัว ได้แก่ โรคที่เกี่ยวข้องกับภูมิคุ้มกัน
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - rash_opd_006
+- qid: rash_opd_006
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ผื่นคันเรื้อรัง ผื่นเป็นวงขาวหรือแดง ผิวหนังอักเสบ
+      label: ผื่นคันเรื้อรัง ผื่นเป็นวงขาวหรือแดง ผิวหนังอักเสบ
+    - id: ผื่นตุ่มน้ำ เรียงตัวเป็นแนวบนผิวหนัง มีอาการแสบร้อน
+      label: ผื่นตุ่มน้ำ เรียงตัวเป็นแนวบนผิวหนัง มีอาการแสบร้อน
+    - id: ผื่นที่รูปร่างไม่สมมาตร ขรุขระ สีไม่สม่ำเสมอ มีการเปลี่ยนแปลงอย่างรวดเร็ว ผิวหนังเป็นสะเก็ดหนา
+      label: ผื่นที่รูปร่างไม่สมมาตร ขรุขระ สีไม่สม่ำเสมอ มีการเปลี่ยนแปลงอย่างรวดเร็ว ผิวหนังเป็นสะเก็ดหนา
+    - id: โรคประจำตัว ได้แก่ โรคภูมิแพ้ผิวหนัง โรคทางผิวหนังอื่น ๆ มะเร็งผิวหนัง
+      label: โรคประจำตัว ได้แก่ โรคภูมิแพ้ผิวหนัง โรคทางผิวหนังอื่น ๆ มะเร็งผิวหนัง
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - rash_opd_006-1
+- qid: rash_opd_006-1
+  question: มีอาการเข้าได้กับแผนกผิวหนังหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: rash_opd_006
+          op: contains_any
+          value:
+            - ผื่นคันเรื้อรัง ผื่นเป็นวงขาวหรือแดง ผิวหนังอักเสบ
+            - ผื่นตุ่มน้ำ เรียงตัวเป็นแนวบนผิวหนัง มีอาการแสบร้อน
+            - ผื่นที่รูปร่างไม่สมมาตร ขรุขระ สีไม่สม่ำเสมอ มีการเปลี่ยนแปลงอย่างรวดเร็ว ผิวหนังเป็นสะเก็ดหนา
+            - โรคประจำตัว ได้แก่ โรคภูมิแพ้ผิวหนัง โรคทางผิวหนังอื่น ๆ มะเร็งผิวหนัง
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept001
+  default:
+    action: goto
+    qid:
+      - rash_opd_007
+- qid: rash_opd_007
+  question: ผื่นแดงคัน เกิดขึ้นเฉพาะบริเวณที่สัมผัสกับสิ่งอื่น ๆ หรือมีการเสียดสี หรือบริเวณที่เหงื่อออกมาก ไม่มีอาการอื่น ๆ อาจมีประวัติแพ้จากสัมผัสแบบไม่รุนแรงหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          advice: หลีกเลี่ยงสิ่งที่แพ้ กินยาแก้แพ้ ทายารักษาผื่น หากไม่ดีขึ้นแนะนำพบแพทย์เพื่อตรวจเพิ่มเติม
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+Wound:
+- qid: wou_opd_002
+  question: แผลเกิดจากอุบัติเหตุ เกิดภายใน 24 ชั่วโมงก่อนพบแพทย์หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept002
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - wou_opd_003
+- qid: wou_opd_003
+  question: ท่านเป็นเพศหญิงหรือไม่?
+  question_type: gender_filter
+  options:
+    - id: male
+      label: male
+      action:
+        action: goto
+        qid:
+          - wou_opd_004
+    - id: female
+      label: female
+      action:
+        action: goto
+        qid:
+          - wou_opd_003-1
+- qid: wou_opd_003-1
+  question: มีแผลบริเวณอวัยวะเพศ หรือมีอาการบริเวณแผลคลอดหรือแผลผ่าตัดคลอด ภายใน 6 สัปดาห์หลังคลอดหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept005
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - wou_opd_004
+- qid: wou_opd_004
+  question: แผลจากอุบัติเหตุ บริเวณเปลือกตา หรือ ใกล้ดวงตาหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept006
+            - id: dept012
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - wou_opd_005
+- qid: wou_opd_005
+  question: แผลจากอุบัติเหตุ บริเวณใบหู จมูกหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept008
+            - id: dept012
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - wou_opd_006
+- qid: wou_opd_006
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: แผลจากอุบัติเหตุ หรือ ลักษณะแผลฉีกขาด หรือ ถูกของมีคม
+      label: แผลจากอุบัติเหตุ หรือ ลักษณะแผลฉีกขาด หรือ ถูกของมีคม
+    - id: แผลจากไฟไหม้ น้ำร้อนลวก ที่มีตุ่มน้ำ
+      label: แผลจากไฟไหม้ น้ำร้อนลวก ที่มีตุ่มน้ำ
+    - id: มีไข้ และ ปวด หรือ บวม หรือ ร้อน หรือ มีหนองไหล
+      label: มีไข้ และ ปวด หรือ บวม หรือ ร้อน หรือ มีหนองไหล
+    - id: แผลเรื้อรัง (เป็นนานกว่า 2 สัปดาห์) มีเนื้อตาย ผิวหนังรอบแผลสีคล้ำ
+      label: แผลเรื้อรัง (เป็นนานกว่า 2 สัปดาห์) มีเนื้อตาย ผิวหนังรอบแผลสีคล้ำ
+    - id: มีอาการบริเวณแผลผ่าตัด ภายใน 4 สัปดาห์หลังผ่าตัด
+      label: มีอาการบริเวณแผลผ่าตัด ภายใน 4 สัปดาห์หลังผ่าตัด
+    - id: โรคประจำตัว ได้แก่ โรคที่เกี่ยวข้องกับหลอดเลือดส่วนปลาย (โรคหลอดเลือดส่วนปลายตีบ)
+      label: โรคประจำตัว ได้แก่ โรคที่เกี่ยวข้องกับหลอดเลือดส่วนปลาย (โรคหลอดเลือดส่วนปลายตีบ)
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - wou_opd_006-1
+- qid: wou_opd_006-1
+  question: มีอาการเข้าได้กับแผนกศัลยกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: wou_opd_006
+          op: contains_any
+          value:
+            - แผลจากอุบัติเหตุ หรือ ลักษณะแผลฉีกขาด หรือ ถูกของมีคม
+            - แผลจากไฟไหม้ น้ำร้อนลวก ที่มีตุ่มน้ำ
+            - มีไข้ และ ปวด หรือ บวม หรือ ร้อน หรือ มีหนองไหล
+            - แผลเรื้อรัง (เป็นนานกว่า 2 สัปดาห์) มีเนื้อตาย ผิวหนังรอบแผลสีคล้ำ
+            - มีอาการบริเวณแผลผ่าตัด ภายใน 4 สัปดาห์หลังผ่าตัด
+            - โรคประจำตัว ได้แก่ โรคที่เกี่ยวข้องกับหลอดเลือดส่วนปลาย (โรคหลอดเลือดส่วนปลายตีบ)
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept012
+  default:
+    action: goto
+    qid:
+      - wou_opd_007
+- qid: wou_opd_007
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: terminate
+      metadata:
+        department:
+          - id: dept009
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - wou_opd_008
+- qid: wou_opd_008
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: แผลพุพอง มีไข้ มีประวัติเริ่มยาใหม่
+      label: แผลพุพอง มีไข้ มีประวัติเริ่มยาใหม่
+    - id: แผลในปาก แผลที่ใบหู มีไข้ ผื่นแพ้แสง อ่อนเพลีย ปวดข้อ ปัสสาวะผิดปกติ
+      label: แผลในปาก แผลที่ใบหู มีไข้ ผื่นแพ้แสง อ่อนเพลีย ปวดข้อ ปัสสาวะผิดปกติ
+    - id: แผลพุพองตามตัว มีประวัติโรคประจำตัว ได้แก่ เบาหวาน โรคไตเรื้อรัง โรคเกี่ยวกับภูมิคุ้มกัน
+      label: แผลพุพองตามตัว มีประวัติโรคประจำตัว ได้แก่ เบาหวาน โรคไตเรื้อรัง โรคเกี่ยวกับภูมิคุ้มกัน
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - wou_opd_008-1
+- qid: wou_opd_008-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: wou_opd_008
+          op: contains_any
+          value:
+            - แผลพุพอง มีไข้ มีประวัติเริ่มยาใหม่
+            - แผลในปาก แผลที่ใบหู มีไข้ ผื่นแพ้แสง อ่อนเพลีย ปวดข้อ ปัสสาวะผิดปกติ
+            - แผลพุพองตามตัว มีประวัติโรคประจำตัว ได้แก่ เบาหวาน โรคไตเรื้อรัง โรคเกี่ยวกับภูมิคุ้มกัน
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - wou_opd_009
+- qid: wou_opd_009
+  question: แผลเกิดขึ้นมาเอง ไม่มีสาเหตุ หรือแผลที่เกิดจากการเกา หรือแผลจากโรคภูมิแพ้หรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept001
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: goto
+        qid:
+          - wou_opd_010
+- qid: wou_opd_010
+  question: มีลักษณะดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: แผลถลอก ตื้น ขนาดเล็ก (น้อยกว่า 5x5 cm)
+      label: แผลถลอก ตื้น ขนาดเล็ก (น้อยกว่า 5x5 cm)
+    - id: แผลฉีกขาดขอบเรียบ ไม่มีสิ่งสกปรก ไม่มีเลือดไหลไม่หยุด
+      label: แผลฉีกขาดขอบเรียบ ไม่มีสิ่งสกปรก ไม่มีเลือดไหลไม่หยุด
+    - id: แผลไฟไหม้ขนาดเล็ก ไม่มีตุ่มน้ำพอง
+      label: แผลไฟไหม้ขนาดเล็ก ไม่มีตุ่มน้ำพอง
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - wou_opd_010-1
+- qid: wou_opd_010-1
+  question: เป็นแผลที่ดูแลในหน่วยบริการปฐมภูมิได้หรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: wou_opd_010
+          op: contains_any
+          value:
+            - แผลถลอก ตื้น ขนาดเล็ก (น้อยกว่า 5x5 cm)
+            - แผลฉีกขาดขอบเรียบ ไม่มีสิ่งสกปรก ไม่มีเลือดไหลไม่หยุด
+            - แผลไฟไหม้ขนาดเล็ก ไม่มีตุ่มน้ำพอง
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+  default:
+    action: terminate
+    metadata:
+      department:
+        - id: dept004
         - id: dept012
+
 Eye Disorder:
-- qid: eye_opd_001
-  question: ท่านมีอาการในหัวข้ออื่นเด่นกว่าอาการทางตาหรือไม่?
+- qid: eye_opd_002
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: goto
+      qid:
+        - eye_opd_002-1
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - eye_opd_003
+- qid: eye_opd_002-1
+  question: มีอาการดังต่อไปนี้ร่วมกับอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: multi_select
+  options:
+    - id: ตาแดง คันตา มีขี้ตาหรือน้ำตาไหล หรือ มีไข้ มีน้ำมูก เป็นหวัด
+      label: ตาแดง คันตา มีขี้ตาหรือน้ำตาไหล หรือ มีไข้ มีน้ำมูก เป็นหวัด
+    - id: ตาแดง และ มีไข้ หรือ ผื่นแพ้แสง หรือ ปวดข้อ หรือโรคประจำตัวทางภูมิคุ้มกันบกพร่อง
+      label: ตาแดง และ มีไข้ หรือ ผื่นแพ้แสง หรือ ปวดข้อ หรือโรคประจำตัวทางภูมิคุ้มกันบกพร่อง
+    - id: ตากระตุก
+      label: ตากระตุก
+    - id: หนังตาตก
+      label: หนังตาตก
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - eye_opd_002-2
+- qid: eye_opd_002-2
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีและมีอาการเข้าได้กับกุมารเวชกรรมหรือไม่?
   question_type: conditional
-  rules: []
+  rules:
+    - when:
+        - qid: eye_opd_002-1
+          op: contains_any
+          value:
+            - ตาแดง คันตา มีขี้ตาหรือน้ำตาไหล หรือ มีไข้ มีน้ำมูก เป็นหวัด
+            - ตาแดง และ มีไข้ หรือ ผื่นแพ้แสง หรือ ปวดข้อ หรือโรคประจำตัวทางภูมิคุ้มกันบกพร่อง
+            - ตากระตุก
+            - หนังตาตก
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept009
   default:
-    action: terminate
-    metadata:
-      department:
-      - id: dept006
+    action: goto
+    qid:
+      - eye_opd_003
+- qid: eye_opd_003
+  question: มีอาการหรือประวัติดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: ตาแดง และ มีไข้ หรือ ผื่นแพ้แสง หรือ ปวดข้อ หรือโรคประจำตัวทางภูมิคุ้มกันบกพร่อง
+      label: ตาแดง และ มีไข้ หรือ ผื่นแพ้แสง หรือ ปวดข้อ หรือโรคประจำตัวทางภูมิคุ้มกันบกพร่อง
+    - id: มองเห็นภาพไม่เต็มวง
+      label: มองเห็นภาพไม่เต็มวง
+    - id: เห็นภาพซ้อน
+      label: เห็นภาพซ้อน
+    - id: หนังตาตก
+      label: หนังตาตก
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - eye_opd_003-1
+- qid: eye_opd_003-1
+  question: มีอาการเข้าได้กับแผนกอายุรกรรมหรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: eye_opd_003
+          op: contains_any
+          value:
+            - ตาแดง และ มีไข้ หรือ ผื่นแพ้แสง หรือ ปวดข้อ หรือโรคประจำตัวทางภูมิคุ้มกันบกพร่อง
+            - มองเห็นภาพไม่เต็มวง
+            - เห็นภาพซ้อน
+            - หนังตาตก
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept004
+  default:
+    action: goto
+    qid:
+      - eye_opd_004
+- qid: eye_opd_004
+  question: มีอาการตาแห้ง มีขี้ตาเล็กน้อย หรือมีประวัติภูมิแพ้ตา และมีการมองเห็นปกติหรือไม่?
+  question_type: single_select
+  options:
+    - id: ใช่
+      label: ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
+    - id: ไม่ใช่
+      label: ไม่ใช่
+      action:
+        action: terminate
+        metadata:
+          department:
+            - id: dept006
+
 Ear Disorder:
-- qid: ear_opd_001
-  question: ท่านมีอาการในหัวข้ออื่นเด่นกว่าอาการทางหูหรือไม่?
+- qid: ear_opd_002
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: age_filter
+  options:
+  - id: lt_18
+    label: <18
+    action:
+      action: goto
+      qid:
+        - ear_opd_002-1
+  - id: gte_18
+    label: '>=18'
+    action:
+      action: goto
+      qid:
+        - ear_opd_003
+- qid: ear_opd_002-1
+  question: มีอาการดังต่อไปนี้ร่วมกับอายุน้อยกว่า 18 ปีหรือไม่?
+  question_type: multi_select
+  options:
+    - id: ปวดหู หรือ มีหนองไหลจากหู หรือดึงใบหูแล้วเจ็บ
+      label: ปวดหู หรือ มีหนองไหลจากหู หรือดึงใบหูแล้วเจ็บ
+    - id: ปวดหู และมีไข้ หรือน้ำมูก คัดจมูก เป็นหวัด
+      label: ปวดหู และมีไข้ หรือน้ำมูก คัดจมูก เป็นหวัด
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - ear_opd_002-2
+- qid: ear_opd_002-2
+  question: ผู้ป่วยอายุน้อยกว่า 18 ปีและมีอาการเข้าได้กับกุมารเวชกรรมหรือไม่?
   question_type: conditional
-  rules: []
+  rules:
+    - when:
+        - qid: ear_opd_002-1
+          op: contains_any
+          value:
+            - ปวดหู หรือ มีหนองไหลจากหู หรือดึงใบหูแล้วเจ็บ
+            - ปวดหู และมีไข้ หรือน้ำมูก คัดจมูก เป็นหวัด
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept009
+  default:
+    action: goto
+    qid:
+      - ear_opd_003
+- qid: ear_opd_003
+  question: มีอาการดังต่อไปนี้หรือไม่?
+  question_type: multi_select
+  options:
+    - id: มีอาการปวดหูเล็กน้อย และ มีน้ำมูก คัดจมูก หรือ เป็นหลังแคะหู ไม่มีอาการอื่น
+      label: มีอาการปวดหูเล็กน้อย และ มีน้ำมูก คัดจมูก หรือ เป็นหลังแคะหู ไม่มีอาการอื่น
+    - id: หูอื้อหลังอาบน้ำ หรือว่ายน้ำ ไม่มีอาการอื่น
+      label: หูอื้อหลังอาบน้ำ หรือว่ายน้ำ ไม่มีอาการอื่น
+    - id: ไม่มี
+      label: ไม่มี
+  next:
+    action: goto
+    qid:
+      - ear_opd_003-1
+- qid: ear_opd_003-1
+  question: มีอาการที่ดูแลในหน่วยบริการปฐมภูมิได้หรือไม่?
+  question_type: conditional
+  rules:
+    - when:
+        - qid: ear_opd_003
+          op: contains_any
+          value:
+            - มีอาการปวดหูเล็กน้อย และ มีน้ำมูก คัดจมูก หรือ เป็นหลังแคะหู ไม่มีอาการอื่น
+            - หูอื้อหลังอาบน้ำ หรือว่ายน้ำ ไม่มีอาการอื่น
+      then:
+        action: terminate
+        metadata:
+          department:
+            - id: dept013
   default:
     action: terminate
     metadata:
       department:
-      - id: dept008
+        - id: dept008

@@ -192,6 +192,9 @@ def _opd_goto_targets(question: Question) -> Set[str]:
     elif isinstance(question, NumberRangeQuestion):
         if question.on_submit.action == "goto":
             targets.update(question.on_submit.qid)
+    elif isinstance(question, MultiSelectQuestion):
+        if question.next.action == "goto":
+            targets.update(question.next.qid)
     elif isinstance(question, ConditionalQuestion):
         for rule in question.rules:
             if rule.then.action == "goto":
@@ -310,6 +313,21 @@ def test_opd_schema_and_parsing():
                         assert len(question.default.qid) > 0, f"Empty default goto in {question.qid}"
                     else:
                         raise AssertionError(f"Unknown default action {question.default.action} in {question.qid}")
+            elif isinstance(question, MultiSelectQuestion):
+                # Options must exist and have unique labels
+                assert len(question.options) > 0, f"No options for {question.qid}"
+                opt_labels = [opt.label for opt in question.options]
+                assert len(set(opt_labels)) == len(opt_labels), f"Duplicate option labels in {question.qid}"
+                # Validate the next action (terminate or goto — OPD doesn't use opd/urgency/emergency)
+                if question.next.action == "terminate":
+                    for dept in question.next.department:
+                        assert dept in _department_ids, f"Unknown department {dept} in {question.qid}"
+                    for sev in question.next.severity:
+                        assert sev in _severity_ids, f"Unknown severity {sev} in {question.qid}"
+                elif question.next.action == "goto":
+                    assert len(question.next.qid) > 0, f"Empty goto in {question.qid}"
+                else:
+                    raise AssertionError(f"Unknown action {question.next.action} in {question.qid}")
             else:
                 raise AssertionError(f"Unsupported question class {type(question)} in OPD")
 
