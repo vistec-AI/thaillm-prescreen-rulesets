@@ -407,6 +407,11 @@ def test_opd_predicates_reference_existing_oldcarts_or_opd_qids():
             
             for rule in question.rules:
                 for pred in rule.when:
+                    # Field-based predicates reference demographics fields
+                    # (e.g. pregnancy_status, age) rather than question qids.
+                    # These are validated separately — skip here.
+                    if pred.qid is None and pred.field is not None:
+                        continue
                     assert pred.qid in known_qids, f"Predicate {pred.qid} in {question.qid} not found in OPD or oldcarts for {symptom}"
 
 
@@ -443,6 +448,12 @@ def test_opd_conditional_predicate_semantics():
 
             for rule in cond_q.rules:
                 for pred in rule.when:
+                    # Field-based predicates reference demographics fields
+                    # (e.g. pregnancy_status, age) rather than question qids.
+                    # These are validated separately — skip here.
+                    if pred.qid is None and pred.field is not None:
+                        continue
+
                     ref_q = opd_map.get(pred.qid) or oldcarts_map.get(pred.qid)
                     assert ref_q is not None, f"Referenced qid {pred.qid} not found for {cond_q.qid}"
 

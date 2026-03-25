@@ -104,7 +104,8 @@ These values control clinical decision logic in the prescreening engine. Overrid
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENAI_API_KEY` | *(none)* | OpenAI API key. When set, the server enables `OpenAIPredictionModule` for LLM-based differential diagnosis, department routing, and severity classification. When not set, the pipeline returns rule-based results only (no DDx). |
+| `OPENAI_API_KEY` | *(none)* | OpenAI API key. When set, the server enables `OpenAIPredictionModule` for LLM-based differential diagnosis, department routing, and severity classification. Takes priority over `OPENROUTER_API_KEY`. When neither key is set, the pipeline returns rule-based results only (no DDx). |
+| `OPENROUTER_API_KEY` | *(none)* | OpenRouter API key. Used as a fallback when `OPENAI_API_KEY` is not set. Routes requests through `https://openrouter.ai/api/v1` using a provider-prefixed model name (`openai/gpt-5.4`). |
 
 ---
 
@@ -158,6 +159,7 @@ All variables in one table:
 | `ADMIN_API_KEY` | *(none)* | Auth |
 | `TRUSTED_PROXY_SECRET` | *(none)* | Auth |
 | `OPENAI_API_KEY` | *(none)* | LLM |
+| `OPENROUTER_API_KEY` | *(none)* | LLM |
 | `PEDIATRIC_AGE_THRESHOLD` | `15` | Medical |
 | `DEFAULT_ER_SEVERITY` | `sev003` | Medical |
 | `DEFAULT_ER_DEPARTMENT` | `dept002` | Medical |

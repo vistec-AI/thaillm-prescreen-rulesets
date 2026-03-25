@@ -14,6 +14,7 @@ import type {
   TextOverride,
 } from "../types/simulator";
 import {
+  coerceAge,
   getFirstQid,
   resolveNext,
   determineAction,
@@ -625,7 +626,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         // If any auto_complete condition is met (e.g. child < 1 year with
         // Cough), terminate immediately without showing the checklist.
         const selectedSymptoms = [sel.primary_symptom, ...(sel.secondary_symptoms ?? [])];
-        const curAge = typeof demographics.age === "number" ? demographics.age : null;
+        const curAge = coerceAge(demographics);
         const autoTermResult = checkErAutoComplete(
           selectedSymptoms, curAge, demographics, ruleData
         );
@@ -652,7 +653,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         // Check for first positive item
         const symptoms = [primarySymptom, ...secondarySymptoms];
         // Age is now submitted directly as a number from the demographic form
-        const age = typeof demographics.age === "number" ? demographics.age : null;
+        const age = coerceAge(demographics);
         const termResult = resolveErChecklistTermination(
           flags,
           symptoms,

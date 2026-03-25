@@ -55,6 +55,48 @@ def _make_qa_pairs() -> list[QAPair]:
 
 
 # =====================================================================
+# LLM provider resolution tests
+# =====================================================================
+
+class TestLLMConfigResolution:
+    """Tests for OPENAI_API_KEY / OPENROUTER_API_KEY fallback in __init__."""
+
+    def test_openai_key_takes_priority(self, monkeypatch):
+        """When both keys are set, OPENAI_API_KEY wins."""
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter")
+        gen = OpenAIQuestionGenerator()
+        assert gen._model == "gpt-5.4", (
+            "OpenAI provider should keep the default model name"
+        )
+
+    def test_openrouter_fallback_sets_model(self, monkeypatch):
+        """When only OPENROUTER_API_KEY is set, model becomes openai/gpt-5.4."""
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter")
+        gen = OpenAIQuestionGenerator()
+        assert gen._model == "openai/gpt-5.4", (
+            "OpenRouter fallback should prefix the model name"
+        )
+
+    def test_neither_key_raises_openai_error(self, monkeypatch):
+        """When neither key is set, OpenAI SDK raises on client init."""
+        import openai as openai_mod
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        with pytest.raises(openai_mod.OpenAIError):
+            OpenAIQuestionGenerator()
+
+    def test_explicit_api_key_skips_resolution(self, monkeypatch):
+        """When api_key is explicitly provided, env fallback is skipped."""
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or")
+        gen = OpenAIQuestionGenerator(api_key="explicit-key")
+        assert gen._model == "gpt-5.4", (
+            "Explicit api_key should skip env-var resolution"
+        )
+
+
+# =====================================================================
 # _filter_qa_pairs tests
 # =====================================================================
 

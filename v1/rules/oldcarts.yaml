@@ -294,9 +294,8 @@ Headache:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -616,9 +615,8 @@ Dizziness:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -923,9 +921,8 @@ Pain in Joint:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -1360,9 +1357,8 @@ Muscle Pain:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -1644,9 +1640,8 @@ Fever:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -2143,9 +2138,8 @@ Cough:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -2355,9 +2349,8 @@ Sore Throat:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -2791,9 +2784,8 @@ Stomachache:
   rules:
   - when:
     - field: gender
-      op: contains_any
-      value:
-      - male
+      op: eq
+      value: Male
     then:
       action: goto
       qid:
@@ -2822,9 +2814,8 @@ Stomachache:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -3275,9 +3266,8 @@ Constipation:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -3514,9 +3504,8 @@ Diarrhea:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -3840,9 +3829,8 @@ Dysuria:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -4242,9 +4230,8 @@ Vaginal Discharge:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -4806,9 +4793,8 @@ Skin Rash/Lesion:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -5476,9 +5462,8 @@ Wound:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -5936,9 +5921,8 @@ Eye Disorder:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:
@@ -6426,9 +6410,8 @@ Ear Disorder:
   rules:
   - when:
     - field: pregnancy_status
-      op: contains_any
-      value:
-      - pregnant
+      op: eq
+      value: pregnant
     then:
       action: goto
       qid:

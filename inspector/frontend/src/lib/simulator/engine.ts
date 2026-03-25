@@ -55,6 +55,23 @@ export function computeAge(dob: string | null | undefined): number | null {
   }
 }
 
+/**
+ * Robustly extract a numeric age from demographics.
+ *
+ * Handles number, string, and date_of_birth fallback — mirrors the Python
+ * engine's int(demographics["age"]) which accepts both "25" and 25.
+ * This prevents silent null when the demographic form submits age as a string.
+ */
+export function coerceAge(demographics: Record<string, unknown>): number | null {
+  const raw = demographics.age;
+  if (typeof raw === "number" && !isNaN(raw)) return raw;
+  if (raw !== null && raw !== undefined && raw !== "") {
+    const parsed = Number(raw);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return computeAge(demographics.date_of_birth as string);
+}
+
 // --- Question lookup helpers ---
 
 /** Build a map from qid → RawQuestion for quick lookup within a symptom's question list */
@@ -251,11 +268,13 @@ export function resolveNext(
   const questions = ruleData[source]?.[symptom] ?? [];
   const qMap = buildQuestionMap(questions);
 
-  // Ensure age is available for age_filter evaluation
+  // Ensure age is a proper number — the demographic form should submit it as
+  // a number, but if it arrives as a string (e.g. "25") we must coerce it
+  // before auto-eval functions that use strict typeof checks.
   const demoWithAge = { ...demographics };
-  if (!("age" in demoWithAge)) {
-    const age = computeAge(demoWithAge.date_of_birth as string);
-    if (age !== null) demoWithAge.age = age;
+  const resolvedAge = coerceAge(demoWithAge);
+  if (resolvedAge !== null) {
+    demoWithAge.age = resolvedAge;
   }
 
   // Work on a copy to avoid mutating the caller's array unexpectedly
@@ -326,10 +345,9 @@ function autoEvaluate(
     );
   }
   if (qt === "age_filter") {
-    const age =
-      typeof demographics.age === "number"
-        ? demographics.age
-        : computeAge(demographics.date_of_birth as string);
+    // Use coerceAge for robust extraction — handles string "25", number 25,
+    // and date_of_birth fallback.  Prevents silent null when age is a string.
+    const age = coerceAge(demographics);
     return evalAgeFilter(question.options ?? [], age);
   }
   if (qt === "gender_filter") {
@@ -376,7 +394,7 @@ function enrichDemographics(
   demographics: Record<string, unknown>
 ): Record<string, unknown> {
   const enriched = { ...demographics };
-  const age = typeof enriched.age === "number" ? enriched.age : null;
+  const age = coerceAge(enriched);
   const ageMonths =
     typeof enriched.age_months === "number" ? enriched.age_months : 0;
   if (age !== null) {

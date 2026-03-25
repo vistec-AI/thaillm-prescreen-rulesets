@@ -82,6 +82,40 @@ def _make_qa_pairs() -> list[QAPair]:
 
 
 # =====================================================================
+# LLM provider resolution tests
+# =====================================================================
+
+class TestLLMConfigResolution:
+    """Tests for OPENAI_API_KEY / OPENROUTER_API_KEY fallback in __init__."""
+
+    def test_openai_key_takes_priority(self, monkeypatch, store):
+        """When both keys are set, OPENAI_API_KEY wins."""
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter")
+        pred = OpenAIPredictionModule(store=store)
+        assert pred._model == "gpt-5.4", (
+            "OpenAI provider should keep the default model name"
+        )
+
+    def test_openrouter_fallback_sets_model(self, monkeypatch, store):
+        """When only OPENROUTER_API_KEY is set, model becomes openai/gpt-5.4."""
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter")
+        pred = OpenAIPredictionModule(store=store)
+        assert pred._model == "openai/gpt-5.4", (
+            "OpenRouter fallback should prefix the model name"
+        )
+
+    def test_explicit_api_key_skips_resolution(self, monkeypatch, store):
+        """When api_key is explicitly provided, env fallback is skipped."""
+        monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or")
+        pred = OpenAIPredictionModule(api_key="explicit-key", store=store)
+        assert pred._model == "gpt-5.4", (
+            "Explicit api_key should skip env-var resolution"
+        )
+
+
+# =====================================================================
 # _filter_qa_pairs tests
 # =====================================================================
 

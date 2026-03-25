@@ -468,3 +468,102 @@ def test_oldcarts_state_values_valid():
             question: Question = q_cls(**q_dict)
             assert question.is_oldcarts is True, f"{question.qid} should be oldcarts"
             assert question.oldcarts_state in valid_states, f"{question.qid} has invalid oldcarts state {question.oldcarts_state}"
+
+
+# --- Allowed operators per demographic field type ---
+# Used by test_oldcarts_field_predicate_validity to check that the op in a
+# field-based predicate is compatible with the referenced field's data type.
+_ALLOWED_OPS_BY_TYPE = {
+    "int": {"eq", "ne", "lt", "le", "gt", "ge", "between"},
+    "float": {"eq", "ne", "lt", "le", "gt", "ge", "between"},
+    "enum": {"eq", "ne", "contains_any", "contains_all"},
+    "str": {"eq", "ne", "contains", "not_contains", "matches"},
+    "date": {"eq", "ne", "lt", "le", "gt", "ge"},
+    "yes_no_detail": {"eq", "ne"},
+    "from_yaml": {"eq", "ne", "contains", "not_contains", "contains_any", "contains_all"},
+}
+
+
+def _build_demographic_field_map() -> dict:
+    """Build a mapping of demographic field keys to their type and enum values.
+
+    Returns dict like ``{"pregnancy_status": {"type": "enum", "values": ["pregnant", "not_pregnant"]}, ...}``
+    """
+    demo_path = find_repo_root() / "v1" / "rules" / "demographic.yaml"
+    demo_fields = load_yaml(demo_path)
+    field_map = {}
+    for entry in demo_fields:
+        key = entry["key"]
+        ftype = entry["type"]
+        info: dict = {"type": ftype}
+        # Capture enum values for strict value validation
+        if ftype == "enum" and "values" in entry:
+            info["values"] = entry["values"]
+        field_map[key] = info
+    return field_map
+
+
+def test_oldcarts_field_predicate_validity():
+    """Validate field-based predicates in conditional questions reference valid demographic fields.
+
+    For each conditional question in OLDCARTS whose predicate uses ``field``
+    (demographics lookup) instead of ``qid`` (prior answer lookup), checks:
+    1. The field name is a valid demographic key from demographic.yaml
+    2. The operator is compatible with the field's data type
+    3. For enum fields, the predicate value(s) are valid enum values
+    """
+    rules = load_rules()
+    field_map = _build_demographic_field_map()
+    valid_field_keys = set(field_map.keys())
+
+    for symptom, q_list in rules["oldcarts"].items():
+        for q_dict in q_list:
+            if q_dict["question_type"] != "conditional":
+                continue
+            q_cls = question_mapper["conditional"]
+            cond_q: ConditionalQuestion = q_cls(**q_dict)
+
+            for rule in cond_q.rules:
+                for pred in rule.when:
+                    # Only validate field-based predicates (qid is None)
+                    if pred.qid is not None or pred.field is None:
+                        continue
+
+                    # 1. Field name must be a known demographic key
+                    assert pred.field in valid_field_keys, (
+                        f"Unknown demographic field '{pred.field}' in predicate "
+                        f"at {cond_q.qid} (symptom: {symptom}). "
+                        f"Valid fields: {sorted(valid_field_keys)}"
+                    )
+
+                    # 2. Operator must be compatible with the field type
+                    ftype = field_map[pred.field]["type"]
+                    allowed_ops = _ALLOWED_OPS_BY_TYPE.get(ftype, set())
+                    assert pred.op in allowed_ops, (
+                        f"Operator '{pred.op}' is not compatible with field "
+                        f"'{pred.field}' (type={ftype}) in {cond_q.qid}. "
+                        f"Allowed ops: {sorted(allowed_ops)}"
+                    )
+
+                    # 3. For enum fields, validate predicate values
+                    if ftype == "enum" and "values" in field_map[pred.field]:
+                        enum_values = set(field_map[pred.field]["values"])
+                        # contains_any / contains_all: value is a list
+                        if pred.op in ("contains_any", "contains_all"):
+                            assert isinstance(pred.value, list), (
+                                f"{pred.op} expects a list value for '{pred.field}' "
+                                f"in {cond_q.qid}, got {type(pred.value).__name__}"
+                            )
+                            invalid = set(pred.value) - enum_values
+                            assert not invalid, (
+                                f"Invalid enum value(s) {invalid} for field "
+                                f"'{pred.field}' in {cond_q.qid}. "
+                                f"Valid values: {sorted(enum_values)}"
+                            )
+                        # eq / ne: value is a single string
+                        elif pred.op in ("eq", "ne"):
+                            assert pred.value in enum_values, (
+                                f"Invalid enum value '{pred.value}' for field "
+                                f"'{pred.field}' in {cond_q.qid}. "
+                                f"Valid values: {sorted(enum_values)}"
+                            )

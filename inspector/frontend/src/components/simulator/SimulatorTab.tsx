@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { SimulatorDataResponse } from "@/lib/types/simulator";
 import { fetchSimulatorData } from "@/lib/api/simulator";
 import { useSimulator } from "@/lib/simulator/useSimulator";
-import { getVisibleErCriticalItems, checkErAutoComplete } from "@/lib/simulator/engine";
+import { coerceAge, getVisibleErCriticalItems, checkErAutoComplete } from "@/lib/simulator/engine";
 import PhaseIndicator from "./PhaseIndicator";
 import DemographicForm from "./DemographicForm";
 import ErCriticalForm from "./ErCriticalForm";
@@ -102,7 +102,7 @@ function SimulatorContent({
   );
 
   // Age is now submitted directly as a number from the demographic form
-  const age = typeof sim.demographics.age === "number" ? sim.demographics.age : null;
+  const age = coerceAge(sim.demographics);
 
   /** The main simulation form content — shared between desktop and mobile views */
   const simulationContent = (
