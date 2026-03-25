@@ -128,15 +128,21 @@ class PrescreenPipeline:
         user_id: str,
         session_id: str,
         ruleset_version: str | None = None,
+        disable_early_termination: bool = False,
     ) -> SessionInfo:
         """Create a new prescreening session.
 
         Delegates to the engine.  The ``pipeline_stage`` column defaults to
         ``rule_based`` via the DB server_default, so no extra write is needed.
+
+        Args:
+            disable_early_termination: when True, the engine skips all early
+                termination points and continues through all 8 phases.
         """
         return await self._engine.create_session(
             db, user_id=user_id, session_id=session_id,
             ruleset_version=ruleset_version,
+            disable_early_termination=disable_early_termination,
         )
 
     # ==================================================================
@@ -631,6 +637,7 @@ class PrescreenPipeline:
             reason=result.get("reason") or row.termination_reason,
             terminated_early=(row.status == SessionStatus.TERMINATED),
             history=history,
+            skipped_terminations=row.skipped_terminations or [],
         )
 
     # ==================================================================

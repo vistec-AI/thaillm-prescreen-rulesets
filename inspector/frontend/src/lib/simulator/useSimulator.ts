@@ -12,16 +12,21 @@ import type {
   TerminationResult,
   HistoryEntry,
   TextOverride,
+  SkippedTermination,
 } from "../types/simulator";
 import {
+  coerceAge,
   getFirstQid,
   resolveNext,
+  resolveNextSkippingTerminations,
   determineAction,
   processAction,
   getErChecklistItems,
   resolveErChecklistTermination,
   buildErCriticalTermination,
   checkErAutoComplete,
+  buildSkippedTermination,
+  highestSeveritySkipped,
 } from "./engine";
 import type { QAPairPayload } from "../api/llm";
 import type { LLMAnswerPair } from "../../components/simulator/LLMQuestionsPanel";
@@ -95,6 +100,12 @@ export interface SimulatorAPI {
   pastHistoryData: Record<string, unknown>;
   /** Phase 6 personal history data */
   personalHistoryData: Record<string, unknown>;
+  /** Whether early termination is disabled (researcher mode) */
+  disableEarlyTermination: boolean;
+  /** Toggle disable_early_termination (only before phase 1) */
+  setDisableEarlyTermination: (val: boolean) => void;
+  /** Accumulated skipped terminations when flag is on */
+  skippedTerminations: SkippedTermination[];
 }
 
 export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
@@ -112,6 +123,10 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
   const [terminated, setTerminated] = useState(false);
   const [result, setResult] = useState<TerminationResult | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<RawQuestion | null>(null);
+
+  // --- Disable early termination (researcher mode) ---
+  const [disableEarlyTermination, setDisableEarlyTermination] = useState(false);
+  const [skippedTerminations, setSkippedTerminations] = useState<SkippedTermination[]>([]);
 
   // --- LLM phase state (phase 8) ---
   const [llmLoading, setLlmLoading] = useState(false);
@@ -152,6 +167,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       pendingResult,
       pastHistoryData: { ...pastHistoryData },
       personalHistoryData: { ...personalHistoryData },
+      skippedTerminations: [...skippedTerminations],
       label,
       answerValue,
     }),
@@ -168,6 +184,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       pendingResult,
       pastHistoryData,
       personalHistoryData,
+      skippedTerminations,
     ]
   );
 
@@ -185,6 +202,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     setPending(entry.pending);
     setCurrentQuestion(entry.currentQuestion);
     setPendingResult(entry.pendingResult);
+    setSkippedTerminations(entry.skippedTerminations);
     setTerminated(false);
     setResult(null);
     // Invalidate any in-flight LLM request
@@ -313,8 +331,9 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
    */
   const triggerTermination = useCallback(
     (termResult: TerminationResult, answersOverride?: Record<string, unknown>) => {
-      // ER terminations skip the LLM phase
-      if (termResult.fromPhase !== undefined && termResult.fromPhase <= 3) {
+      // Early terminations (ER phases 1/3, OLDCARTS urgency/emergency/terminate)
+      // skip the LLM phase — only "completed" (full flow through phase 7) enters LLM.
+      if (termResult.type === "terminated") {
         setTerminated(true);
         setResult(termResult);
         return;
@@ -527,17 +546,58 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         return;
       }
 
-      const resolved = resolveNext(
-        source,
-        symptom,
-        [firstQid],
-        answers,
-        demos,
-        ruleData,
-        nextPhase
-      );
-
       setPhase(nextPhase);
+
+      if (disableEarlyTermination) {
+        // Use the skip-aware resolver for the initial resolve
+        const { result: skipResult, skippedTerminations: moreSkipped } =
+          resolveNextSkippingTerminations(
+            source, symptom, [firstQid], answers, demos, ruleData, nextPhase,
+          );
+        if (moreSkipped.length > 0) {
+          setSkippedTerminations((prev) => [...prev, ...moreSkipped]);
+        }
+        if (skipResult.kind === "question") {
+          setCurrentQuestion(skipResult.question);
+          setPending(skipResult.pending);
+        } else if (skipResult.kind === "advance_to_opd") {
+          setPhase(5);
+        } else {
+          // exhausted
+          if (nextPhase === 4) {
+            setPhase(5);
+          } else {
+            // OPD exhausted — build completion with highest-severity skip
+            setSkippedTerminations((prev) => {
+              const allSkipped = [...prev];
+              const best = highestSeveritySkipped(allSkipped);
+              const completionResult: TerminationResult = best
+                ? {
+                    type: "completed",
+                    departments: best.departments,
+                    severity: best.severity,
+                    reason: best.reason,
+                    fromPhase: 7,
+                    skippedTerminations: allSkipped,
+                  }
+                : {
+                    type: "completed",
+                    departments: [],
+                    severity: null,
+                    reason: "All phases completed without explicit termination",
+                    fromPhase: 7,
+                  };
+              triggerTermination(completionResult, answers);
+              return allSkipped;
+            });
+          }
+        }
+        return;
+      }
+
+      const resolved = resolveNext(
+        source, symptom, [firstQid], answers, demos, ruleData, nextPhase,
+      );
 
       if (resolved.kind === "question") {
         setCurrentQuestion(resolved.question);
@@ -565,7 +625,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         }
       }
     },
-    [ruleData, triggerTermination]
+    [ruleData, triggerTermination, disableEarlyTermination]
   );
 
   // --- Submit answer ---
@@ -601,6 +661,14 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
           .map(([k]) => k);
 
         if (positiveQids.length > 0) {
+          if (disableEarlyTermination) {
+            // Record the skipped termination and continue
+            const termResult = buildErCriticalTermination(positiveQids, ruleData);
+            const skipped = buildSkippedTermination(termResult, 1);
+            setSkippedTerminations((prev) => [...prev, skipped]);
+            setPhase(2);
+            return;
+          }
           triggerTermination(buildErCriticalTermination(positiveQids, ruleData));
           return;
         }
@@ -624,11 +692,18 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         // If any auto_complete condition is met (e.g. child < 1 year with
         // Cough), terminate immediately without showing the checklist.
         const selectedSymptoms = [sel.primary_symptom, ...(sel.secondary_symptoms ?? [])];
-        const curAge = typeof demographics.age === "number" ? demographics.age : null;
+        const curAge = coerceAge(demographics);
         const autoTermResult = checkErAutoComplete(
           selectedSymptoms, curAge, demographics, ruleData
         );
         if (autoTermResult) {
+          if (disableEarlyTermination) {
+            const skipped = buildSkippedTermination(autoTermResult, 3);
+            setSkippedTerminations((prev) => [...prev, skipped]);
+            // Continue to phase 3 — show the checklist instead of terminating
+            setPhase(3);
+            return;
+          }
           setPhase(3);
           triggerTermination(autoTermResult);
           return;
@@ -651,7 +726,7 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         // Check for first positive item
         const symptoms = [primarySymptom, ...secondarySymptoms];
         // Age is now submitted directly as a number from the demographic form
-        const age = typeof demographics.age === "number" ? demographics.age : null;
+        const age = coerceAge(demographics);
         const termResult = resolveErChecklistTermination(
           flags,
           symptoms,
@@ -660,6 +735,13 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         );
 
         if (termResult) {
+          if (disableEarlyTermination) {
+            const skipped = buildSkippedTermination(termResult, 3);
+            setSkippedTerminations((prev) => [...prev, skipped]);
+            // Continue to OLDCARTS despite positive ER checklist
+            enterSequentialPhase(4, primarySymptom, nextAnswers, demographics);
+            return;
+          }
           triggerTermination(termResult);
           return;
         }
@@ -730,6 +812,26 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         );
 
         if (actionResult.type === "terminate") {
+          if (disableEarlyTermination) {
+            // Record the skipped termination and continue resolving
+            const skipped = buildSkippedTermination(
+              actionResult.termination!, phase, currentQuestion.qid,
+            );
+            setSkippedTerminations((prev) => [...prev, skipped]);
+            // Continue with remaining pending, skipping further terminations
+            const { result: skipResult, skippedTerminations: moreSkipped } =
+              resolveNextSkippingTerminations(
+                source, primarySymptom, newPending, nextAnswers,
+                demographics, ruleData, phase,
+              );
+            if (moreSkipped.length > 0) {
+              setSkippedTerminations((prev) => [...prev, ...moreSkipped]);
+            }
+            handleResolveResult(
+              skipResult as ReturnType<typeof resolveNext>, nextAnswers,
+            );
+            return;
+          }
           triggerTermination(actionResult.termination!, nextAnswers);
           setPending(newPending);
           return;
@@ -742,16 +844,26 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
         }
 
         // Goto — resolve next from the updated pending queue
-        const resolved = resolveNext(
-          source,
-          primarySymptom,
-          newPending,
-          nextAnswers,
-          demographics,
-          ruleData,
-          phase
-        );
-        handleResolveResult(resolved, nextAnswers);
+        if (disableEarlyTermination) {
+          // Use the skip-aware resolver so auto-eval terminations are skipped
+          const { result: skipResult, skippedTerminations: moreSkipped } =
+            resolveNextSkippingTerminations(
+              source, primarySymptom, newPending, nextAnswers,
+              demographics, ruleData, phase,
+            );
+          if (moreSkipped.length > 0) {
+            setSkippedTerminations((prev) => [...prev, ...moreSkipped]);
+          }
+          handleResolveResult(
+            skipResult as ReturnType<typeof resolveNext>, nextAnswers,
+          );
+        } else {
+          const resolved = resolveNext(
+            source, primarySymptom, newPending, nextAnswers,
+            demographics, ruleData, phase,
+          );
+          handleResolveResult(resolved, nextAnswers);
+        }
         return;
       }
     },
@@ -773,19 +885,41 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
       ruleData,
       enterSequentialPhase,
       triggerTermination,
+      disableEarlyTermination,
     ]
   );
 
-  /** Handle a ResolveResult and update state accordingly */
+  /** Handle a ResolveResult and update state accordingly. */
   const handleResolveResult = useCallback(
     (
       resolved: ReturnType<typeof resolveNext>,
-      answers: Record<string, unknown>
+      answers: Record<string, unknown>,
     ) => {
       if (resolved.kind === "question") {
         setCurrentQuestion(resolved.question);
         setPending(resolved.pending);
       } else if (resolved.kind === "terminate") {
+        if (disableEarlyTermination) {
+          // Record the skipped termination and continue resolving
+          const skipped = buildSkippedTermination(resolved.termination, phase);
+          setSkippedTerminations((prev) => [...prev, skipped]);
+          // Try continuing with the remaining pending
+          const { result: skipResult, skippedTerminations: moreSkipped } =
+            resolveNextSkippingTerminations(
+              phase === 4 ? "oldcarts" : "opd",
+              primarySymptom, resolved.pending, answers,
+              demographics, ruleData, phase,
+            );
+          if (moreSkipped.length > 0) {
+            setSkippedTerminations((prev) => [...prev, ...moreSkipped]);
+          }
+          // Re-dispatch the non-terminate result (recursive, but only once
+          // since resolveNextSkippingTerminations never returns "terminate")
+          handleResolveResult(
+            skipResult as ReturnType<typeof resolveNext>, answers,
+          );
+          return;
+        }
         triggerTermination(resolved.termination, answers);
         setPending(resolved.pending);
       } else if (resolved.kind === "advance_to_opd") {
@@ -797,18 +931,34 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
           // OLDCARTS exhausted — go to past history (phase 5)
           setPhase(5);
         } else {
-          // OPD (phase 7) exhausted — complete
-          triggerTermination({
-            type: "completed",
-            departments: [],
-            severity: null,
-            reason: "All phases completed without explicit termination",
-            fromPhase: 7,
-          }, answers);
+          // OPD (phase 7) exhausted — build completion result.
+          // When skipped terminations exist, use the highest-severity one.
+          setSkippedTerminations((prev) => {
+            const allSkipped = [...prev];
+            const best = highestSeveritySkipped(allSkipped);
+            const completionResult: TerminationResult = best
+              ? {
+                  type: "completed",
+                  departments: best.departments,
+                  severity: best.severity,
+                  reason: best.reason,
+                  fromPhase: 7,
+                  skippedTerminations: allSkipped,
+                }
+              : {
+                  type: "completed",
+                  departments: [],
+                  severity: null,
+                  reason: "All phases completed without explicit termination",
+                  fromPhase: 7,
+                };
+            triggerTermination(completionResult, answers);
+            return allSkipped;
+          });
         }
       }
     },
-    [phase, primarySymptom, demographics, enterSequentialPhase, triggerTermination]
+    [phase, primarySymptom, demographics, enterSequentialPhase, triggerTermination, ruleData, disableEarlyTermination]
   );
 
   // --- Back navigation ---
@@ -846,7 +996,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     setLlmError(null);
     setPendingResult(null);
     setPredictionLoading(false);
-    // Note: textOverrides are preserved across reset
+    setSkippedTerminations([]);
+    // Note: textOverrides and disableEarlyTermination are preserved across reset
   }, []);
 
   // --- Text override setters ---
@@ -907,5 +1058,8 @@ export function useSimulator(ruleData: SimulatorDataResponse): SimulatorAPI {
     allAnswers,
     pastHistoryData,
     personalHistoryData,
+    disableEarlyTermination,
+    setDisableEarlyTermination,
+    skippedTerminations,
   };
 }

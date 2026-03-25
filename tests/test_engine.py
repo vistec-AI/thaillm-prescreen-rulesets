@@ -114,6 +114,9 @@ class MockSessionRow:
     completed_at: datetime | None = None
     # Soft-delete timestamp — None means live, non-None means soft-deleted
     deleted_at: datetime | None = None
+    # Early termination control — mirrors PrescreenSession ORM fields
+    disable_early_termination: bool = False
+    skipped_terminations: list | None = None
 
 
 class MockRepository:
@@ -129,11 +132,13 @@ class MockRepository:
 
     async def create_session(
         self, db, *, user_id, session_id, ruleset_version=None,
+        disable_early_termination=False,
     ):
         row = MockSessionRow(
             user_id=user_id,
             session_id=session_id,
             ruleset_version=ruleset_version,
+            disable_early_termination=disable_early_termination,
         )
         self._sessions[(user_id, session_id)] = row
         return row

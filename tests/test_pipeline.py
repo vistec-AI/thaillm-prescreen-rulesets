@@ -939,41 +939,48 @@ class TestPipelineMultiStepSequential:
                 f"OLDCARTS loop exceeded 50 iterations — possible infinite loop"
             )
 
-        # After OLDCARTS, submit bulk phases 5 (Past History) and 6 (Personal History)
-        assert isinstance(step, QuestionsStep) and step.phase == 5, (
-            f"Expected phase 5 (Past History) after OLDCARTS, got phase {getattr(step, 'phase', '?')}"
-        )
-        step = await pipeline.submit_answer(
-            mock_db, user_id="u1", session_id="s1",
-            value=VALID_PAST_HISTORY,
-        )
-        assert isinstance(step, QuestionsStep) and step.phase == 6, (
-            f"Expected phase 6 (Personal History) after Past History, got phase {getattr(step, 'phase', '?')}"
-        )
-        step = await pipeline.submit_answer(
-            mock_db, user_id="u1", session_id="s1",
-            value=VALID_PERSONAL_HISTORY,
-        )
-
-        # Drive through OPD sequential questions (phase 7)
-        while isinstance(step, QuestionsStep) and step.phase == 7:
-            q = step.questions[0]
-            seen_qids.append(q.qid)
-            answer = self._pick_answer(q)
+        # OLDCARTS may terminate early (e.g. urgency routing to ER).
+        # If so, accept the PipelineResult and skip remaining phases.
+        if isinstance(step, PipelineResult):
+            assert step.severity, (
+                "Early termination from OLDCARTS should include a severity"
+            )
+        else:
+            # Normal flow: submit bulk phases 5 (Past History) and 6 (Personal History)
+            assert isinstance(step, QuestionsStep) and step.phase == 5, (
+                f"Expected phase 5 (Past History) after OLDCARTS, got phase {getattr(step, 'phase', '?')}"
+            )
             step = await pipeline.submit_answer(
                 mock_db, user_id="u1", session_id="s1",
-                value=answer,
+                value=VALID_PAST_HISTORY,
             )
-            seq_count += 1
-            assert seq_count < 50, (
-                f"Sequential loop exceeded 50 iterations — possible infinite loop"
+            assert isinstance(step, QuestionsStep) and step.phase == 6, (
+                f"Expected phase 6 (Personal History) after Past History, got phase {getattr(step, 'phase', '?')}"
+            )
+            step = await pipeline.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=VALID_PERSONAL_HISTORY,
             )
 
-        # After sequential phase, pipeline should transition to LLM or result
-        assert isinstance(step, (LLMQuestionsStep, PipelineResult)), (
-            f"Expected LLMQuestionsStep or PipelineResult after sequential, "
-            f"got {type(step).__name__}"
-        )
+            # Drive through OPD sequential questions (phase 7)
+            while isinstance(step, QuestionsStep) and step.phase == 7:
+                q = step.questions[0]
+                seen_qids.append(q.qid)
+                answer = self._pick_answer(q)
+                step = await pipeline.submit_answer(
+                    mock_db, user_id="u1", session_id="s1",
+                    value=answer,
+                )
+                seq_count += 1
+                assert seq_count < 50, (
+                    f"Sequential loop exceeded 50 iterations — possible infinite loop"
+                )
+
+            # After sequential phase, pipeline should transition to LLM or result
+            assert isinstance(step, (LLMQuestionsStep, PipelineResult)), (
+                f"Expected LLMQuestionsStep or PipelineResult after sequential, "
+                f"got {type(step).__name__}"
+            )
 
         # Verify all qids were unique (no question presented twice)
         assert len(seen_qids) == len(set(seen_qids)), (

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { SimulatorDataResponse } from "@/lib/types/simulator";
 import { fetchSimulatorData } from "@/lib/api/simulator";
 import { useSimulator } from "@/lib/simulator/useSimulator";
-import { getVisibleErCriticalItems, checkErAutoComplete } from "@/lib/simulator/engine";
+import { coerceAge, getVisibleErCriticalItems, checkErAutoComplete } from "@/lib/simulator/engine";
 import PhaseIndicator from "./PhaseIndicator";
 import DemographicForm from "./DemographicForm";
 import ErCriticalForm from "./ErCriticalForm";
@@ -102,7 +102,7 @@ function SimulatorContent({
   );
 
   // Age is now submitted directly as a number from the demographic form
-  const age = typeof sim.demographics.age === "number" ? sim.demographics.age : null;
+  const age = coerceAge(sim.demographics);
 
   /** The main simulation form content — shared between desktop and mobile views */
   const simulationContent = (
@@ -231,6 +231,32 @@ function SimulatorContent({
         >
           Reset
         </button>
+
+        {/* Disable early termination toggle — only editable at phase 0 */}
+        <label
+          className={`flex items-center gap-1.5 text-xs select-none ${
+            currentStep.phase === 0 && !currentStep.terminated
+              ? "cursor-pointer"
+              : "cursor-not-allowed opacity-60"
+          } ${sim.disableEarlyTermination ? "text-amber-700" : "text-gray-500"}`}
+          title={
+            currentStep.phase === 0 && !currentStep.terminated
+              ? "When enabled, the simulator skips all early termination points and continues through all 8 phases"
+              : "Can only be toggled before the simulation starts"
+          }
+        >
+          <input
+            type="checkbox"
+            checked={sim.disableEarlyTermination}
+            onChange={(e) => sim.setDisableEarlyTermination(e.target.checked)}
+            disabled={currentStep.phase !== 0 || currentStep.terminated}
+            className="accent-amber-600 w-3.5 h-3.5"
+          />
+          <span className="font-medium whitespace-nowrap">
+            Skip Early Exit
+          </span>
+        </label>
+
         <PhaseIndicator
           currentPhase={currentStep.phase}
           terminated={currentStep.terminated}

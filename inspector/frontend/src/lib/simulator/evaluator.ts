@@ -106,10 +106,11 @@ export function evalAgeFilter(
 export function evalConditional(
   rules: RawConditionalRule[],
   defaultAction: RawAction | undefined,
-  answers: Record<string, unknown>
+  answers: Record<string, unknown>,
+  demographics?: Record<string, unknown>
 ): RawAction | null {
   for (const rule of rules) {
-    if (rule.when.every((pred) => evalPredicate(pred, answers))) {
+    if (rule.when.every((pred) => evalPredicate(pred, answers, demographics))) {
       return rule.then;
     }
   }
@@ -119,23 +120,39 @@ export function evalConditional(
 // --- Predicate evaluation ---
 
 /**
- * Evaluate a single predicate against the answers dict.
- * If the referenced qid hasn't been answered, returns false.
+ * Evaluate a single predicate against the answers or demographics dict.
+ *
+ * Two reference modes:
+ * - qid-based: looks up a prior question's answer in answers
+ * - field-based: looks up a demographics field directly when qid is absent
  */
 function evalPredicate(
   pred: RawPredicate,
-  answers: Record<string, unknown>
+  answers: Record<string, unknown>,
+  demographics?: Record<string, unknown>
 ): boolean {
-  let answer = answers[pred.qid];
-  if (answer === undefined || answer === null) return false;
+  let answer: unknown;
 
-  // Drill into sub-field for free_text_with_fields
-  if (pred.field !== undefined && pred.field !== null) {
-    if (typeof answer === "object" && !Array.isArray(answer)) {
-      answer = (answer as Record<string, unknown>)[pred.field];
-    } else {
-      return false;
+  if (pred.qid) {
+    // Standard mode: look up prior answer by qid
+    answer = answers[pred.qid];
+    if (answer === undefined || answer === null) return false;
+
+    // Drill into sub-field for free_text_with_fields
+    if (pred.field !== undefined && pred.field !== null) {
+      if (typeof answer === "object" && !Array.isArray(answer)) {
+        answer = (answer as Record<string, unknown>)[pred.field];
+      } else {
+        return false;
+      }
     }
+  } else if (pred.field) {
+    // Field-based mode: look up demographics field directly
+    if (!demographics) return false;
+    answer = demographics[pred.field];
+    if (answer === undefined || answer === null) return false;
+  } else {
+    return false;
   }
 
   return compare(pred.op, answer, pred.value);

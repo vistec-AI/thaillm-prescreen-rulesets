@@ -26,6 +26,7 @@ class CreateSessionRequest(BaseModel):
     """Body for POST /sessions."""
     session_id: str
     ruleset_version: str | None = None
+    disable_early_termination: bool = False
 
 
 # ------------------------------------------------------------------
@@ -49,6 +50,7 @@ async def create_session(
         user_id=user_id,
         session_id=body.session_id,
         ruleset_version=body.ruleset_version,
+        disable_early_termination=body.disable_early_termination,
     )
 
 
