@@ -231,6 +231,32 @@ function SimulatorContent({
         >
           Reset
         </button>
+
+        {/* Disable early termination toggle — only editable at phase 0 */}
+        <label
+          className={`flex items-center gap-1.5 text-xs select-none ${
+            currentStep.phase === 0 && !currentStep.terminated
+              ? "cursor-pointer"
+              : "cursor-not-allowed opacity-60"
+          } ${sim.disableEarlyTermination ? "text-amber-700" : "text-gray-500"}`}
+          title={
+            currentStep.phase === 0 && !currentStep.terminated
+              ? "When enabled, the simulator skips all early termination points and continues through all 8 phases"
+              : "Can only be toggled before the simulation starts"
+          }
+        >
+          <input
+            type="checkbox"
+            checked={sim.disableEarlyTermination}
+            onChange={(e) => sim.setDisableEarlyTermination(e.target.checked)}
+            disabled={currentStep.phase !== 0 || currentStep.terminated}
+            className="accent-amber-600 w-3.5 h-3.5"
+          />
+          <span className="font-medium whitespace-nowrap">
+            Skip Early Exit
+          </span>
+        </label>
+
         <PhaseIndicator
           currentPhase={currentStep.phase}
           terminated={currentStep.terminated}

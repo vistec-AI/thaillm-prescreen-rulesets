@@ -12,6 +12,7 @@ import type {
   RawErCriticalItem,
   RawQuestion,
   SimulatorDataResponse,
+  SkippedTermination,
   TerminationResult,
 } from "../types/simulator";
 import { compare, evalAgeFilter, evalConditional, evalGenderFilter } from "./evaluator";
@@ -28,6 +29,21 @@ const PEDIATRIC_AGE_THRESHOLD = 15;
 
 /** Fixed severity for urgency actions in OLDCARTS (always "Visit Urgently") */
 const DEFAULT_URGENCY_SEVERITY = "sev002_5";
+
+/** Severity IDs ordered from least to most severe (index = rank) */
+const SEVERITY_ORDER = ["sev001", "sev002", "sev002_5", "sev003"];
+
+/** Human-readable phase names (mirrors Python PHASE_NAMES) */
+const PHASE_NAMES: Record<number, string> = {
+  0: "Demographics",
+  1: "ER Critical Screen",
+  2: "Symptom Selection",
+  3: "ER Checklist",
+  4: "OLDCARTS",
+  5: "Past History",
+  6: "Personal History",
+  7: "OPD",
+};
 
 // --- Age computation ---
 
@@ -625,4 +641,101 @@ export function buildErCriticalTermination(
     reason,
     fromPhase: 1,
   };
+}
+
+// --- disable_early_termination helpers ---
+
+/**
+ * Build a SkippedTermination record from a TerminationResult.
+ *
+ * Used when disable_early_termination is active and a termination
+ * would have occurred — we capture the details instead of stopping.
+ */
+export function buildSkippedTermination(
+  termination: TerminationResult,
+  phase: number,
+  sourceQid: string | null = null
+): SkippedTermination {
+  return {
+    phase,
+    phaseName: PHASE_NAMES[phase] ?? `Phase ${phase}`,
+    departments: termination.departments,
+    severity: termination.severity,
+    reason: termination.reason,
+    sourceQid: sourceQid,
+  };
+}
+
+/**
+ * Resolve the next question while skipping termination results.
+ *
+ * Wraps resolveNext in a loop: whenever auto-eval produces a terminate
+ * action, it is collected as a SkippedTermination and the loop continues
+ * with the remaining pending queue.
+ *
+ * Returns the eventual non-terminate result plus any skipped terminations.
+ */
+export type ResolveSkipResult = {
+  result: Exclude<ResolveResult, { kind: "terminate" }>;
+  skippedTerminations: SkippedTermination[];
+};
+
+export function resolveNextSkippingTerminations(
+  source: "oldcarts" | "opd",
+  symptom: string,
+  pending: string[],
+  answers: Record<string, unknown>,
+  demographics: Record<string, unknown>,
+  ruleData: SimulatorDataResponse,
+  currentPhase: number
+): ResolveSkipResult {
+  const skipped: SkippedTermination[] = [];
+  let currentPending = [...pending];
+
+  // Keep resolving until we get a non-terminate result.  Each iteration
+  // may consume some qids from the pending queue via auto-eval, so we
+  // pass the updated pending through.
+  for (;;) {
+    const resolved = resolveNext(
+      source, symptom, currentPending, answers, demographics, ruleData, currentPhase,
+    );
+
+    if (resolved.kind !== "terminate") {
+      return { result: resolved, skippedTerminations: skipped };
+    }
+
+    // Collect the skipped termination and continue with remaining pending
+    skipped.push(
+      buildSkippedTermination(resolved.termination, currentPhase),
+    );
+    currentPending = resolved.pending;
+
+    // If pending is empty after the skip, return exhausted
+    if (currentPending.length === 0) {
+      return {
+        result: { kind: "exhausted", pending: currentPending },
+        skippedTerminations: skipped,
+      };
+    }
+  }
+}
+
+/**
+ * Pick the highest-severity entry from a list of skipped terminations.
+ *
+ * Uses SEVERITY_ORDER for ranking (higher index = more severe).
+ */
+export function highestSeveritySkipped(
+  skipped: SkippedTermination[]
+): SkippedTermination | null {
+  if (skipped.length === 0) return null;
+  return skipped.reduce((best, entry) => {
+    const bestRank = best.severity
+      ? SEVERITY_ORDER.indexOf(best.severity.id)
+      : -1;
+    const entryRank = entry.severity
+      ? SEVERITY_ORDER.indexOf(entry.severity.id)
+      : -1;
+    return entryRank > bestRank ? entry : best;
+  });
 }

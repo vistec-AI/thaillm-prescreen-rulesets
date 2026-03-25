@@ -57,6 +57,7 @@ from prescreen_rulesets.models.session import (
     QuestionPayload,
     QuestionsStep,
     SessionInfo,
+    SkippedTermination,
     StepResult,
     TerminationStep,
 )
@@ -117,6 +118,7 @@ __all__ = [
     "QuestionPayload",
     "QuestionsStep",
     "SessionInfo",
+    "SkippedTermination",
     "StepResult",
     "TerminationStep",
     # Pipeline

@@ -169,6 +169,16 @@ export interface SimulatorDataResponse {
 
 // --- Simulator internal state types ---
 
+/** A termination event that was skipped due to disable_early_termination */
+export interface SkippedTermination {
+  phase: number;
+  phaseName: string;
+  departments: Array<{ id: string; name: string }>;
+  severity: { id: string; name: string } | null;
+  reason: string | null;
+  sourceQid: string | null;
+}
+
 /** The result shown when the simulation terminates */
 export interface TerminationResult {
   type: "terminated" | "completed";
@@ -185,6 +195,8 @@ export interface TerminationResult {
   predictionError?: string;
   /** Whether prediction returned successfully but with no diagnoses or severity (e.g. transient API error) */
   predictionEmpty?: boolean;
+  /** Termination events skipped due to disable_early_termination */
+  skippedTerminations?: SkippedTermination[];
 }
 
 /** Text overrides for inline editing within the simulator */
@@ -210,6 +222,8 @@ export interface HistoryEntry {
   pastHistoryData: Record<string, unknown>;
   /** Phase 6 personal history data snapshot */
   personalHistoryData: Record<string, unknown>;
+  /** Termination events skipped due to disable_early_termination */
+  skippedTerminations: SkippedTermination[];
   /** Label describing what was answered at this step */
   label: string;
   /** The answer value submitted */

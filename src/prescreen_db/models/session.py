@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Index,
     SmallInteger,
@@ -100,6 +101,19 @@ class PrescreenSession(Base):
     # Written once when status transitions to "completed".
     # Shape: {"departments": [...], "severity": "...", ...}
     result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # --- Early termination control ---
+    # When True, the engine skips all termination points and continues
+    # through all 8 phases, recording would-be terminations instead.
+    disable_early_termination: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false"),
+    )
+    # Accumulated list of terminations that were skipped.
+    # Shape: [{"phase": 1, "phase_name": "...", "departments": [...],
+    #          "severity": {...}, "reason": "...", "source_qid": "..."}]
+    skipped_terminations: Mapped[list | None] = mapped_column(
+        JSONB, nullable=True,
+    )
 
     # --- Pipeline stage (post-rule-based orchestration) ---
     # Tracks which macro-stage of the full pipeline the session is in:

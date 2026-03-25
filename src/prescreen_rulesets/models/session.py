@@ -43,6 +43,24 @@ class QuestionPayload(BaseModel):
     answer_schema: dict | None = None
 
 
+class SkippedTermination(BaseModel):
+    """A termination event that was suppressed by ``disable_early_termination``.
+
+    Recorded whenever the engine encounters a termination condition but the
+    session flag instructs it to continue.  Contains the full details of the
+    would-be termination so researchers can see what the outcome *would* have
+    been at that point.
+    """
+
+    phase: int
+    phase_name: str
+    departments: list[dict]
+    severity: dict | None = None
+    reason: str | None = None
+    # The qid whose action triggered the termination (sequential phases only).
+    source_qid: str | None = None
+
+
 class QuestionsStep(BaseModel):
     """Engine step: present questions to the user and wait for answers."""
 
@@ -54,6 +72,9 @@ class QuestionsStep(BaseModel):
     # For bulk phases this is an object with per-question keys; for sequential
     # phases it mirrors the single question's answer_schema.
     submission_schema: dict | None = None
+    # Present when an early termination was skipped on the step that produced
+    # this QuestionsStep (only when disable_early_termination is True).
+    skipped_termination: SkippedTermination | None = None
 
 
 class TerminationStep(BaseModel):
@@ -85,5 +106,6 @@ class SessionInfo(BaseModel):
     session_id: str
     status: str
     current_phase: int
+    disable_early_termination: bool = False
     created_at: datetime
     updated_at: datetime
