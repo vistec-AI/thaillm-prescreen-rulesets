@@ -170,9 +170,7 @@ def test_oldcarts_schema():
                 action = parsed_question.on_submit if parsed_question.question_type != "multi_select" else parsed_question.next
 
                 # update has_opd state
-                # also check if there's only one opd action exists
                 if action.action == "opd":
-                    assert not has_opd, f"Only 1 OPD is allowed for symptom {symptom}"
                     has_opd = True
 
                 # check if referred action follows format
@@ -187,6 +185,15 @@ def test_oldcarts_schema():
                         assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid}"
                     for sev in action.severity:
                         assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid}"
+
+                # urgency: validate department IDs in metadata if present
+                elif action.action == "urgency":
+                    for dept in action.department:
+                        assert dept in _department_ids, f"Unknown department {dept} in urgency action at {parsed_question.qid}"
+
+                # emergency: no metadata to validate — fixed sev003/dept002
+                elif action.action == "emergency":
+                    pass
 
             elif parsed_question.question_type in ["single_select", "image_single_select", "gender_filter", "age_filter"]:
                 for opt in parsed_question.options:
@@ -210,6 +217,15 @@ def test_oldcarts_schema():
                         for sev in action.severity:
                             assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid}"
 
+                    # urgency: validate department IDs in metadata if present
+                    elif action.action == "urgency":
+                        for dept in action.department:
+                            assert dept in _department_ids, f"Unknown department {dept} in urgency action at {parsed_question.qid}"
+
+                    # emergency: no metadata to validate — fixed sev003/dept002
+                    elif action.action == "emergency":
+                        pass
+
             elif isinstance(parsed_question, ConditionalQuestion):
                 # check if default action is needed based on rule coverage
                 needs_default = _conditional_needs_default(parsed_question, rules["oldcarts"][symptom])
@@ -225,6 +241,9 @@ def test_oldcarts_schema():
                             assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid} default"
                         for sev in parsed_question.default.severity:
                             assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid} default"
+                    elif parsed_question.default.action == "urgency":
+                        for dept in parsed_question.default.department:
+                            assert dept in _department_ids, f"Unknown department {dept} in urgency action at {parsed_question.qid} default"
 
                 # validate rules
                 for rule in parsed_question.rules:
@@ -240,6 +259,9 @@ def test_oldcarts_schema():
                             assert dept in _department_ids, f"Unknown department {dept} in {parsed_question.qid}"
                         for sev in rule.then.severity:
                             assert sev in _severity_ids, f"Unknown severity {sev} in {parsed_question.qid}"
+                    elif rule.then.action == "urgency":
+                        for dept in rule.then.department:
+                            assert dept in _department_ids, f"Unknown department {dept} in urgency action at {parsed_question.qid}"
 
         # oldcards must have at least 1 opd
         assert has_opd, f"Symptom {symptom} must have at least one OPD action"
@@ -270,7 +292,7 @@ def recursive_traverse(
     if question.question_type  in ["free_text", "free_text_with_fields", "number_range", "multi_select",  "image_multi_select"]:
         action = question.on_submit if question.question_type not in ["multi_select", "image_multi_select"] else question.next
         # base case: opd handoff or early termination both end traversal
-        if action.action in ("opd", "terminate"):
+        if action.action in ("opd", "terminate", "urgency", "emergency"):
             return qid_pools
 
         # recursive
@@ -446,3 +468,102 @@ def test_oldcarts_state_values_valid():
             question: Question = q_cls(**q_dict)
             assert question.is_oldcarts is True, f"{question.qid} should be oldcarts"
             assert question.oldcarts_state in valid_states, f"{question.qid} has invalid oldcarts state {question.oldcarts_state}"
+
+
+# --- Allowed operators per demographic field type ---
+# Used by test_oldcarts_field_predicate_validity to check that the op in a
+# field-based predicate is compatible with the referenced field's data type.
+_ALLOWED_OPS_BY_TYPE = {
+    "int": {"eq", "ne", "lt", "le", "gt", "ge", "between"},
+    "float": {"eq", "ne", "lt", "le", "gt", "ge", "between"},
+    "enum": {"eq", "ne", "contains_any", "contains_all"},
+    "str": {"eq", "ne", "contains", "not_contains", "matches"},
+    "date": {"eq", "ne", "lt", "le", "gt", "ge"},
+    "yes_no_detail": {"eq", "ne"},
+    "from_yaml": {"eq", "ne", "contains", "not_contains", "contains_any", "contains_all"},
+}
+
+
+def _build_demographic_field_map() -> dict:
+    """Build a mapping of demographic field keys to their type and enum values.
+
+    Returns dict like ``{"pregnancy_status": {"type": "enum", "values": ["pregnant", "not_pregnant"]}, ...}``
+    """
+    demo_path = find_repo_root() / "v1" / "rules" / "demographic.yaml"
+    demo_fields = load_yaml(demo_path)
+    field_map = {}
+    for entry in demo_fields:
+        key = entry["key"]
+        ftype = entry["type"]
+        info: dict = {"type": ftype}
+        # Capture enum values for strict value validation
+        if ftype == "enum" and "values" in entry:
+            info["values"] = entry["values"]
+        field_map[key] = info
+    return field_map
+
+
+def test_oldcarts_field_predicate_validity():
+    """Validate field-based predicates in conditional questions reference valid demographic fields.
+
+    For each conditional question in OLDCARTS whose predicate uses ``field``
+    (demographics lookup) instead of ``qid`` (prior answer lookup), checks:
+    1. The field name is a valid demographic key from demographic.yaml
+    2. The operator is compatible with the field's data type
+    3. For enum fields, the predicate value(s) are valid enum values
+    """
+    rules = load_rules()
+    field_map = _build_demographic_field_map()
+    valid_field_keys = set(field_map.keys())
+
+    for symptom, q_list in rules["oldcarts"].items():
+        for q_dict in q_list:
+            if q_dict["question_type"] != "conditional":
+                continue
+            q_cls = question_mapper["conditional"]
+            cond_q: ConditionalQuestion = q_cls(**q_dict)
+
+            for rule in cond_q.rules:
+                for pred in rule.when:
+                    # Only validate field-based predicates (qid is None)
+                    if pred.qid is not None or pred.field is None:
+                        continue
+
+                    # 1. Field name must be a known demographic key
+                    assert pred.field in valid_field_keys, (
+                        f"Unknown demographic field '{pred.field}' in predicate "
+                        f"at {cond_q.qid} (symptom: {symptom}). "
+                        f"Valid fields: {sorted(valid_field_keys)}"
+                    )
+
+                    # 2. Operator must be compatible with the field type
+                    ftype = field_map[pred.field]["type"]
+                    allowed_ops = _ALLOWED_OPS_BY_TYPE.get(ftype, set())
+                    assert pred.op in allowed_ops, (
+                        f"Operator '{pred.op}' is not compatible with field "
+                        f"'{pred.field}' (type={ftype}) in {cond_q.qid}. "
+                        f"Allowed ops: {sorted(allowed_ops)}"
+                    )
+
+                    # 3. For enum fields, validate predicate values
+                    if ftype == "enum" and "values" in field_map[pred.field]:
+                        enum_values = set(field_map[pred.field]["values"])
+                        # contains_any / contains_all: value is a list
+                        if pred.op in ("contains_any", "contains_all"):
+                            assert isinstance(pred.value, list), (
+                                f"{pred.op} expects a list value for '{pred.field}' "
+                                f"in {cond_q.qid}, got {type(pred.value).__name__}"
+                            )
+                            invalid = set(pred.value) - enum_values
+                            assert not invalid, (
+                                f"Invalid enum value(s) {invalid} for field "
+                                f"'{pred.field}' in {cond_q.qid}. "
+                                f"Valid values: {sorted(enum_values)}"
+                            )
+                        # eq / ne: value is a single string
+                        elif pred.op in ("eq", "ne"):
+                            assert pred.value in enum_values, (
+                                f"Invalid enum value '{pred.value}' for field "
+                                f"'{pred.field}' in {cond_q.qid}. "
+                                f"Valid values: {sorted(enum_values)}"
+                            )

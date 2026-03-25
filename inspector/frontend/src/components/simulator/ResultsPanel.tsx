@@ -1,6 +1,7 @@
 "use client";
 
-import type { TerminationResult, DiseaseEntry } from "@/lib/types/simulator";
+import { useState } from "react";
+import type { TerminationResult, DiseaseEntry, SkippedTermination } from "@/lib/types/simulator";
 
 interface ResultsPanelProps {
   result: TerminationResult;
@@ -169,12 +170,89 @@ export default function ResultsPanel({
         )}
       </div>
 
+      {/* Skipped Terminations (when disable_early_termination was active) */}
+      {result.skippedTerminations && result.skippedTerminations.length > 0 && (
+        <SkippedTerminationsSection skipped={result.skippedTerminations} />
+      )}
+
       <button
         onClick={onRestart}
         className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors text-sm font-medium"
       >
         Restart Simulation
       </button>
+    </div>
+  );
+}
+
+/**
+ * Collapsible section showing termination events that were skipped
+ * because disable_early_termination was enabled.
+ */
+function SkippedTerminationsSection({ skipped }: { skipped: SkippedTermination[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="border border-amber-200 rounded-lg bg-amber-50">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-3 text-left"
+      >
+        <span className="text-sm font-medium text-amber-800">
+          Skipped Terminations ({skipped.length})
+        </span>
+        <svg
+          className={`w-4 h-4 text-amber-600 transition-transform ${expanded ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {expanded && (
+        <div className="px-3 pb-3 space-y-2">
+          {skipped.map((entry, i) => {
+            const sevColor = entry.severity
+              ? SEVERITY_COLORS[entry.severity.id] ?? "bg-gray-100 text-gray-800 border-gray-300"
+              : "bg-gray-100 text-gray-800 border-gray-300";
+            return (
+              <div key={i} className="bg-white rounded border border-amber-100 p-2 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-500">
+                    Phase {entry.phase}: {entry.phaseName}
+                  </span>
+                  {entry.severity && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${sevColor}`}>
+                      {entry.severity.name}
+                    </span>
+                  )}
+                </div>
+                {entry.departments.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {entry.departments.map((dept) => (
+                      <span
+                        key={dept.id}
+                        className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200"
+                      >
+                        {dept.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {entry.reason && (
+                  <p className="text-xs text-gray-600">{entry.reason}</p>
+                )}
+                {entry.sourceQid && (
+                  <p className="text-xs text-gray-400">Triggered by: {entry.sourceQid}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

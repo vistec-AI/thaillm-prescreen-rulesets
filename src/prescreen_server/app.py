@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     engine = PrescreenEngine(store)
 
     predictor = None
-    if os.environ.get("OPENAI_API_KEY"):
+    if os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY"):
         from prescreen_rulesets.prediction import OpenAIPredictionModule
         predictor = OpenAIPredictionModule(store=store)
         logger.info("OpenAIPredictionModule enabled")

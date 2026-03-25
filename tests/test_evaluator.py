@@ -207,6 +207,82 @@ class TestPredicateEdgeCases:
 
 
 # =====================================================================
+# Field-based predicate tests (demographics lookup, no qid)
+# =====================================================================
+
+
+class TestFieldBasedPredicates:
+    """Tests for predicates that reference demographics fields directly.
+
+    These predicates have ``field`` set but ``qid`` is None, so the evaluator
+    looks up the value from the demographics dict rather than prior answers.
+    Used in OLDCARTS conditional questions (e.g. pregnancy_status, age, gender).
+    """
+
+    def test_field_from_demographics_match(self, evaluator):
+        """Predicate matches when demographics field satisfies contains_any."""
+        pred = Predicate(field="pregnancy_status", op="contains_any", value=["pregnant"])
+        demographics = {"pregnancy_status": "pregnant", "gender": "Female"}
+        assert evaluator._eval_predicate(pred, {}, demographics) is True
+
+    def test_field_from_demographics_no_match(self, evaluator):
+        """Predicate returns False when demographics field doesn't satisfy the condition."""
+        pred = Predicate(field="pregnancy_status", op="eq", value="pregnant")
+        demographics = {"pregnancy_status": "not_pregnant", "gender": "Female"}
+        assert evaluator._eval_predicate(pred, {}, demographics) is False
+
+    def test_field_contains_any_substring_pitfall(self, evaluator):
+        """contains_any uses substring matching on strings — 'pregnant' matches 'not_pregnant'.
+
+        This documents the current evaluator behavior.  OLDCARTS YAML should
+        use ``eq`` instead of ``contains_any`` for enum fields to avoid this.
+        """
+        pred = Predicate(field="pregnancy_status", op="contains_any", value=["pregnant"])
+        # Substring match: "pregnant" is found inside "not_pregnant"
+        assert evaluator._eval_predicate(pred, {}, {"pregnancy_status": "not_pregnant"}) is True
+
+    def test_field_missing_from_demographics(self, evaluator):
+        """Predicate returns False when the referenced field is absent from demographics."""
+        pred = Predicate(field="pregnancy_status", op="contains_any", value=["pregnant"])
+        # Male patient — pregnancy_status key not present
+        demographics = {"gender": "Male", "age": 30}
+        assert evaluator._eval_predicate(pred, {}, demographics) is False
+
+    def test_field_no_demographics_dict(self, evaluator):
+        """Predicate returns False when demographics is None."""
+        pred = Predicate(field="pregnancy_status", op="contains_any", value=["pregnant"])
+        assert evaluator._eval_predicate(pred, {}, None) is False
+
+    def test_field_age_numeric_comparison(self, evaluator):
+        """Numeric op works against a demographics age field."""
+        pred = Predicate(field="age", op="lt", value=18)
+        assert evaluator._eval_predicate(pred, {}, {"age": 12}) is True
+        assert evaluator._eval_predicate(pred, {}, {"age": 25}) is False
+
+    def test_field_gender_contains_any_case_sensitive(self, evaluator):
+        """contains_any is case-sensitive — lowercase 'male' does NOT match 'Male'.
+
+        This documents the current evaluator behavior.  OLDCARTS YAML uses
+        ``contains_any: ['male']`` but demographics stores ``'Male'``, so the
+        predicate never matches.  The YAML should use ``eq: Male`` instead.
+        """
+        pred = Predicate(field="gender", op="contains_any", value=["male"])
+        # Case mismatch: "male" not found in "Male" (case-sensitive)
+        assert evaluator._eval_predicate(pred, {}, {"gender": "Male"}) is False
+
+    def test_field_gender_eq(self, evaluator):
+        """eq operator matches demographics gender field correctly."""
+        pred = Predicate(field="gender", op="eq", value="Male")
+        assert evaluator._eval_predicate(pred, {}, {"gender": "Male"}) is True
+        assert evaluator._eval_predicate(pred, {}, {"gender": "Female"}) is False
+
+    def test_field_neither_qid_nor_field(self, evaluator):
+        """Predicate returns False when both qid and field are None."""
+        pred = Predicate(op="eq", value="x")
+        assert evaluator._eval_predicate(pred, {}, {"age": 10}) is False
+
+
+# =====================================================================
 # Age filter tests
 # =====================================================================
 

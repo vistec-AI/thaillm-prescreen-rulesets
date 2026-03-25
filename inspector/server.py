@@ -312,7 +312,7 @@ def create_app() -> FastAPI:
         Returns {available: false} when OPENAI_API_KEY is not configured,
         allowing the frontend to skip the LLM phase transparently.
         """
-        if not os.environ.get("OPENAI_API_KEY"):
+        if not os.environ.get("OPENAI_API_KEY") and not os.environ.get("OPENROUTER_API_KEY"):
             return {"questions": [], "available": False}
 
         try:
@@ -349,7 +349,7 @@ def create_app() -> FastAPI:
         Returns {available: false} when OPENAI_API_KEY is not configured,
         allowing the frontend to skip prediction transparently.
         """
-        if not os.environ.get("OPENAI_API_KEY"):
+        if not os.environ.get("OPENAI_API_KEY") and not os.environ.get("OPENROUTER_API_KEY"):
             return {"available": False, "prediction": None}
 
         try:

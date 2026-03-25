@@ -37,7 +37,10 @@ class OpenAIPredictionModule(PredictionModule):
     Args:
         store: ``RulesetStore`` — provides disease, department, and severity
             ID enumerations for the JSON schema and reference tables.
-        api_key: OpenAI API key.  Falls back to ``OPENAI_API_KEY`` env var.
+        api_key: API key.  When ``None``, resolved from environment variables:
+            ``OPENAI_API_KEY`` first, then ``OPENROUTER_API_KEY`` as fallback.
+        base_url: Base URL override for OpenAI-compatible endpoints.
+            Auto-set when falling back to OpenRouter.
         model: Model identifier for chat completions.
         temperature: Sampling temperature.  ``None`` omits the parameter.
         max_tokens: Max tokens in the response.  ``None`` omits the parameter.
@@ -49,12 +52,25 @@ class OpenAIPredictionModule(PredictionModule):
         *,
         store: RulesetStore,
         api_key: str | None = None,
+        base_url: str | None = None,
         model: str = "gpt-5.4",
         temperature: float | None = None,
         max_tokens: int | None = None,
         max_diagnoses: int = 10,
     ) -> None:
-        self._client = openai.AsyncOpenAI(api_key=api_key)
+        # When no explicit api_key is provided, resolve the provider from
+        # environment variables.  Priority: OPENAI_API_KEY > OPENROUTER_API_KEY.
+        # OpenRouter requires a base_url override and a provider-prefixed model.
+        if api_key is None and base_url is None:
+            from prescreen_rulesets.constants import resolve_llm_config
+            config = resolve_llm_config(model)
+            api_key = config.api_key
+            base_url = config.base_url
+            model = config.model
+            if config.provider != "none":
+                logger.info("PredictionModule using %s provider", config.provider)
+
+        self._client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
         self._model = model
         self._temperature = temperature
         self._max_tokens = max_tokens

@@ -52,7 +52,7 @@ class ConditionalEvaluator:
         """
         qt = question.question_type
         if qt == "conditional":
-            return self._eval_conditional(question, answers)
+            return self._eval_conditional(question, answers, demographics)
         elif qt == "age_filter":
             return self._eval_age_filter(question, demographics.get("age"))
         elif qt == "gender_filter":
@@ -66,7 +66,8 @@ class ConditionalEvaluator:
     # ------------------------------------------------------------------
 
     def _eval_conditional(
-        self, q: ConditionalQuestion, answers: dict[str, Any]
+        self, q: ConditionalQuestion, answers: dict[str, Any],
+        demographics: dict[str, Any] | None = None,
     ) -> Action | None:
         """Evaluate conditional rules in order; first match wins.
 
@@ -75,7 +76,7 @@ class ConditionalEvaluator:
         If no rule matches, falls back to ``q.default``.
         """
         for rule in q.rules:
-            if all(self._eval_predicate(pred, answers) for pred in rule.when):
+            if all(self._eval_predicate(pred, answers, demographics) for pred in rule.when):
                 return rule.then
         return q.default
 
@@ -167,24 +168,42 @@ class ConditionalEvaluator:
     # Predicate evaluation
     # ------------------------------------------------------------------
 
-    def _eval_predicate(self, pred: Predicate, answers: dict[str, Any]) -> bool:
-        """Evaluate a single predicate against the answers dict.
+    def _eval_predicate(
+        self, pred: Predicate, answers: dict[str, Any],
+        demographics: dict[str, Any] | None = None,
+    ) -> bool:
+        """Evaluate a single predicate against the answers or demographics dict.
 
-        If the referenced qid has not been answered yet, the predicate
-        evaluates to False (the rule won't match).
+        Two reference modes:
+        - qid-based: looks up a prior question's answer in ``answers``
+        - field-based: looks up a demographics field directly (e.g. pregnancy_status,
+          age, gender) when qid is None but field is set
+
+        If the referenced value cannot be found, the predicate evaluates to False.
         """
-        # Get the raw answer for the referenced qid
-        answer = answers.get(pred.qid)
-        if answer is None:
-            return False
-
-        # If the predicate references a sub-field (for free_text_with_fields),
-        # drill into the answer dict
-        if pred.field is not None:
-            if isinstance(answer, dict):
-                answer = answer.get(pred.field)
-            else:
+        if pred.qid is not None:
+            # Standard mode: look up prior answer by qid
+            answer = answers.get(pred.qid)
+            if answer is None:
                 return False
+
+            # If the predicate also references a sub-field (for free_text_with_fields),
+            # drill into the answer dict
+            if pred.field is not None:
+                if isinstance(answer, dict):
+                    answer = answer.get(pred.field)
+                else:
+                    return False
+        elif pred.field is not None:
+            # Field-based mode: look up demographics field directly
+            if demographics is None:
+                return False
+            answer = demographics.get(pred.field)
+            if answer is None:
+                return False
+        else:
+            # Neither qid nor field set — cannot evaluate
+            return False
 
         return self._compare(pred.op, answer, pred.value)
 
