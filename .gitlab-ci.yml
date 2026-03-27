@@ -1,33 +1,67 @@
 stages:
-  - test
+  - package
+  # - deploy
 
-variables:
-  PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  PIP_NO_CACHE_DIR: "1"
-
-# Use a recent Python image; uv is installed via pipx for speed where available
-image: python:3.13-slim
-
-before_script:
-  - python --version
-  - pip install --upgrade pip
-  - pip install uv
-  - uv venv
-  - uv pip install -e .
-
-pytest:
-  stage: test
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+.kaniko-build-template:
+  stage: package
+  image:
+    name: gcr.io/kaniko-project/executor:v1.9.0-debug
+    entrypoint: [ "" ]
+  variables:
+    DOCKERIZED_IMAGE: $VISAI_GITLAB_CONTAINER_REGISTRY/projects/bdi/application/prescreen-rulesets:$CI_COMMIT_SHA
+    GODEBUG: "http2client=0"
   script:
-    - echo "hf token-- $HF_TOKEN"
-    - uv run pytest -q --junitxml=junit.xml
+  - cp $KANIKO_VISAI_GITLAB_REGISTRY_CONFIG /kaniko/.docker/config.json
+  - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${DOCKERIZED_IMAGE}" --snapshotMode=redo --use-new-run --cache=true
+  - |
+    cat << EOF > build.env
+    IMAGE_REF=$DOCKERIZED_IMAGE
+    PROJECT_NAME=prescreen-rulesets
+    APP_NAME=prescreen-rulesets
+    EOF
   artifacts:
-    when: always
     reports:
-      junit: junit.xml
-    paths:
-      - junit.xml
-    expire_in: 1 week
+      dotenv: build.env
 
+kaniko-build-dev:
+  extends: .kaniko-build-template
+  only:
+  - dev
+  environment: development
+
+kaniko-build-prod:
+  extends: .kaniko-build-template
+  only:
+  - main
+  environment: production
+
+# .deploy-template:
+#   stage: deploy
+#   needs:
+#   - job: kaniko build
+#     artifacts: true
+#   variables:
+#     IMAGE_REF: "${IMAGE_REF}"
+#     PROJECT_NAME: $PROJECT_NAME
+#     APP_NAME: $APP_NAME
+#   trigger: visai-ai/projects/bdi/kubernetes
+
+# deploy-dev:
+#   extends: .deploy-template
+#   only:
+#     - dev
+#   variables:
+#     TARGET_ENV: dev
+#   needs:
+#     - job: kaniko-build-dev
+#       artifacts: true
+
+# deploy-prod:
+#   extends: .deploy-template
+#   only:
+#     - main
+#   variables:
+#     TARGET_ENV: prod
+#   needs:
+#     - job: kaniko-build-prod
+#       artifacts: true
