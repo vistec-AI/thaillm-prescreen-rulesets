@@ -190,37 +190,21 @@ Headache:
 
 Dizziness:
 - qid: diz_opd_002
-  question: ท่านเป็นเพศหญิงหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - diz_opd_003
-  - id: female
-    label: female
-    action:
-      action: goto
-      qid:
-      - diz_opd_002-1
-- qid: diz_opd_002-1
-  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่
-    label: ใช่
-    action:
+  question: ผู้ป่วยตั้งครรภ์หรือไม่ ?
+  question_type: conditional
+  rules:
+  - when:
+    - field: pregnancy_status
+      op: eq
+      value: pregnant
+    then:
       action: goto
       qid:
       - diz_opd_002-2
-  - id: ไม่ใช่
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - diz_opd_003
+  default:
+    action: goto
+    qid:
+    - diz_opd_003
 - qid: diz_opd_002-2
   question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
   question_type: single_select
@@ -363,37 +347,21 @@ Dizziness:
 
 Pain in Joint:
 - qid: pai_opd_002
-  question: ท่านเป็นเพศหญิงหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - pai_opd_003
-  - id: female
-    label: female
-    action:
-      action: goto
-      qid:
-      - pai_opd_002-1
-- qid: pai_opd_002-1
-  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่
-    label: ใช่
-    action:
+  question: ผู้ป่วยตั้งครรภ์หรือไม่ ?
+  question_type: conditional
+  rules:
+  - when:
+    - field: pregnancy_status
+      op: eq
+      value: pregnant
+    then:
       action: goto
       qid:
       - pai_opd_002-2
-  - id: ไม่ใช่
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - pai_opd_003
+  default:
+    action: goto
+    qid:
+    - pai_opd_003
 - qid: pai_opd_002-2
   question: มีปวดข้อ/เชิงกราน/หลัง ที่สัมพันธ์กับการตั้งครรภ์ หรือมีอาการ ปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
   question_type: single_select
@@ -612,37 +580,21 @@ Pain in Joint:
       - id: dept013
 Muscle Pain:
 - qid: mus_opd_002
-  question: ท่านเป็นเพศหญิงหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - mus_opd_003
-  - id: female
-    label: female
-    action:
-      action: goto
-      qid:
-      - mus_opd_002-1
-- qid: mus_opd_002-1
-  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่
-    label: ใช่
-    action:
+  question: ผู้ป่วยตั้งครรภ์หรือไม่ ?
+  question_type: conditional
+  rules:
+  - when:
+    - field: pregnancy_status
+      op: eq
+      value: pregnant
+    then:
       action: goto
       qid:
       - mus_opd_002-2
-  - id: ไม่ใช่
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - mus_opd_003
+  default:
+    action: goto
+    qid:
+    - mus_opd_003
 - qid: mus_opd_002-2
   question: มีอาการปวดหลัง หรือ สะโพก หรือ ขาหนีบ ที่สัมพันธ์กับการตั้งครรภ์ หรือมีอาการ ปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
   question_type: single_select
@@ -1416,37 +1368,21 @@ Fever:
 
 Cough:
 - qid: cou_opd_002
-  question: ท่านเป็นเพศหญิงหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - cou_opd_003
-  - id: female
-    label: female
-    action:
-      action: goto
-      qid:
-      - cou_opd_002-1
-- qid: cou_opd_002-1
-  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่
-    label: ใช่
-    action:
+  question: ผู้ป่วยตั้งครรภ์หรือไม่ ?
+  question_type: conditional
+  rules:
+  - when:
+    - field: pregnancy_status
+      op: eq
+      value: pregnant
+    then:
       action: goto
       qid:
       - cou_opd_002-2
-  - id: ไม่ใช่
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - cou_opd_003
+  default:
+    action: goto
+    qid:
+    - cou_opd_003
 - qid: cou_opd_002-2
   question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
   question_type: single_select
@@ -1669,37 +1605,21 @@ Cough:
 
 Sore Throat:
 - qid: sor_opd_002
-  question: ท่านเป็นเพศหญิงหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - sor_opd_003
-  - id: female
-    label: female
-    action:
-      action: goto
-      qid:
-      - sor_opd_002-1
-- qid: sor_opd_002-1
-  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่
-    label: ใช่
-    action:
+  question: ผู้ป่วยตั้งครรภ์หรือไม่ ?
+  question_type: conditional
+  rules:
+  - when:
+    - field: pregnancy_status
+      op: eq
+      value: pregnant
+    then:
       action: goto
       qid:
       - sor_opd_002-2
-  - id: ไม่ใช่
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - sor_opd_003
+  default:
+    action: goto
+    qid:
+    - sor_opd_003
 - qid: sor_opd_002-2
   question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
   question_type: single_select
@@ -2188,37 +2108,21 @@ Stomachache:
 
 Constipation:
 - qid: con_opd_002
-  question: ท่านเป็นเพศหญิงหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - con_opd_003
-  - id: female
-    label: female
-    action:
-      action: goto
-      qid:
-      - con_opd_002-1
-- qid: con_opd_002-1
-  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่
-    label: ใช่
-    action:
+  question: ผู้ป่วยตั้งครรภ์หรือไม่ ?
+  question_type: conditional
+  rules:
+  - when:
+    - field: pregnancy_status
+      op: eq
+      value: pregnant
+    then:
       action: goto
       qid:
       - con_opd_002-2
-  - id: ไม่ใช่
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - con_opd_003
+  default:
+    action: goto
+    qid:
+    - con_opd_003
 - qid: con_opd_002-2
   question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
   question_type: single_select
@@ -2396,37 +2300,21 @@ Constipation:
 
 Diarrhea:
 - qid: dia_opd_002
-  question: ท่านเป็นเพศหญิงหรือไม่?
-  question_type: gender_filter
-  options:
-  - id: male
-    label: male
-    action:
-      action: goto
-      qid:
-      - dia_opd_003
-  - id: female
-    label: female
-    action:
-      action: goto
-      qid:
-      - dia_opd_002-1
-- qid: dia_opd_002-1
-  question: ผู้ป่วยกำลังตั้งครรภ์ หรือประจำเดือนขาด ใช่หรือไม่?
-  question_type: single_select
-  options:
-  - id: ใช่
-    label: ใช่
-    action:
+  question: ผู้ป่วยตั้งครรภ์หรือไม่ ?
+  question_type: conditional
+  rules:
+  - when:
+    - field: pregnancy_status
+      op: eq
+      value: pregnant
+    then:
       action: goto
       qid:
       - dia_opd_002-2
-  - id: ไม่ใช่
-    label: ไม่ใช่
-    action:
-      action: goto
-      qid:
-      - dia_opd_003
+  default:
+    action: goto
+    qid:
+    - dia_opd_003
 - qid: dia_opd_002-2
   question: มีอาการปวดท้อง หรือ ปัสสาวะผิดปกติ หรือ ตกขาวผิดปกติ หรือ เลือดออกทางช่องคลอดหรือไม่?
   question_type: single_select
