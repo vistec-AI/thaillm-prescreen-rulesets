@@ -20,7 +20,13 @@ import pytest
 
 from prescreen_rulesets.constants import AUTO_EVAL_TYPES
 from prescreen_rulesets.evaluator import ConditionalEvaluator
-from prescreen_rulesets.models.action import GotoAction, OPDAction, TerminateAction
+from prescreen_rulesets.models.action import (
+    EmergencyAction,
+    GotoAction,
+    OPDAction,
+    TerminateAction,
+    UrgencyAction,
+)
 from prescreen_rulesets.models.question import (
     FreeTextQuestion,
     FreeTextWithFieldQuestion,
@@ -187,6 +193,11 @@ def _walk_tree(store, evaluator, source, symptom, demographics, rng,
             return ("opd", steps, answers)
         elif isinstance(action, TerminateAction):
             return ("terminate", steps, answers)
+        elif isinstance(action, UrgencyAction):
+            # Immediate termination (like EmergencyAction)
+            return ("terminate", steps, answers)
+        elif isinstance(action, EmergencyAction):
+            return ("terminate", steps, answers)
 
     assert steps < MAX_STEPS, (
         f"Possible infinite loop in {source}/{symptom} after {steps} steps"
@@ -251,9 +262,13 @@ def test_opd_walkthrough_adult(store, symptom):
     for seed in range(NUM_RANDOM_RUNS):
         rng = random.Random(seed)
         # Walk OLDCARTS first to collect answers
-        _, _, oldcarts_answers = _walk_tree(
+        oc_result, _, oldcarts_answers = _walk_tree(
             store, evaluator, "oldcarts", symptom, demographics, rng,
         )
+        # Skip OPD when OLDCARTS terminated early (urgency/emergency/terminate)
+        # — in the real engine, OPD never runs after early termination
+        if oc_result == "terminate":
+            continue
         # Walk OPD with OLDCARTS answers available
         result, steps, _ = _walk_tree(
             store, evaluator, "opd", symptom, demographics, rng,
@@ -273,9 +288,12 @@ def test_opd_walkthrough_pediatric(store, symptom):
 
     for seed in range(NUM_RANDOM_RUNS):
         rng = random.Random(seed)
-        _, _, oldcarts_answers = _walk_tree(
+        oc_result, _, oldcarts_answers = _walk_tree(
             store, evaluator, "oldcarts", symptom, demographics, rng,
         )
+        # Skip OPD when OLDCARTS terminated early
+        if oc_result == "terminate":
+            continue
         result, steps, _ = _walk_tree(
             store, evaluator, "opd", symptom, demographics, rng,
             prior_answers=oldcarts_answers,

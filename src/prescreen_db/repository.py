@@ -33,6 +33,7 @@ class SessionRepository:
         user_id: str,
         session_id: str,
         ruleset_version: str | None = None,
+        disable_early_termination: bool = False,
     ) -> PrescreenSession:
         """Insert a new session row and return it.
 
@@ -42,6 +43,7 @@ class SessionRepository:
             user_id=user_id,
             session_id=session_id,
             ruleset_version=ruleset_version,
+            disable_early_termination=disable_early_termination,
         )
         db.add(session)
         await db.flush()  # Populate server-side defaults (id, timestamps)
@@ -204,6 +206,25 @@ class SessionRepository:
     ) -> PrescreenSession:
         """Save Phase 3 ER checklist flags."""
         session.er_flags = er_flags
+        session.updated_at = datetime.now(timezone.utc)
+        await db.flush()
+        return session
+
+    async def append_skipped_termination(
+        self,
+        db: AsyncSession,
+        session: PrescreenSession,
+        skipped: dict,
+    ) -> PrescreenSession:
+        """Append a skipped-termination event to the session's JSONB list.
+
+        Called when ``disable_early_termination`` is True and a termination
+        condition is met — the engine records the would-be termination here
+        instead of actually terminating the session.
+        """
+        existing = list(session.skipped_terminations or [])
+        existing.append(skipped)
+        session.skipped_terminations = existing
         session.updated_at = datetime.now(timezone.utc)
         await db.flush()
         return session

@@ -34,12 +34,19 @@ from prescreen_rulesets.constants import (
     AUTO_EVAL_TYPES,
     DEFAULT_ER_DEPARTMENT,
     DEFAULT_ER_SEVERITY,
+    DEFAULT_URGENCY_SEVERITY,
     PEDIATRIC_AGE_THRESHOLD,
     PHASE_NAMES,
     SEVERITY_ORDER,
 )
 from prescreen_rulesets.evaluator import ConditionalEvaluator
-from prescreen_rulesets.models.action import GotoAction, OPDAction, TerminateAction
+from prescreen_rulesets.models.action import (
+    EmergencyAction,
+    GotoAction,
+    OPDAction,
+    TerminateAction,
+    UrgencyAction,
+)
 from prescreen_rulesets.models.question import (
     FreeTextQuestion,
     FreeTextWithFieldQuestion,
@@ -54,6 +61,7 @@ from prescreen_rulesets.models.session import (
     QuestionPayload,
     QuestionsStep,
     SessionInfo,
+    SkippedTermination,
     StepResult,
     TerminationStep,
 )
@@ -64,6 +72,7 @@ logger = logging.getLogger(__name__)
 # Key used in the responses JSONB to store the pending-qid queue for
 # sequential phases (4 OLDCARTS, 7 OPD).
 _PENDING_KEY = "__pending"
+
 
 
 def _demographic_answer_schema(field) -> dict:
@@ -172,14 +181,23 @@ class PrescreenEngine:
         user_id: str,
         session_id: str,
         ruleset_version: str | None = None,
+        disable_early_termination: bool = False,
     ) -> SessionInfo:
         """Create a new prescreening session.
 
         The session starts at phase 0 (Demographics).  The caller must
         ``await db.commit()`` to persist.
+
+        Args:
+            disable_early_termination: when True, the engine skips all early
+                termination points and continues through all 8 phases,
+                recording would-be terminations as ``SkippedTermination``
+                events on the session.
         """
         row = await self._repo.create_session(
-            db, user_id=user_id, session_id=session_id, ruleset_version=ruleset_version,
+            db, user_id=user_id, session_id=session_id,
+            ruleset_version=ruleset_version,
+            disable_early_termination=disable_early_termination,
         )
         return self._to_session_info(row)
 
@@ -1409,6 +1427,22 @@ class PrescreenEngine:
                 "; ".join(custom_reasons) if custom_reasons
                 else f"ER critical positive: {', '.join(positive_qids)} (default response)"
             )
+
+            # When disable_early_termination is set, record the would-be
+            # termination and continue to the next phase instead.
+            if self._should_skip_termination(row):
+                skipped = await self._record_skipped_termination(
+                    db, row,
+                    departments=[DEFAULT_ER_DEPARTMENT],
+                    severity=DEFAULT_ER_SEVERITY,
+                    reason=reason,
+                )
+                await self._repo.advance_phase(db, row, 2)
+                step = self._compute_step(row)
+                if isinstance(step, QuestionsStep):
+                    step.skipped_termination = skipped
+                return step
+
             return await self._terminate(
                 db, row,
                 departments=[DEFAULT_ER_DEPARTMENT],
@@ -1451,6 +1485,21 @@ class PrescreenEngine:
                 item.reason
                 or f"ER checklist auto-complete: {item.qid} (default response)"
             )
+
+            if self._should_skip_termination(row):
+                skipped = await self._record_skipped_termination(
+                    db, row,
+                    departments=[dept],
+                    severity=sev,
+                    reason=reason,
+                    source_qid=item.qid,
+                )
+                # Phase already advanced to 3 — show the checklist instead
+                step = self._compute_step(row)
+                if isinstance(step, QuestionsStep):
+                    step.skipped_termination = skipped
+                return step
+
             return await self._terminate(
                 db, row,
                 departments=[dept],
@@ -1491,6 +1540,21 @@ class PrescreenEngine:
             # Use the item's custom reason if provided, else fall back to
             # auto-generated format with qid identifier.
             reason = item.reason or f"ER checklist positive: {item.qid} (default response)"
+
+            if self._should_skip_termination(row):
+                skipped = await self._record_skipped_termination(
+                    db, row,
+                    departments=[dept],
+                    severity=sev,
+                    reason=reason,
+                    source_qid=item.qid,
+                )
+                await self._repo.advance_phase(db, row, 4)
+                step = self._compute_step(row)
+                if isinstance(step, QuestionsStep):
+                    step.skipped_termination = skipped
+                return step
+
             return await self._terminate(
                 db, row,
                 departments=[dept],
@@ -1534,6 +1598,27 @@ class PrescreenEngine:
         if result is not None:
             # Terminal action (terminate or opd/phase advance)
             if isinstance(result, TerminationStep):
+                # When disable_early_termination is set and this is an early
+                # exit (type == "terminated"), record the skip and continue
+                # resolving the remaining pending queue.
+                if result.type == "terminated" and self._should_skip_termination(row):
+                    dept_ids = [d["id"] for d in result.departments]
+                    sev_id = result.severity["id"] if result.severity else None
+                    skipped = await self._record_skipped_termination(
+                        db, row,
+                        departments=dept_ids,
+                        severity=sev_id,
+                        reason=result.reason,
+                        source_qid=qid,
+                    )
+                    # Continue with remaining pending queue
+                    next_step = await self._resolve_and_persist(
+                        db, row, source, symptom, pending,
+                    )
+                    if isinstance(next_step, QuestionsStep) and next_step.skipped_termination is None:
+                        next_step.skipped_termination = skipped
+                    return next_step
+
                 # When the termination comes from a phase advance (e.g. OPD
                 # auto-eval chain terminated without user-facing questions),
                 # advance the session phase so the record correctly reflects
@@ -1618,6 +1703,29 @@ class PrescreenEngine:
                 reason=action.reason,
             )
 
+        if isinstance(action, UrgencyAction):
+            # Immediate termination with urgency severity (sev002_5) and
+            # departments from action metadata (may be empty).
+            dept_ids = action.department
+            return TerminationStep(
+                type="terminated" if row.current_phase < 7 else "completed",
+                phase=row.current_phase,
+                departments=[self._store.resolve_department(d) for d in dept_ids],
+                severity=self._store.resolve_severity(DEFAULT_URGENCY_SEVERITY),
+                reason=None,
+            )
+
+        if isinstance(action, EmergencyAction):
+            # Immediate termination with Emergency severity (sev003) and
+            # Emergency Medicine department (dept002).
+            return TerminationStep(
+                type="terminated" if row.current_phase < 7 else "completed",
+                phase=row.current_phase,
+                departments=[self._store.resolve_department(DEFAULT_ER_DEPARTMENT)],
+                severity=self._store.resolve_severity(DEFAULT_ER_SEVERITY),
+                reason=None,
+            )
+
         logger.warning("Unknown action type: %s", type(action))
         return None
 
@@ -1688,6 +1796,46 @@ class PrescreenEngine:
                 f"(phase={row.current_phase})"
             )
         return step.questions[0].qid
+
+    # ------------------------------------------------------------------
+    # Internal: disable_early_termination helpers
+    # ------------------------------------------------------------------
+
+    def _should_skip_termination(self, row: PrescreenSession) -> bool:
+        """Return True when early termination should be suppressed.
+
+        The flag is set at session creation and stored on the DB row.
+        """
+        return bool(row.disable_early_termination)
+
+    async def _record_skipped_termination(
+        self,
+        db: AsyncSession,
+        row: PrescreenSession,
+        *,
+        departments: list[str],
+        severity: str | None,
+        reason: str | None,
+        source_qid: str | None = None,
+    ) -> SkippedTermination:
+        """Record a would-be termination that was skipped.
+
+        Persists the event into the session's ``skipped_terminations`` JSONB
+        list and returns a ``SkippedTermination`` model for attaching to the
+        next ``QuestionsStep``.
+        """
+        skipped = SkippedTermination(
+            phase=row.current_phase,
+            phase_name=PHASE_NAMES[row.current_phase],
+            departments=[self._store.resolve_department(d) for d in departments],
+            severity=self._store.resolve_severity(severity) if severity else None,
+            reason=reason,
+            source_qid=source_qid,
+        )
+        await self._repo.append_skipped_termination(
+            db, row, skipped.model_dump(),
+        )
+        return skipped
 
     async def _terminate(
         self,
@@ -1766,8 +1914,42 @@ class PrescreenEngine:
         if isinstance(step, QuestionsStep) and step.phase != row.current_phase:
             await self._repo.advance_phase(db, row, step.phase)
 
-        # If it's a termination, persist it
+        # If it's a termination, persist it — or skip it when flag is set
         if isinstance(step, TerminationStep):
+            # When disable_early_termination is set and this is an early exit,
+            # record the skip and try to continue from the remaining pending.
+            if step.type == "terminated" and self._should_skip_termination(row):
+                dept_ids = [d["id"] for d in step.departments]
+                sev_id = step.severity["id"] if step.severity else None
+                skipped = await self._record_skipped_termination(
+                    db, row,
+                    departments=dept_ids,
+                    severity=sev_id,
+                    reason=step.reason,
+                )
+                # Continue with whatever is left in the pending queue.
+                # If pending is empty, advance phase or complete.
+                if pending:
+                    # Re-resolve from the remaining pending (recursive call).
+                    next_step = await self._resolve_and_persist(
+                        db, row, source, symptom, pending,
+                    )
+                else:
+                    # Pending exhausted — advance to next phase or complete.
+                    phase = row.current_phase
+                    if phase == 4:
+                        await self._repo.advance_phase(db, row, 5)
+                        next_step = self._compute_step(row)
+                    else:
+                        # Phase 7 done — build completion with skipped data
+                        next_step = self._build_completion_step(row)
+                        return await self._complete(db, row, next_step)
+                # Attach the skipped termination to the next step if it
+                # doesn't already carry one (from a nested skip).
+                if isinstance(next_step, QuestionsStep) and next_step.skipped_termination is None:
+                    next_step.skipped_termination = skipped
+                return next_step
+
             # When the termination comes from a phase advance (e.g. pending
             # queue exhausted in OLDCARTS → OPD auto-eval chain terminates),
             # advance the session phase so the record correctly reflects
@@ -1832,9 +2014,33 @@ class PrescreenEngine:
 
         This happens when the OPD tree terminates with a terminate action,
         or when phase 7 pending queue is exhausted.
+
+        When ``disable_early_termination`` is set and skipped terminations
+        exist, the completion result uses the highest-severity skipped
+        termination so the final outcome reflects the most critical event.
         """
-        # If we get here, the OPD tree should have terminated with a result.
-        # Build a default completion with no specific department.
+        skipped = row.skipped_terminations or []
+        if skipped:
+            # Pick the entry with the highest severity according to
+            # SEVERITY_ORDER (higher index = more severe).
+            def _severity_rank(entry: dict) -> int:
+                sev = entry.get("severity")
+                sev_id = sev.get("id") if isinstance(sev, dict) else None
+                try:
+                    return SEVERITY_ORDER.index(sev_id) if sev_id else -1
+                except ValueError:
+                    return -1
+
+            best = max(skipped, key=_severity_rank)
+            return TerminationStep(
+                type="completed",
+                phase=7,
+                departments=best.get("departments", []),
+                severity=best.get("severity"),
+                reason=best.get("reason"),
+            )
+
+        # Default completion with no specific department.
         return TerminationStep(
             type="completed",
             phase=7,
@@ -2017,6 +2223,7 @@ class PrescreenEngine:
             session_id=row.session_id,
             status=row.status.value if isinstance(row.status, SessionStatus) else str(row.status),
             current_phase=row.current_phase,
+            disable_early_termination=row.disable_early_termination,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )

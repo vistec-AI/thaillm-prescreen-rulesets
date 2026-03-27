@@ -864,6 +864,9 @@ class TestStepBackConditionalSkipping:
     ):
         """Answering through OLDCARTS (which may contain conditionals), then
         stepping back, should always present a user-facing question type.
+
+        Uses _pick_answer_last to avoid urgency/terminate paths that
+        would end the session before enough questions are answered.
         """
         step = await _advance_to_phase(engine, mock_db, target_phase=4)
         if not isinstance(step, QuestionsStep):
@@ -871,10 +874,14 @@ class TestStepBackConditionalSkipping:
 
         # Answer enough questions to potentially hit conditional branches
         answered_qids, step = await _answer_sequential_questions(
-            engine, mock_db, step, count=5,
+            engine, mock_db, step, count=5, picker=_pick_answer_last,
         )
         if len(answered_qids) < 2:
             pytest.skip("Not enough sequential questions")
+
+        # Skip if session terminated during answering (e.g. emergency/urgency action)
+        if isinstance(step, TerminationStep):
+            pytest.skip("Session terminated during OLDCARTS answering")
 
         # Step back — should never show a conditional/filter question
         step = await engine.step_back(mock_db, user_id="u1", session_id="s1")
@@ -925,10 +932,13 @@ class TestStepBackConditionalSkipping:
             pytest.skip("OLDCARTS tree auto-resolved")
 
         answered_qids, step = await _answer_sequential_questions(
-            engine, mock_db, step, count=5,
+            engine, mock_db, step, count=5, picker=_pick_answer_last,
         )
         if len(answered_qids) < 3:
             pytest.skip("Not enough sequential questions")
+
+        if isinstance(step, TerminationStep):
+            pytest.skip("Session terminated during OLDCARTS answering")
 
         # Step back multiple times, checking each result
         for i in range(min(len(answered_qids), 4)):
@@ -948,6 +958,13 @@ class TestStepBackConditionalSkipping:
                         f"step_back #{i+1} presented auto-evaluated type "
                         f"'{q.question_type}' (qid: {q.qid})"
                     )
+
+
+# =====================================================================
+# Test: Urgency flag cleared on step_back
+# =====================================================================
+
+
 
 
 # =====================================================================

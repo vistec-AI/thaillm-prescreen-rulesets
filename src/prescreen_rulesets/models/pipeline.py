@@ -149,6 +149,12 @@ class PipelineResult(BaseModel):
         default_factory=list,
         description="Full Q&A history for the session (rule-based + LLM).",
     )
+    # Termination events that were skipped because disable_early_termination
+    # was set.  Empty list when the flag is off or no terminations were hit.
+    skipped_terminations: list[dict] = Field(
+        default_factory=list,
+        description="Termination events skipped due to disable_early_termination.",
+    )
 
 
 # Union for pipeline step dispatching — callers match on step.type.

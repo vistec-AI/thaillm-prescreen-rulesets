@@ -12,6 +12,7 @@ import type {
   RawErCriticalItem,
   RawQuestion,
   SimulatorDataResponse,
+  SkippedTermination,
   TerminationResult,
 } from "../types/simulator";
 import { compare, evalAgeFilter, evalConditional, evalGenderFilter } from "./evaluator";
@@ -25,6 +26,24 @@ const DEFAULT_ER_DEPARTMENT = "dept002";
 
 /** Patients younger than this use the pediatric ER checklist */
 const PEDIATRIC_AGE_THRESHOLD = 15;
+
+/** Fixed severity for urgency actions in OLDCARTS (always "Visit Urgently") */
+const DEFAULT_URGENCY_SEVERITY = "sev002_5";
+
+/** Severity IDs ordered from least to most severe (index = rank) */
+const SEVERITY_ORDER = ["sev001", "sev002", "sev002_5", "sev003"];
+
+/** Human-readable phase names (mirrors Python PHASE_NAMES) */
+const PHASE_NAMES: Record<number, string> = {
+  0: "Demographics",
+  1: "ER Critical Screen",
+  2: "Symptom Selection",
+  3: "ER Checklist",
+  4: "OLDCARTS",
+  5: "Past History",
+  6: "Personal History",
+  7: "OPD",
+};
 
 // --- Age computation ---
 
@@ -50,6 +69,23 @@ export function computeAge(dob: string | null | undefined): number | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Robustly extract a numeric age from demographics.
+ *
+ * Handles number, string, and date_of_birth fallback — mirrors the Python
+ * engine's int(demographics["age"]) which accepts both "25" and 25.
+ * This prevents silent null when the demographic form submits age as a string.
+ */
+export function coerceAge(demographics: Record<string, unknown>): number | null {
+  const raw = demographics.age;
+  if (typeof raw === "number" && !isNaN(raw)) return raw;
+  if (raw !== null && raw !== undefined && raw !== "") {
+    const parsed = Number(raw);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return computeAge(demographics.date_of_birth as string);
 }
 
 // --- Question lookup helpers ---
@@ -178,6 +214,43 @@ export function processAction(
     };
   }
 
+  if (action.action === "urgency") {
+    // Immediate termination with urgency severity (sev002_5) and
+    // departments from action metadata (may be empty).
+    const meta = action.metadata ?? {};
+    const deptIds = (meta.department ?? []).map((d) => d.id);
+    return {
+      type: "terminate",
+      termination: buildUrgencyTermination(deptIds, ruleData, currentPhase),
+    };
+  }
+
+  if (action.action === "emergency") {
+    // Immediate termination with Emergency severity (sev003) and dept002
+    const deptMap = new Map(ruleData.departments.map((d) => [d.id, d.name]));
+    const sevMap = new Map(
+      ruleData.severity_levels.map((s) => [s.id, s.name])
+    );
+    return {
+      type: "terminate",
+      termination: {
+        type: currentPhase < 7 ? "terminated" : "completed",
+        departments: [
+          {
+            id: DEFAULT_ER_DEPARTMENT,
+            name: deptMap.get(DEFAULT_ER_DEPARTMENT) ?? DEFAULT_ER_DEPARTMENT,
+          },
+        ],
+        severity: {
+          id: DEFAULT_ER_SEVERITY,
+          name: sevMap.get(DEFAULT_ER_SEVERITY) ?? DEFAULT_ER_SEVERITY,
+        },
+        reason: null,
+        fromPhase: currentPhase,
+      },
+    };
+  }
+
   return { type: "continue" };
 }
 
@@ -211,11 +284,13 @@ export function resolveNext(
   const questions = ruleData[source]?.[symptom] ?? [];
   const qMap = buildQuestionMap(questions);
 
-  // Ensure age is available for age_filter evaluation
+  // Ensure age is a proper number — the demographic form should submit it as
+  // a number, but if it arrives as a string (e.g. "25") we must coerce it
+  // before auto-eval functions that use strict typeof checks.
   const demoWithAge = { ...demographics };
-  if (!("age" in demoWithAge)) {
-    const age = computeAge(demoWithAge.date_of_birth as string);
-    if (age !== null) demoWithAge.age = age;
+  const resolvedAge = coerceAge(demoWithAge);
+  if (resolvedAge !== null) {
+    demoWithAge.age = resolvedAge;
   }
 
   // Work on a copy to avoid mutating the caller's array unexpectedly
@@ -281,14 +356,14 @@ function autoEvaluate(
     return evalConditional(
       question.rules ?? [],
       question.default,
-      answers
+      answers,
+      demographics
     );
   }
   if (qt === "age_filter") {
-    const age =
-      typeof demographics.age === "number"
-        ? demographics.age
-        : computeAge(demographics.date_of_birth as string);
+    // Use coerceAge for robust extraction — handles string "25", number 25,
+    // and date_of_birth fallback.  Prevents silent null when age is a string.
+    const age = coerceAge(demographics);
     return evalAgeFilter(question.options ?? [], age);
   }
   if (qt === "gender_filter") {
@@ -335,7 +410,7 @@ function enrichDemographics(
   demographics: Record<string, unknown>
 ): Record<string, unknown> {
   const enriched = { ...demographics };
-  const age = typeof enriched.age === "number" ? enriched.age : null;
+  const age = coerceAge(enriched);
   const ageMonths =
     typeof enriched.age_months === "number" ? enriched.age_months : 0;
   if (age !== null) {
@@ -506,6 +581,32 @@ export function resolveErChecklistTermination(
   return null;
 }
 
+/** Build urgency termination result (sev002_5 with optional departments) */
+export function buildUrgencyTermination(
+  departmentIds: string[],
+  ruleData: SimulatorDataResponse,
+  currentPhase: number
+): TerminationResult {
+  const deptMap = new Map(ruleData.departments.map((d) => [d.id, d.name]));
+  const sevMap = new Map(
+    ruleData.severity_levels.map((s) => [s.id, s.name])
+  );
+
+  return {
+    type: "terminated",
+    departments: departmentIds.map((id) => ({
+      id,
+      name: deptMap.get(id) ?? id,
+    })),
+    severity: {
+      id: DEFAULT_URGENCY_SEVERITY,
+      name: sevMap.get(DEFAULT_URGENCY_SEVERITY) ?? DEFAULT_URGENCY_SEVERITY,
+    },
+    reason: null,
+    fromPhase: currentPhase,
+  };
+}
+
 /** Build ER critical termination result (any positive → Emergency) */
 export function buildErCriticalTermination(
   positiveQids: string[],
@@ -540,4 +641,101 @@ export function buildErCriticalTermination(
     reason,
     fromPhase: 1,
   };
+}
+
+// --- disable_early_termination helpers ---
+
+/**
+ * Build a SkippedTermination record from a TerminationResult.
+ *
+ * Used when disable_early_termination is active and a termination
+ * would have occurred — we capture the details instead of stopping.
+ */
+export function buildSkippedTermination(
+  termination: TerminationResult,
+  phase: number,
+  sourceQid: string | null = null
+): SkippedTermination {
+  return {
+    phase,
+    phaseName: PHASE_NAMES[phase] ?? `Phase ${phase}`,
+    departments: termination.departments,
+    severity: termination.severity,
+    reason: termination.reason,
+    sourceQid: sourceQid,
+  };
+}
+
+/**
+ * Resolve the next question while skipping termination results.
+ *
+ * Wraps resolveNext in a loop: whenever auto-eval produces a terminate
+ * action, it is collected as a SkippedTermination and the loop continues
+ * with the remaining pending queue.
+ *
+ * Returns the eventual non-terminate result plus any skipped terminations.
+ */
+export type ResolveSkipResult = {
+  result: Exclude<ResolveResult, { kind: "terminate" }>;
+  skippedTerminations: SkippedTermination[];
+};
+
+export function resolveNextSkippingTerminations(
+  source: "oldcarts" | "opd",
+  symptom: string,
+  pending: string[],
+  answers: Record<string, unknown>,
+  demographics: Record<string, unknown>,
+  ruleData: SimulatorDataResponse,
+  currentPhase: number
+): ResolveSkipResult {
+  const skipped: SkippedTermination[] = [];
+  let currentPending = [...pending];
+
+  // Keep resolving until we get a non-terminate result.  Each iteration
+  // may consume some qids from the pending queue via auto-eval, so we
+  // pass the updated pending through.
+  for (;;) {
+    const resolved = resolveNext(
+      source, symptom, currentPending, answers, demographics, ruleData, currentPhase,
+    );
+
+    if (resolved.kind !== "terminate") {
+      return { result: resolved, skippedTerminations: skipped };
+    }
+
+    // Collect the skipped termination and continue with remaining pending
+    skipped.push(
+      buildSkippedTermination(resolved.termination, currentPhase),
+    );
+    currentPending = resolved.pending;
+
+    // If pending is empty after the skip, return exhausted
+    if (currentPending.length === 0) {
+      return {
+        result: { kind: "exhausted", pending: currentPending },
+        skippedTerminations: skipped,
+      };
+    }
+  }
+}
+
+/**
+ * Pick the highest-severity entry from a list of skipped terminations.
+ *
+ * Uses SEVERITY_ORDER for ranking (higher index = more severe).
+ */
+export function highestSeveritySkipped(
+  skipped: SkippedTermination[]
+): SkippedTermination | null {
+  if (skipped.length === 0) return null;
+  return skipped.reduce((best, entry) => {
+    const bestRank = best.severity
+      ? SEVERITY_ORDER.indexOf(best.severity.id)
+      : -1;
+    const entryRank = entry.severity
+      ? SEVERITY_ORDER.indexOf(entry.severity.id)
+      : -1;
+    return entryRank > bestRank ? entry : best;
+  });
 }
