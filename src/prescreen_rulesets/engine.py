@@ -1382,12 +1382,16 @@ class PrescreenEngine:
         """Process phase 6 personal history submission.
 
         Merges personal history data into the existing demographics JSONB.
+        If the subsequent OPD phase (7) auto-evaluates entirely (all
+        questions are filters/conditionals), the completion is persisted
+        via ``_persist_step_if_terminal``.
         """
         existing = dict(row.demographics or {})
         self._validate_bulk_fields(value, self._store.personal_history, existing)
         await self._repo.save_demographics(db, row, value)
         await self._repo.advance_phase(db, row, 7)
-        return self._compute_step(row)
+        step = self._compute_step(row)
+        return await self._persist_step_if_terminal(db, row, step)
 
     async def _submit_er_critical(
         self, db: AsyncSession, row: PrescreenSession, value: dict[str, Any]
@@ -1551,6 +1555,7 @@ class PrescreenEngine:
                 )
                 await self._repo.advance_phase(db, row, 4)
                 step = self._compute_step(row)
+                step = await self._persist_step_if_terminal(db, row, step)
                 if isinstance(step, QuestionsStep):
                     step.skipped_termination = skipped
                 return step
@@ -1564,7 +1569,8 @@ class PrescreenEngine:
 
         # All negative — advance to phase 4 (OLDCARTS)
         await self._repo.advance_phase(db, row, 4)
-        return self._compute_step(row)
+        step = self._compute_step(row)
+        return await self._persist_step_if_terminal(db, row, step)
 
     async def _submit_sequential(
         self, db: AsyncSession, row: PrescreenSession, qid: str, value: Any
@@ -1883,6 +1889,35 @@ class PrescreenEngine:
         await self._repo.complete_session(db, row, result_payload)
         return step
 
+    async def _persist_step_if_terminal(
+        self,
+        db: AsyncSession,
+        row: PrescreenSession,
+        step: StepResult,
+    ) -> StepResult:
+        """Persist terminal outcomes returned by ``_compute_step``.
+
+        When a bulk submit handler (e.g. ``_submit_personal_history``)
+        advances to a sequential phase that auto-evaluates entirely,
+        ``_compute_step`` returns a ``TerminationStep`` without persisting
+        the session status or result.  This helper ensures the session is
+        properly completed or terminated in the DB.
+
+        Non-terminal steps (``QuestionsStep``) are returned unchanged.
+        """
+        if not isinstance(step, TerminationStep):
+            return step
+        if step.type == "terminated":
+            dept_ids = [d["id"] for d in step.departments]
+            sev_id = step.severity["id"] if step.severity else None
+            return await self._terminate(
+                db, row,
+                departments=dept_ids,
+                severity=sev_id,
+                reason=step.reason,
+            )
+        return await self._complete(db, row, step)
+
     async def _save_pending(
         self, db: AsyncSession, row: PrescreenSession, pending: list[str]
     ) -> None:
@@ -1908,11 +1943,22 @@ class PrescreenEngine:
         re-computes the step from the persisted pending) derives the
         *same* qid that was just presented — not the *next* one.
         """
+        # Capture the phase we started from *before* _resolve_next runs,
+        # because _build_advance_step (called inside _resolve_next) may
+        # modify row.current_phase in-memory.  We need the original phase
+        # to detect phase advances correctly.
+        starting_phase = row.current_phase
+
         step = self._resolve_next(row, source, symptom, pending)
 
-        # If the step is a phase advance, persist it
-        if isinstance(step, QuestionsStep) and step.phase != row.current_phase:
+        # Phase advance: the step targets a different phase than we started
+        # from (e.g. OLDCARTS auto-eval chain → OPD action → phase 5 step).
+        # Persist the advance and return immediately — the old pending queue
+        # is stale and must NOT be saved.  advance_phase() also clears
+        # __pending in the responses JSONB.
+        if isinstance(step, QuestionsStep) and step.phase != starting_phase:
             await self._repo.advance_phase(db, row, step.phase)
+            return step
 
         # If it's a termination, persist it — or skip it when flag is set
         if isinstance(step, TerminationStep):
@@ -1936,8 +1982,7 @@ class PrescreenEngine:
                     )
                 else:
                     # Pending exhausted — advance to next phase or complete.
-                    phase = row.current_phase
-                    if phase == 4:
+                    if starting_phase == 4:
                         await self._repo.advance_phase(db, row, 5)
                         next_step = self._compute_step(row)
                     else:
@@ -1954,7 +1999,7 @@ class PrescreenEngine:
             # queue exhausted in OLDCARTS → OPD auto-eval chain terminates),
             # advance the session phase so the record correctly reflects
             # that the next phase was processed.
-            if step.phase != row.current_phase:
+            if step.phase != starting_phase:
                 await self._repo.advance_phase(db, row, step.phase)
             if step.type == "terminated":
                 dept_ids = [d["id"] for d in step.departments]
@@ -1994,7 +2039,7 @@ class PrescreenEngine:
             reason=result.get("reason") or row.termination_reason,
         )
 
-    def _build_advance_step(self, row: PrescreenSession, next_phase: int) -> QuestionsStep:
+    def _build_advance_step(self, row: PrescreenSession, next_phase: int) -> StepResult:
         """Build a step for the next phase (used when current phase is exhausted)."""
         # Temporarily adjust phase to compute the next step
         original_phase = row.current_phase
