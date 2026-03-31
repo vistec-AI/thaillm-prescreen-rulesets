@@ -2318,6 +2318,81 @@ class TestStalePendingRegression:
             )
 
 
+class TestAdviceOnlyTerminate:
+    """BUG-003: OPD advice-only terminate paths should surface advice as reason.
+
+    Nine OPD terminate actions have a ``metadata.advice`` field with
+    self-care guidance but no department or severity.  The engine should
+    surface the advice text as the termination ``reason`` so downstream
+    consumers (API, frontend, LLM predictor) can see it.
+    """
+
+    @pytest.mark.asyncio
+    async def test_advice_surfaced_as_reason(self, engine, mock_db, mock_repo):
+        """Walk Diarrhea OPD to dia_opd_006 'ไม่ใช่' and verify advice appears in reason."""
+        # Set up session directly at phase 7 (OPD) with Diarrhea,
+        # pre-populating OLDCARTS answers that OPD conditionals check.
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.current_phase = 7
+        row.status = SessionStatus.IN_PROGRESS
+        row.demographics = {**VALID_DEMOGRAPHICS, **VALID_PAST_HISTORY}
+        row.primary_symptom = "Diarrhea"
+        # OLDCARTS answers that OPD conditionals reference — set to benign
+        # values so all conditionals fall through to dia_opd_006.
+        row.responses = {
+            # dia_as_001: no alarming associated symptoms
+            "dia_as_001": {"value": ["ไม่มี"]},
+            # dia_c_001: ordinary diarrhea character (not bloody mucus)
+            "dia_c_001": {"value": "ท้องเสียเป็นน้ำ"},
+        }
+
+        # Walk through OPD sequential questions until termination.
+        # OPD conditionals (age_filter, pregnancy check, OLDCARTS checks)
+        # auto-evaluate.  We only need to answer user-facing questions.
+        max_steps = 20
+        step = await engine.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+
+        for _ in range(max_steps):
+            if isinstance(step, TerminationStep):
+                break
+            assert isinstance(step, QuestionsStep), (
+                f"Expected QuestionsStep or TerminationStep, got {type(step).__name__}"
+            )
+            q = step.questions[0]
+
+            # For multi_select: pick empty list (no concerning features)
+            # For single_select: pick "ไม่ใช่" when available, else last option
+            if q.question_type in ("multi_select", "image_multi_select"):
+                answer = []
+            elif q.question_type in ("single_select", "image_single_select"):
+                opts = q.options or []
+                no_opts = [o for o in opts if "ไม่" in (o.get("id") or "")]
+                answer = no_opts[0]["id"] if no_opts else opts[-1]["id"]
+            else:
+                answer = "ไม่มี"
+
+            step = await engine.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=answer,
+            )
+
+        assert isinstance(step, TerminationStep), (
+            "Expected flow to terminate after walking OPD Diarrhea tree"
+        )
+        # The advice-only path should surface the Thai advice text as reason
+        assert step.reason is not None, (
+            "Advice-only OPD terminate should have reason populated "
+            "with the self-care advice text from YAML metadata"
+        )
+        assert "พบแพทย์" in step.reason, (
+            f"Expected Thai advice text containing 'พบแพทย์' (see doctor), "
+            f"got: {step.reason!r}"
+        )
+
+
 class TestCompletionPersistence:
     """Regression tests for missing completion persistence.
 

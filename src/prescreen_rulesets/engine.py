@@ -1706,7 +1706,7 @@ class PrescreenEngine:
                 phase=row.current_phase,
                 departments=[self._store.resolve_department(d) for d in dept_ids],
                 severity=self._store.resolve_severity(severity) if severity else None,
-                reason=action.reason,
+                reason=action.reason or action.advice,
             )
 
         if isinstance(action, UrgencyAction):

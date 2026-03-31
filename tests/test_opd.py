@@ -537,3 +537,57 @@ def test_opd_conditional_predicate_semantics():
 
                     else:
                         raise AssertionError(f"Unhandled referenced question type {type(ref_q)} for {pred.qid} in {cond_q.qid}")
+
+
+def test_opd_terminate_has_department_or_advice():
+    """Every OPD terminate action must have department routing OR self-care advice.
+
+    Terminate actions with neither department nor advice produce an empty
+    pipeline result — no department routing AND no clinical guidance.
+    The 9 advice-only paths are valid "observe at home" outcomes; adding
+    this test prevents future regressions where a terminate is added with
+    nothing actionable.
+    """
+    rules = load_rules()
+
+    def _check_terminate(action, symptom: str, qid: str, source: str):
+        """Assert a terminate action has department or advice."""
+        if action.action != "terminate":
+            return
+        has_dept = len(action.department) > 0
+        has_advice = getattr(action, "advice", None) is not None
+        assert has_dept or has_advice, (
+            f"[{symptom}] {qid} ({source}): terminate has neither "
+            f"department nor advice — pipeline result will have no "
+            f"actionable output"
+        )
+
+    for symptom, q_list in rules["opd"].items():
+        for q_dict in q_list:
+            qid = q_dict.get("qid", "?")
+            qtype = q_dict.get("question_type")
+            q_cls = question_mapper.get(qtype)
+            if q_cls is None:
+                continue
+            question = q_cls(**q_dict)
+
+            # single_select, age_filter, gender_filter: per-option actions
+            if isinstance(question, (SingleSelectQuestion, AgeFilterQuestion, GenderQuestion)):
+                for opt in question.options:
+                    _check_terminate(opt.action, symptom, qid, f"option '{opt.id}'")
+
+            # number_range: on_submit action
+            elif isinstance(question, NumberRangeQuestion):
+                _check_terminate(question.on_submit, symptom, qid, "on_submit")
+
+            # conditional: rule then-actions and default
+            elif isinstance(question, ConditionalQuestion):
+                for rule in question.rules:
+                    _check_terminate(rule.then, symptom, qid, "conditional rule")
+                if question.default is not None:
+                    _check_terminate(question.default, symptom, qid, "default")
+
+            # multi_select: next action (not per-option)
+            elif isinstance(question, (MultiSelectQuestion, ImageMultiSelectQuestion)):
+                if hasattr(question, "next") and question.next is not None:
+                    _check_terminate(question.next, symptom, qid, "next")
