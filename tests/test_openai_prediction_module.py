@@ -3,11 +3,13 @@
 Covers:
   - _filter_qa_pairs: phase 3 negative removal, other phases unchanged
   - _build_response_format: validates JSON schema has correct enums
-  - _parse_and_validate: ER override, min severity enforcement, max diagnoses cap
+  - _parse_response: JSON parsing, max diagnoses cap
+  - _apply_safety_constraints: ER override, min severity enforcement
   - Full predict() flow with mocked OpenAI client
+  - Re-prompt on fewer than 3 diagnoses
   - Transient error handling (graceful degradation)
   - Permanent error handling (re-raised)
-  - Prompt rendering: system prompt contains disease table, user prompt groups by phase
+  - Prompt rendering: system prompt is lean, user prompt contains reference tables
   - set_context: context stored and used correctly
 """
 
@@ -212,11 +214,11 @@ class TestResponseFormatSchema:
 
 
 # =====================================================================
-# _parse_and_validate tests
+# _parse_response tests
 # =====================================================================
 
-class TestParseAndValidate:
-    """Tests for response parsing and safety constraint enforcement."""
+class TestParseResponse:
+    """Tests for _parse_response — raw JSON parsing without safety constraints."""
 
     def test_valid_response(self, predictor):
         """Standard valid response is parsed correctly."""
@@ -224,20 +226,21 @@ class TestParseAndValidate:
             "diagnoses": [
                 {"disease_id": "d001"},
                 {"disease_id": "d002"},
+                {"disease_id": "d003"},
             ],
             "departments": ["dept004"],
             "severity": "sev002",
             "reasoning": "Likely abdominal injury based on symptoms.",
         })
-        result = predictor._parse_and_validate(content)
+        result = predictor._parse_response(content)
         assert isinstance(result, PredictionResult)
-        assert len(result.diagnoses) == 2
+        assert len(result.diagnoses) == 3
         assert result.diagnoses[0].disease_id == "d001"
         assert result.departments == ["dept004"]
         assert result.severity == "sev002"
 
     def test_max_diagnoses_cap(self, predictor):
-        """Result is capped at max_diagnoses."""
+        """Result is truncated at max_diagnoses (10)."""
         diagnoses = [
             {"disease_id": f"d{i:03d}"}
             for i in range(1, 21)
@@ -248,21 +251,53 @@ class TestParseAndValidate:
             "severity": "sev001",
             "reasoning": "Many possibilities.",
         })
-        result = predictor._parse_and_validate(content)
+        result = predictor._parse_response(content)
         assert len(result.diagnoses) == 10, (
             f"Expected 10 diagnoses (max), got {len(result.diagnoses)}"
         )
 
-    def test_er_override(self, predictor):
-        """When er_override is set, ER severity and department are forced."""
-        predictor.set_context(er_override=True)
+    def test_fewer_than_3_diagnoses_still_parsed(self, predictor):
+        """_parse_response returns the result as-is; min-3 enforcement is in predict()."""
         content = json.dumps({
             "diagnoses": [{"disease_id": "d001"}],
             "departments": ["dept004"],
-            "severity": "sev001",
-            "reasoning": "Test ER override.",
+            "severity": "sev002",
+            "reasoning": "Only one diagnosis.",
         })
-        result = predictor._parse_and_validate(content)
+        result = predictor._parse_response(content)
+        assert len(result.diagnoses) == 1, (
+            "_parse_response should not enforce min diagnoses"
+        )
+
+    def test_invalid_json_returns_empty(self, predictor):
+        """Malformed JSON returns empty PredictionResult."""
+        result = predictor._parse_response("not json at all")
+        assert result.diagnoses == []
+        assert result.departments == []
+        assert result.severity is None
+
+
+# =====================================================================
+# _apply_safety_constraints tests
+# =====================================================================
+
+class TestApplySafetyConstraints:
+    """Tests for _apply_safety_constraints — ER override and min severity."""
+
+    def test_er_override(self, predictor):
+        """When er_override is set, ER severity and department are forced."""
+        parsed = PredictionResult(
+            diagnoses=[
+                DiagnosisResult(disease_id="d001"),
+                DiagnosisResult(disease_id="d002"),
+                DiagnosisResult(disease_id="d003"),
+            ],
+            departments=["dept004"],
+            severity="sev001",
+        )
+        result = predictor._apply_safety_constraints(
+            parsed, er_override=True, min_severity=None,
+        )
         assert result.severity == "sev003", (
             "ER override should force severity to sev003"
         )
@@ -272,52 +307,52 @@ class TestParseAndValidate:
 
     def test_min_severity_enforcement(self, predictor):
         """When min_severity is set, predicted severity is bumped up if needed."""
-        predictor.set_context(min_severity="sev002_5")
-        content = json.dumps({
-            "diagnoses": [{"disease_id": "d001"}],
-            "departments": ["dept004"],
-            "severity": "sev002",
-            "reasoning": "Test min severity.",
-        })
-        result = predictor._parse_and_validate(content)
+        parsed = PredictionResult(
+            diagnoses=[
+                DiagnosisResult(disease_id="d001"),
+                DiagnosisResult(disease_id="d002"),
+                DiagnosisResult(disease_id="d003"),
+            ],
+            departments=["dept004"],
+            severity="sev002",
+        )
+        result = predictor._apply_safety_constraints(
+            parsed, er_override=False, min_severity="sev002_5",
+        )
         assert result.severity == "sev002_5", (
             "Severity should be bumped to min_severity sev002_5"
         )
 
     def test_min_severity_no_bump_when_higher(self, predictor):
         """When predicted severity is already higher, no bump needed."""
-        predictor.set_context(min_severity="sev001")
-        content = json.dumps({
-            "diagnoses": [{"disease_id": "d001"}],
-            "departments": ["dept004"],
-            "severity": "sev002",
-            "reasoning": "Already higher.",
-        })
-        result = predictor._parse_and_validate(content)
+        parsed = PredictionResult(
+            diagnoses=[
+                DiagnosisResult(disease_id="d001"),
+                DiagnosisResult(disease_id="d002"),
+                DiagnosisResult(disease_id="d003"),
+            ],
+            departments=["dept004"],
+            severity="sev002",
+        )
+        result = predictor._apply_safety_constraints(
+            parsed, er_override=False, min_severity="sev001",
+        )
         assert result.severity == "sev002", (
             "Severity should stay at sev002 (higher than min sev001)"
         )
 
-    def test_invalid_json_returns_empty(self, predictor):
-        """Malformed JSON returns empty PredictionResult."""
-        result = predictor._parse_and_validate("not json at all")
-        assert result.diagnoses == []
-        assert result.departments == []
-        assert result.severity is None
-
-    def test_context_resets_after_parse(self, predictor):
-        """Context (min_severity, er_override) is cleared after _parse_and_validate."""
-        predictor.set_context(min_severity="sev002", er_override=True)
-        content = json.dumps({
-            "diagnoses": [],
-            "departments": ["dept002"],
-            "severity": "sev003",
-            "reasoning": "Test.",
-        })
-        predictor._parse_and_validate(content)
-        # After parsing, context should be reset
-        assert predictor._min_severity is None
-        assert predictor._er_override is False
+    def test_no_constraints(self, predictor):
+        """When no constraints set, result passes through unchanged."""
+        parsed = PredictionResult(
+            diagnoses=[DiagnosisResult(disease_id="d001")],
+            departments=["dept004"],
+            severity="sev001",
+        )
+        result = predictor._apply_safety_constraints(
+            parsed, er_override=False, min_severity=None,
+        )
+        assert result.severity == "sev001"
+        assert result.departments == ["dept004"]
 
 
 # =====================================================================
@@ -347,32 +382,37 @@ class TestSetContext:
 class TestPredictFlow:
     """Integration tests for predict() with mocked AsyncOpenAI."""
 
+    def _mock_response(self, content: str) -> MagicMock:
+        """Build a mock OpenAI response with the given content."""
+        mock_message = MagicMock()
+        mock_message.content = content
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        return mock_response
+
     @pytest.mark.asyncio
     async def test_predict_success(self, predictor):
         """Successful API call returns parsed PredictionResult."""
-        mock_message = MagicMock()
-        mock_message.content = json.dumps({
+        content = json.dumps({
             "diagnoses": [
                 {"disease_id": "d001"},
                 {"disease_id": "d003"},
+                {"disease_id": "d005"},
             ],
             "departments": ["dept004"],
             "severity": "sev002",
             "reasoning": "Based on symptoms, abdominal injury most likely.",
         })
-        mock_choice = MagicMock()
-        mock_choice.message = mock_message
-        mock_response = MagicMock()
-        mock_response.choices = [mock_choice]
-
         predictor._client.chat.completions.create = AsyncMock(
-            return_value=mock_response,
+            return_value=self._mock_response(content),
         )
 
         result = await predictor.predict(_make_qa_pairs())
 
         assert isinstance(result, PredictionResult)
-        assert len(result.diagnoses) == 2
+        assert len(result.diagnoses) == 3
         assert result.diagnoses[0].disease_id == "d001"
         assert result.departments == ["dept004"]
         assert result.severity == "sev002"
@@ -380,20 +420,18 @@ class TestPredictFlow:
     @pytest.mark.asyncio
     async def test_predict_uses_structured_output(self, predictor):
         """predict() passes response_format with json_schema to the API."""
-        mock_message = MagicMock()
-        mock_message.content = json.dumps({
-            "diagnoses": [],
+        content = json.dumps({
+            "diagnoses": [
+                {"disease_id": "d001"},
+                {"disease_id": "d002"},
+                {"disease_id": "d003"},
+            ],
             "departments": ["dept001"],
             "severity": "sev001",
             "reasoning": "Test.",
         })
-        mock_choice = MagicMock()
-        mock_choice.message = mock_message
-        mock_response = MagicMock()
-        mock_response.choices = [mock_choice]
-
         predictor._client.chat.completions.create = AsyncMock(
-            return_value=mock_response,
+            return_value=self._mock_response(content),
         )
 
         await predictor.predict([])
@@ -445,20 +483,18 @@ class TestPredictFlow:
         """predict() with set_context applies ER override correctly."""
         predictor.set_context(er_override=True, min_severity="sev002")
 
-        mock_message = MagicMock()
-        mock_message.content = json.dumps({
-            "diagnoses": [{"disease_id": "d001"}],
+        content = json.dumps({
+            "diagnoses": [
+                {"disease_id": "d001"},
+                {"disease_id": "d002"},
+                {"disease_id": "d003"},
+            ],
             "departments": ["dept004"],
             "severity": "sev001",
             "reasoning": "Test with context.",
         })
-        mock_choice = MagicMock()
-        mock_choice.message = mock_message
-        mock_response = MagicMock()
-        mock_response.choices = [mock_choice]
-
         predictor._client.chat.completions.create = AsyncMock(
-            return_value=mock_response,
+            return_value=self._mock_response(content),
         )
 
         result = await predictor.predict(_make_qa_pairs())
@@ -466,6 +502,105 @@ class TestPredictFlow:
         # ER override should force sev003 and include dept002
         assert result.severity == "sev003"
         assert "dept002" in result.departments
+        # Context should be reset after predict()
+        assert predictor._min_severity is None
+        assert predictor._er_override is False
+
+    @pytest.mark.asyncio
+    async def test_predict_reprompts_on_fewer_than_3_diagnoses(self, predictor):
+        """When LLM returns < 3 diagnoses, predict() re-prompts once."""
+        # First response: only 2 diagnoses
+        first_content = json.dumps({
+            "diagnoses": [
+                {"disease_id": "d001"},
+                {"disease_id": "d002"},
+            ],
+            "departments": ["dept004"],
+            "severity": "sev002",
+            "reasoning": "Initial attempt.",
+        })
+        # Retry response: 4 diagnoses
+        retry_content = json.dumps({
+            "diagnoses": [
+                {"disease_id": "d001"},
+                {"disease_id": "d002"},
+                {"disease_id": "d003"},
+                {"disease_id": "d004"},
+            ],
+            "departments": ["dept004"],
+            "severity": "sev002",
+            "reasoning": "Expanded differentials.",
+        })
+        predictor._client.chat.completions.create = AsyncMock(
+            side_effect=[
+                self._mock_response(first_content),
+                self._mock_response(retry_content),
+            ],
+        )
+
+        result = await predictor.predict(_make_qa_pairs())
+
+        # Should have called the API twice (initial + re-prompt)
+        assert predictor._client.chat.completions.create.call_count == 2, (
+            "Should re-prompt once when fewer than 3 diagnoses"
+        )
+        # Re-prompt message should ask for at least 3
+        retry_call = predictor._client.chat.completions.create.call_args_list[1]
+        retry_messages = retry_call.kwargs["messages"]
+        assert len(retry_messages) == 4, (
+            "Retry should have 4 messages: system + user + assistant + re-prompt"
+        )
+        assert "at least 3" in retry_messages[3]["content"], (
+            "Re-prompt should ask for at least 3 diagnoses"
+        )
+        # Final result should use the retry response
+        assert len(result.diagnoses) == 4
+        assert result.diagnoses[0].disease_id == "d001"
+
+    @pytest.mark.asyncio
+    async def test_predict_accepts_retry_even_if_still_under_3(self, predictor):
+        """If the retry still returns < 3, the result is accepted as-is."""
+        content = json.dumps({
+            "diagnoses": [{"disease_id": "d001"}],
+            "departments": ["dept004"],
+            "severity": "sev002",
+            "reasoning": "Only one possible.",
+        })
+        predictor._client.chat.completions.create = AsyncMock(
+            return_value=self._mock_response(content),
+        )
+
+        result = await predictor.predict(_make_qa_pairs())
+
+        # Called twice (initial + re-prompt), but result accepted as-is
+        assert predictor._client.chat.completions.create.call_count == 2
+        assert len(result.diagnoses) == 1, (
+            "After retry still < 3, result should be accepted as-is"
+        )
+
+    @pytest.mark.asyncio
+    async def test_predict_no_reprompt_when_3_or_more(self, predictor):
+        """When LLM returns >= 3 diagnoses, no re-prompt happens."""
+        content = json.dumps({
+            "diagnoses": [
+                {"disease_id": "d001"},
+                {"disease_id": "d002"},
+                {"disease_id": "d003"},
+            ],
+            "departments": ["dept004"],
+            "severity": "sev002",
+            "reasoning": "Sufficient differentials.",
+        })
+        predictor._client.chat.completions.create = AsyncMock(
+            return_value=self._mock_response(content),
+        )
+
+        result = await predictor.predict(_make_qa_pairs())
+
+        assert predictor._client.chat.completions.create.call_count == 1, (
+            "Should NOT re-prompt when >= 3 diagnoses returned"
+        )
+        assert len(result.diagnoses) == 3
 
 
 # =====================================================================
@@ -475,33 +610,54 @@ class TestPredictFlow:
 class TestPromptRendering:
     """Tests for PredictionPromptManager template rendering."""
 
-    def test_system_prompt_contains_disease_table(self, store):
-        """System prompt includes the disease reference table."""
+    def test_system_prompt_is_lean(self, store):
+        """System prompt is a concise role definition without reference tables."""
         pm = PredictionPromptManager(store)
         system = pm.render_system()
 
-        # Should contain at least one disease ID and name
-        assert "d001" in system, "System prompt should contain disease ID d001"
-        assert "Abdominal injury" in system, (
-            "System prompt should contain disease name"
+        assert "senior Thai physician" in system, (
+            "System prompt should define the physician role"
+        )
+        # Reference tables should NOT be in the system prompt
+        assert "d001" not in system, (
+            "Disease table should be in the user prompt, not system"
+        )
+        assert "dept001" not in system, (
+            "Department table should be in the user prompt, not system"
         )
 
-    def test_system_prompt_contains_department_table(self, store):
-        """System prompt includes the department reference table."""
+    def test_user_prompt_contains_disease_table(self, store):
+        """User prompt includes the disease reference table."""
         pm = PredictionPromptManager(store)
-        system = pm.render_system()
+        prompt = pm.render_prompt(_make_qa_pairs())
 
-        assert "dept001" in system or "dept002" in system, (
-            "System prompt should contain department IDs"
+        assert "d001" in prompt, "User prompt should contain disease ID d001"
+        assert "Disease Reference" in prompt, (
+            "User prompt should contain disease reference header"
         )
 
-    def test_system_prompt_contains_severity_table(self, store):
-        """System prompt includes the severity reference table."""
+    def test_user_prompt_contains_department_table(self, store):
+        """User prompt includes the department reference table."""
         pm = PredictionPromptManager(store)
-        system = pm.render_system()
+        prompt = pm.render_prompt(_make_qa_pairs())
 
-        assert "sev001" in system, "System prompt should contain severity ID sev001"
-        assert "sev003" in system, "System prompt should contain severity ID sev003"
+        assert "dept001" in prompt or "dept002" in prompt, (
+            "User prompt should contain department IDs"
+        )
+        assert "Department Reference" in prompt, (
+            "User prompt should contain department reference header"
+        )
+
+    def test_user_prompt_contains_severity_table(self, store):
+        """User prompt includes the severity reference table."""
+        pm = PredictionPromptManager(store)
+        prompt = pm.render_prompt(_make_qa_pairs())
+
+        assert "sev001" in prompt, "User prompt should contain severity ID sev001"
+        assert "sev003" in prompt, "User prompt should contain severity ID sev003"
+        assert "Severity Reference" in prompt, (
+            "User prompt should contain severity reference header"
+        )
 
     def test_user_prompt_groups_by_phase(self, store):
         """User prompt groups QA pairs by phase with headers."""
@@ -531,6 +687,18 @@ class TestPromptRendering:
 
         assert "sev002_5" in prompt, (
             "Should contain min_severity instruction"
+        )
+
+    def test_user_prompt_contains_min_diagnoses_guidance(self, store):
+        """User prompt includes guidance about minimum 3 diagnoses."""
+        pm = PredictionPromptManager(store)
+        prompt = pm.render_prompt([])
+
+        assert "at least 3" in prompt, (
+            "User prompt should mention minimum 3 diagnoses"
+        )
+        assert "safety" in prompt.lower(), (
+            "User prompt should mention patient safety"
         )
 
     def test_user_prompt_empty_pairs(self, store):
