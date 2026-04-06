@@ -14,7 +14,7 @@ All errors return a JSON response with a `detail` field describing the problem.
 
 | Status Code | Meaning | When |
 |-------------|---------|------|
-| **400** | Bad Request | Invalid answer format, wrong pipeline stage (e.g. submitting a step answer during `llm_questioning`) |
+| **400** | Bad Request | Invalid answer format, wrong pipeline stage (e.g. submitting a step answer during `done`) |
 | **401** | Unauthorized | Missing `X-User-ID` header |
 | **404** | Not Found | Session not found, unknown resource ID |
 | **409** | Conflict | Duplicate session (same `user_id` + `session_id` already exists) |
@@ -70,7 +70,7 @@ curl -X POST http://localhost:8080/api/v1/sessions \
 ### Wrong Pipeline Stage
 
 ```bash
-# Try to submit a step answer when the pipeline is in llm_questioning stage
+# Try to submit a step answer when the pipeline is in done stage
 curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step \
   -H "Content-Type: application/json" \
   -H "X-User-ID: patient-1" \
@@ -82,7 +82,7 @@ curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step \
 {"detail": "Invalid request"}
 ```
 
-**Fix:** Check the step's `type` field. If it's `"llm_questions"`, use `POST /api/v1/sessions/{id}/llm-answers` instead.
+**Fix:** Check the step's `type` field. If it's `"pipeline_result"`, the session is complete — no further answers can be submitted.
 
 !!! note "Sanitized error messages"
     Error responses return generic descriptions (`"Resource not found"`, `"Resource already exists"`, `"Invalid request"`) instead of exposing internal details like user IDs, session IDs, or pipeline stage names.  Full error details are logged server-side for debugging.

@@ -115,6 +115,21 @@ def _demographic_answer_schema(field) -> dict:
         return {"type": "string"}
 
 
+def _nullable_schema(schema: dict) -> dict:
+    """Wrap a JSON-Schema dict to also accept null.
+
+    Conditional fields may not apply to every patient (e.g. pregnancy
+    fields for males), so the submission_schema allows null for them.
+    """
+    schema = dict(schema)  # shallow copy to avoid mutating the original
+    t = schema.get("type")
+    if isinstance(t, str):
+        schema["type"] = [t, "null"]
+    elif isinstance(t, list) and "null" not in t:
+        schema["type"] = list(t) + ["null"]
+    return schema
+
+
 def _evaluate_field_condition(condition, demographics: dict) -> bool:
     """Check if a demographic field's condition is satisfied.
 
@@ -767,16 +782,24 @@ class PrescreenEngine:
                     # from_yaml: the values field is a filename reference
                     payload.metadata["values_source"] = field.values
 
-            if not field.optional:
+            # Only unconditional, non-optional fields are always required.
+            # Conditional fields are required only when their condition is
+            # met, which can't be known at schema-generation time — so they
+            # are excluded from the required list and accept null.
+            if not field.optional and not field.condition:
                 required_keys.append(field.key)
 
             questions.append(payload)
 
-        # submission_schema: an object keyed by demographic field key
-        properties = {
-            f.key: _demographic_answer_schema(f)
-            for f in self._store.demographics
-        }
+        # submission_schema: an object keyed by demographic field key.
+        # Conditional fields get a nullable schema because the field may
+        # not apply to this patient (e.g. pregnancy fields for males).
+        properties = {}
+        for f in self._store.demographics:
+            schema = _demographic_answer_schema(f)
+            if f.condition:
+                schema = _nullable_schema(schema)
+            properties[f.key] = schema
         submission_schema = {
             "type": "object",
             "properties": properties,
@@ -1217,13 +1240,25 @@ class PrescreenEngine:
         field_by_key = {f.key: f for f in fields}
         valid_ud_names = {ud.name for ud in self._store.underlying_diseases}
 
+        # Build active values progressively: only include submitted values
+        # from fields whose conditions are met.  This prevents chained
+        # condition confusion — e.g. a male submitting pregnancy_status
+        # won't activate downstream menstrual fields that condition on
+        # pregnancy_status, because pregnancy_status itself is skipped
+        # (its condition "gender == Female" is not met) and therefore
+        # never enters active_values.
+        active_values = dict(existing_demographics)
+
         for key, field in field_by_key.items():
             # Check condition — skip validation for fields whose condition is not met
             if field.condition:
-                # Merge existing demographics with submitted value for chained conditions
-                merged = {**existing_demographics, **value}
-                if not _evaluate_field_condition(field.condition, merged):
+                if not _evaluate_field_condition(field.condition, active_values):
                     continue
+
+            # Condition met (or no condition) — register the submitted
+            # value so downstream conditions can reference it.
+            if key in value and value[key] is not None:
+                active_values[key] = value[key]
 
             is_present = key in value and value[key] is not None
 
@@ -1584,12 +1619,14 @@ class PrescreenEngine:
         source = "oldcarts" if phase == 4 else "opd"
         symptom = row.primary_symptom
 
-        # Record the answer
-        await self._repo.record_response(db, row, qid, value)
-
-        # Look up the question to determine the action
+        # Look up the question and validate/determine the action BEFORE
+        # recording the answer — this prevents invalid values from polluting
+        # session state.
         question = self._store.get_question(source, symptom, qid)
         action = self._determine_action(question, value)
+
+        # Record the answer only after validation passes
+        await self._repo.record_response(db, row, qid, value)
 
         if action is None:
             logger.warning("No action determined for %s=%r, using pending queue", qid, value)
@@ -1748,8 +1785,11 @@ class PrescreenEngine:
             for opt in question.options:
                 if opt.id == value:
                     return opt.action
-            logger.warning("No option matched value=%r for %s", value, question.qid)
-            return None
+            valid_ids = [opt.id for opt in question.options]
+            raise ValueError(
+                f"Unknown option '{value}' for {question.qid}. "
+                f"Valid option IDs: {valid_ids}"
+            )
 
         if isinstance(question, (MultiSelectQuestion, ImageMultiSelectQuestion)):
             return question.next

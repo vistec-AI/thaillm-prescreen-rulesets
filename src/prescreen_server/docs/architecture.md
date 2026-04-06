@@ -59,7 +59,7 @@ graph TB
 2. **Dependencies resolve:** `get_user_id` extracts the `X-User-ID` header, `get_db` opens an async DB session, `get_pipeline` returns the singleton pipeline
 3. **Pipeline dispatches** based on `pipeline_stage`:
     - `rule_based` → delegates to `PrescreenEngine`
-    - `llm_questioning` → returns stored LLM questions or processes LLM answers
+    - `llm_questioning` → returns stored LLM questions (GET) or processes LLM answers (POST `/step`)
     - `done` → returns cached result
 4. **Engine computes the step:** loads session from DB, evaluates the decision tree, auto-resolves filters/conditionals, returns a `StepResult`
 5. **Response serialized** as JSON via Pydantic models
@@ -74,7 +74,7 @@ stateDiagram-v2
     rule_based --> done: Engine terminates (early exit)
     rule_based --> llm_questioning: Engine completes + generator configured
     rule_based --> done: Engine completes + no generator
-    llm_questioning --> done: Submit LLM Answers
+    llm_questioning --> done: Submit LLM Answers (POST /step)
     done --> [*]
 ```
 

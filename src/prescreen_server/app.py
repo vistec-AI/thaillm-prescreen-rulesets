@@ -60,17 +60,37 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     store.load()
     logger.info("RulesetStore loaded successfully")
 
-    # --- Build pipeline (with optional LLM prediction) ---
+    # --- Build pipeline (LLM question generation + prediction required) ---
     import os
     engine = PrescreenEngine(store)
 
-    predictor = None
-    if os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY"):
-        from prescreen_rulesets.prediction import OpenAIPredictionModule
-        predictor = OpenAIPredictionModule(store=store)
-        logger.info("OpenAIPredictionModule enabled")
+    has_api_key = bool(
+        os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+    )
 
-    pipeline = PrescreenPipeline(engine, store, predictor=predictor)
+    if not has_api_key:
+        raise RuntimeError(
+            "No LLM API key configured. Set OPENAI_API_KEY or "
+            "OPENROUTER_API_KEY environment variable. "
+            "Both the question generator and prediction module require an API key."
+        )
+
+    from prescreen_rulesets.question_generator import OpenAIQuestionGenerator
+    from prescreen_rulesets.prediction import OpenAIPredictionModule
+
+    # Generator may be skipped with SKIP_GENERATOR=true (e.g. for testing
+    # the rule-based flow without LLM follow-up questions).
+    skip_generator = os.environ.get("SKIP_GENERATOR", "").lower() == "true"
+    generator = None if skip_generator else OpenAIQuestionGenerator()
+    predictor = OpenAIPredictionModule(store=store)
+
+    if skip_generator:
+        logger.warning("SKIP_GENERATOR=true — question generator disabled")
+    else:
+        logger.info("OpenAIQuestionGenerator enabled")
+    logger.info("OpenAIPredictionModule enabled")
+
+    pipeline = PrescreenPipeline(engine, store, generator=generator, predictor=predictor)
 
     app.state.store = store
     app.state.pipeline = pipeline
