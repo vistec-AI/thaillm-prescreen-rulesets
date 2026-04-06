@@ -49,8 +49,56 @@ Below is the patient's prescreening Q&A history, grouped by phase.
 {% endfor %}
 ---
 
+## Disease Reference
+
+You may ONLY predict diseases from this list. Use the **disease ID** in your response.
+
+| ID | Name | Name (TH) |
+|----|------|-----------|
+{% for disease in diseases %}
+| {{ disease.id }} | {{ disease.disease_name }} | {{ disease.name_th }} |
+{% endfor %}
+
+## Department Reference
+
+You may ONLY predict departments from this list. Use the **department ID** in your response.
+
+| ID | Name | Name (TH) |
+|----|------|-----------|
+{% for dept in departments %}
+| {{ dept.id }} | {{ dept.name }} | {{ dept.name_th }} |
+{% endfor %}
+
+## Severity Reference
+
+You may ONLY predict severity levels from this list. Use the **severity ID** in your response. Levels are ordered from least to most severe.
+
+| ID | Name | Name (TH) |
+|----|------|-----------|
+{% for sev in severity_levels %}
+| {{ sev.id }} | {{ sev.name }} | {{ sev.name_th }} |
+{% endfor %}
+
+---
+
 {% if min_severity %}
 **Rule-based minimum severity:** {{ min_severity }}. Your predicted severity must be at least this severe (i.e., equal to or higher than this level).
-{% endif %}
 
-**Instructions:** Based on the above patient history, provide your differential diagnosis (up to 10 diseases), recommended department(s), and severity assessment.
+{% endif %}
+## Instructions
+
+Based on the above patient history, provide:
+
+1. **Differential Diagnosis (DDx):** Between 3 and 10 diseases, ranked by likelihood (most likely first).
+   - You MUST predict at least 3 diagnoses so downstream clinical review has sufficient differential coverage.
+   - Do NOT force exactly 10 diagnoses. Only include diseases you have genuine clinical justification for. Padding the list with unlikely diseases dilutes signal and can mislead triage — **patient safety takes priority over list completeness.**
+   - If the clinical picture is ambiguous, lean toward including more plausible differentials. If it is clear-cut, 3–5 well-justified diagnoses are preferred over 10 weakly justified ones.
+2. **Department Routing:** Which hospital department(s) the patient should be directed to.
+3. **Severity Assessment:** How urgently the patient needs care.
+4. **Reasoning:** A brief explanation of your clinical thought process.
+
+## Constraints
+
+- Predict ONLY disease IDs, department IDs, and severity IDs from the reference tables above.
+- Department and severity should correlate with your top diagnosis.
+- When in doubt, err on the side of higher severity — under-triaging is more dangerous than over-triaging.
