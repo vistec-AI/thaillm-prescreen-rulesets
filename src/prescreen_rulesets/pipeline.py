@@ -250,24 +250,33 @@ class PrescreenPipeline:
         qid: str | None = None,
         value: Any,
     ) -> PipelineStep:
-        """Submit an answer during the rule-based stage.
+        """Submit an answer during the rule-based or llm_questioning stage.
 
-        Delegates to the engine and handles the transition when the engine
-        signals completion or termination.  ``qid`` is optional — for bulk
-        phases (0-3, 5-6) it is ignored by the engine, and for sequential
-        phases (4, 7) the engine auto-derives it from the current step
-        when ``None``.
+        Dispatches by ``pipeline_stage``:
+          - ``rule_based``: delegates to the engine.  ``qid`` is optional —
+            for bulk phases (0-3, 5-6) it is ignored, and for sequential
+            phases (4, 7) the engine auto-derives it when ``None``.
+          - ``llm_questioning``: ``value`` must be a list of dicts with
+            ``question`` and ``answer`` keys (i.e. ``list[LLMAnswer]``).
+            Delegates to :meth:`submit_llm_answers`.
 
         Raises:
-            ValueError: if the session is not in the ``rule_based`` stage
+            ValueError: if the session is in the ``done`` stage
         """
         row = await self._load_session(db, user_id, session_id)
         stage = row.pipeline_stage
 
+        # --- LLM questioning: value is a list of {question, answer} dicts ---
+        if stage == PipelineStage.LLM_QUESTIONING.value:
+            answers = [LLMAnswer(**item) for item in value]
+            return await self.submit_llm_answers(
+                db, user_id=user_id, session_id=session_id, answers=answers,
+            )
+
         if stage != PipelineStage.RULE_BASED.value:
             raise ValueError(
-                f"submit_answer is only valid during rule_based stage, "
-                f"but session is in '{stage}'"
+                f"submit_answer is only valid during rule_based or "
+                f"llm_questioning stage, but session is in '{stage}'"
             )
 
         # Delegate to the engine
@@ -484,10 +493,10 @@ class PrescreenPipeline:
           - COMPLETED (all 8 phases done): proceed to LLM questioning or prediction
         """
         if row.status == SessionStatus.TERMINATED:
-            # Early termination — add empty diagnoses to result, skip LLM/prediction
-            result = row.result or {}
-            result["diagnoses"] = []
-            row.result = result
+            # Early termination — add empty diagnoses to result, skip LLM/prediction.
+            # Spread into a new dict so SQLAlchemy detects the change
+            # (in-place mutation of the same object is invisible to the ORM).
+            row.result = {**(row.result or {}), "diagnoses": []}
             await db.flush()
 
             await self._repo.set_pipeline_stage(db, row, PipelineStage.DONE)
@@ -496,6 +505,7 @@ class PrescreenPipeline:
             # can see which questions/answers led to the ER redirect.
             history = self._build_full_history(row)
 
+            result = row.result
             return PipelineResult(
                 departments=[
                     self._store.resolve_department(d)
@@ -550,15 +560,15 @@ class PrescreenPipeline:
         mechanism.  Diagnoses from prediction are always stored.
         """
         if self._predictor is None:
-            # No predictor — ensure result has an empty diagnoses list
+            # No predictor — ensure result has an empty diagnoses list.
+            # Spread into a new dict so SQLAlchemy detects the change.
             result = row.result or {}
             if "diagnoses" not in result:
-                result["diagnoses"] = []
-                row.result = result
+                row.result = {**result, "diagnoses": []}
                 await db.flush()
             return
 
-        result = row.result or {}
+        result = dict(row.result or {})
         rb_severity = result.get("severity")
         rb_departments = result.get("departments") or []
 
@@ -590,6 +600,8 @@ class PrescreenPipeline:
         if prediction.severity:
             result["severity"] = prediction.severity
 
+        # Assign a new dict so SQLAlchemy detects the change
+        # (in-place mutation of the same object is invisible to the ORM).
         row.result = result
         await db.flush()
 

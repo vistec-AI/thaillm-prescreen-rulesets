@@ -528,6 +528,48 @@ class TestLLMAnswerSubmission:
         assert llm_history[0].question == "Q1?"
         assert llm_history[0].answer == "ปวดมาก"
 
+    @pytest.mark.asyncio
+    async def test_submit_answer_routes_to_llm_answers_during_llm_questioning(
+        self, pipeline, engine, mock_repo, mock_db,
+    ):
+        """submit_answer delegates to submit_llm_answers when in llm_questioning."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+
+        # Set up session in llm_questioning state
+        row.status = SessionStatus.COMPLETED
+        row.current_phase = 5
+        row.primary_symptom = "Headache"
+        row.demographics = {"gender": "Male", "age": 30}
+        row.pipeline_stage = PipelineStage.LLM_QUESTIONING.value
+        row.llm_questions = ["Q1?", "Q2?"]
+        row.result = {
+            "departments": ["dept001"],
+            "severity": "sev001",
+            "reason": "OPD routing",
+        }
+
+        # Submit via submit_answer with value as list of {question, answer} dicts
+        result = await pipeline.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=[
+                {"question": "Q1?", "answer": "ปวดมาก"},
+                {"question": "Q2?", "answer": "ไม่คลื่นไส้"},
+            ],
+        )
+
+        assert isinstance(result, PipelineResult), (
+            f"Expected PipelineResult, got {type(result).__name__}"
+        )
+        assert result.type == "pipeline_result"
+        assert row.pipeline_stage == PipelineStage.DONE.value
+        assert row.llm_responses is not None, "llm_responses should be stored"
+        assert len(row.llm_responses) == 2, "Should have 2 LLM responses"
+        llm_history = [p for p in result.history if p.source == "llm_generated"]
+        assert len(llm_history) == 2, (
+            f"Expected 2 LLM pairs in history, got {len(llm_history)}"
+        )
+
 
 # =====================================================================
 # Tests: Stage guards
@@ -538,15 +580,15 @@ class TestStageGuards:
     """Pipeline rejects calls in the wrong stage."""
 
     @pytest.mark.asyncio
-    async def test_submit_answer_rejects_if_not_rule_based(
+    async def test_submit_answer_rejects_if_done(
         self, pipeline, engine, mock_repo, mock_db,
     ):
-        """submit_answer raises ValueError if pipeline_stage is not rule_based."""
+        """submit_answer raises ValueError if pipeline_stage is done."""
         await engine.create_session(mock_db, user_id="u1", session_id="s1")
         row = mock_repo._sessions[("u1", "s1")]
-        row.pipeline_stage = PipelineStage.LLM_QUESTIONING.value
+        row.pipeline_stage = PipelineStage.DONE.value
 
-        with pytest.raises(ValueError, match="rule_based"):
+        with pytest.raises(ValueError, match="rule_based or llm_questioning"):
             await pipeline.submit_answer(
                 mock_db, user_id="u1", session_id="s1",
                 qid="demographics", value={},

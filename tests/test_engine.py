@@ -1305,6 +1305,27 @@ class TestSchemaFields:
                     f"Optional field '{key}' should not be in required"
                 )
 
+        # Conditional fields (those with a condition block in the YAML)
+        # should NOT be in the required list — their requirement depends
+        # on runtime values (e.g. gender) which aren't known at schema time.
+        conditional_keys = {
+            f.key for f in engine._store.demographics if f.condition
+        }
+        for ckey in conditional_keys:
+            assert ckey not in ss["required"], (
+                f"Conditional field '{ckey}' should not be in required"
+            )
+
+        # Conditional fields should have nullable types in submission_schema
+        # so clients can send null when the field doesn't apply.
+        for ckey in conditional_keys:
+            prop_schema = ss["properties"][ckey]
+            schema_type = prop_schema.get("type")
+            assert isinstance(schema_type, list) and "null" in schema_type, (
+                f"Conditional field '{ckey}' should allow null in "
+                f"submission_schema, got type={schema_type}"
+            )
+
     @pytest.mark.asyncio
     async def test_phase1_schemas(self, engine, mock_db):
         """ER critical step has boolean answer_schemas and an object submission_schema."""
@@ -2390,6 +2411,96 @@ class TestAdviceOnlyTerminate:
         assert "พบแพทย์" in step.reason, (
             f"Expected Thai advice text containing 'พบแพทย์' (see doctor), "
             f"got: {step.reason!r}"
+        )
+
+
+class TestOPDUnknownChoiceRejection:
+    """BUG-004: Submitting an unknown option in OPD must raise ValueError.
+
+    Previously, ``_determine_action`` returned ``None`` for unrecognised
+    option IDs in single_select questions.  This caused ``_submit_sequential``
+    to silently record the invalid answer and continue resolving the pending
+    queue — which could lead to premature termination instead of a clear
+    error.  The fix raises ``ValueError`` so the caller gets a 400 response
+    and the session state stays clean.
+    """
+
+    @pytest.mark.asyncio
+    async def test_opd_unknown_choice_raises_value_error(
+        self, engine, mock_db, mock_repo,
+    ):
+        """Submitting 'ไม่เคย' for hea_opd_004 (valid: 'มี'/'ไม่มี') raises ValueError."""
+        # Set up session directly at phase 7 (OPD) with Headache.
+        # For a 28-year-old male, OPD auto-evals gender_filter and age_filter
+        # so the first user-facing question is hea_opd_004 (single_select).
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.current_phase = 7
+        row.status = SessionStatus.IN_PROGRESS
+        row.demographics = {**VALID_DEMOGRAPHICS, **VALID_PAST_HISTORY}
+        row.primary_symptom = "Headache"
+        row.responses = {}
+
+        # Verify the first user-facing question is hea_opd_004
+        step = await engine.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step, QuestionsStep), (
+            f"Expected QuestionsStep, got {type(step).__name__}"
+        )
+        assert step.questions[0].qid == "hea_opd_004", (
+            f"Expected hea_opd_004 as first user-facing OPD question, "
+            f"got {step.questions[0].qid}"
+        )
+
+        # Submit an invalid choice — should raise ValueError, not terminate
+        with pytest.raises(ValueError, match="Unknown option"):
+            await engine.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value="ไม่เคย",
+            )
+
+        # Session state should be unchanged — invalid answer not recorded
+        assert "hea_opd_004" not in row.responses, (
+            "Invalid answer should not be recorded in session responses"
+        )
+
+        # Re-fetching the current step should still show hea_opd_004
+        step_after = await engine.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step_after, QuestionsStep), (
+            "Session should still present the same question after invalid submit"
+        )
+        assert step_after.questions[0].qid == "hea_opd_004", (
+            "Current step should still be hea_opd_004 after rejected submit"
+        )
+
+    @pytest.mark.asyncio
+    async def test_opd_valid_choice_still_works(
+        self, engine, mock_db, mock_repo,
+    ):
+        """Submitting 'ไม่มี' (a valid choice) for hea_opd_004 advances normally."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.current_phase = 7
+        row.status = SessionStatus.IN_PROGRESS
+        row.demographics = {**VALID_DEMOGRAPHICS, **VALID_PAST_HISTORY}
+        row.primary_symptom = "Headache"
+        row.responses = {}
+
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value="ไม่มี",
+        )
+
+        # Should advance to the next question, not raise an error
+        assert isinstance(step, (QuestionsStep, TerminationStep)), (
+            f"Expected QuestionsStep or TerminationStep, got {type(step).__name__}"
+        )
+        # The answer should be recorded
+        assert "hea_opd_004" in row.responses, (
+            "Valid answer should be recorded in session responses"
         )
 
 

@@ -104,8 +104,9 @@ These values control clinical decision logic in the prescreening engine. Overrid
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENAI_API_KEY` | *(none)* | OpenAI API key. When set, the server enables `OpenAIPredictionModule` for LLM-based differential diagnosis, department routing, and severity classification. Takes priority over `OPENROUTER_API_KEY`. When neither key is set, the pipeline returns rule-based results only (no DDx). |
+| `OPENAI_API_KEY` | *(none)* | OpenAI API key. **At least one of `OPENAI_API_KEY` or `OPENROUTER_API_KEY` is required** — the server will not start without it. Takes priority over `OPENROUTER_API_KEY`. |
 | `OPENROUTER_API_KEY` | *(none)* | OpenRouter API key. Used as a fallback when `OPENAI_API_KEY` is not set. Routes requests through `https://openrouter.ai/api/v1` using a provider-prefixed model name (`openai/gpt-5.4`). |
+| `SKIP_GENERATOR` | *(none)* | Set to `true` to skip LLM question generation (the predictor still runs). Useful for testing the rule-based flow without LLM follow-up questions. |
 
 ---
 
@@ -158,8 +159,9 @@ All variables in one table:
 | `PG_MAX_OVERFLOW` | `10` | Database |
 | `ADMIN_API_KEY` | *(none)* | Auth |
 | `TRUSTED_PROXY_SECRET` | *(none)* | Auth |
-| `OPENAI_API_KEY` | *(none)* | LLM |
-| `OPENROUTER_API_KEY` | *(none)* | LLM |
+| `OPENAI_API_KEY` | *(none)* | LLM (required) |
+| `OPENROUTER_API_KEY` | *(none)* | LLM (required fallback) |
+| `SKIP_GENERATOR` | *(none)* | LLM |
 | `PEDIATRIC_AGE_THRESHOLD` | `15` | Medical |
 | `DEFAULT_ER_SEVERITY` | `sev003` | Medical |
 | `DEFAULT_ER_DEPARTMENT` | `dept002` | Medical |
