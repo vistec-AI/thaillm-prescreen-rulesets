@@ -23,7 +23,6 @@ import yaml
 BASE_URL = "http://localhost:8080/api/v1"
 TIMEOUT = 120.0
 
-
 # ---------------------------------------------------------------------------
 # Helper class
 # ---------------------------------------------------------------------------
@@ -136,6 +135,11 @@ SYMPTOM_SELECTION = {
     "primary_symptom": "Headache",
     "secondary_symptoms": [],
 }
+# for testing no symptom selected
+# SYMPTOM_SELECTION = {
+#     "primary_symptom": None,
+#     "secondary_symptoms": [],
+# }
 
 ER_CHECKLIST = {
     "emer_adult_hea001": False,
@@ -338,6 +342,37 @@ def print_history(history: list[dict]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Early-exit helpers
+# ---------------------------------------------------------------------------
+
+def is_final(result: dict) -> bool:
+    """True when the API response is a terminal result (not more questions)."""
+    return result.get("type") == "pipeline_result"
+
+
+def show_final(
+    result: dict,
+    disease_map: dict[str, dict],
+    session: PrescreenSession,
+) -> None:
+    """Print the pipeline result and full Q&A history."""
+    if result.get("type") == "pipeline_result":
+        print_result(result, disease_map)
+    else:
+        print("\nCurrent step (session may need LLM answers to finish):")
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+
+    history = result.get("history") or session.get_history()
+    print_history(history)
+
+    # --- Raw JSON ---
+    print(f"\n{'#' * 60}")
+    print(f"  RAW JSON RESPONSE")
+    print(f"{'#' * 60}")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+
+
+# ---------------------------------------------------------------------------
 # Main walkthrough
 # ---------------------------------------------------------------------------
 
@@ -360,12 +395,20 @@ def run() -> None:
     # --- Phase 2: Symptom Selection ---
     step = session.get_step()
     print_phase_header(2)
-    session.submit(SYMPTOM_SELECTION)
+    result = session.submit(SYMPTOM_SELECTION)
+
+    # "None of the above" (primary_symptom is None) terminates immediately
+    # as out-of-scope.  Any submit can also early-terminate (ER positive),
+    # so we check after every phase.
+    if is_final(result):
+        return show_final(result, disease_map, session)
 
     # --- Phase 3: ER Checklist ---
     step = session.get_step()
     print_phase_header(3)
-    session.submit(ER_CHECKLIST)
+    result = session.submit(ER_CHECKLIST)
+    if is_final(result):
+        return show_final(result, disease_map, session)
 
     # --- Phase 4: OLDCARTS (sequential) ---
     print_phase_header(4)
@@ -374,7 +417,9 @@ def run() -> None:
         q = step["questions"][0]
         print(f"    Q: {q['question']}  [{q['qid']}]")
         print(f"    A: {format_answer(answer)}")
-        session.submit(answer)
+        result = session.submit(answer)
+        if is_final(result):
+            return show_final(result, disease_map, session)
 
     # --- Phase 5: Past History ---
     step = session.get_step()
@@ -393,7 +438,9 @@ def run() -> None:
         q = step["questions"][0]
         print(f"    Q: {q['question']}  [{q['qid']}]")
         print(f"    A: {format_answer(answer)}")
-        session.submit(answer)
+        result = session.submit(answer)
+        if is_final(result):
+            return show_final(result, disease_map, session)
 
     # --- LLM follow-up questions (phase 8) ---
     step = session.get_step()
@@ -414,15 +461,7 @@ def run() -> None:
 
     # --- Final result ---
     result = session.get_step()
-    if result.get("type") == "pipeline_result":
-        print_result(result, disease_map)
-    else:
-        print("\nCurrent step (session may need LLM answers to finish):")
-        print(json.dumps(result, indent=2, ensure_ascii=False))
-
-    # --- Full Q&A history ---
-    history = result.get("history") or session.get_history()
-    print_history(history)
+    show_final(result, disease_map, session)
 
 
 if __name__ == "__main__":
