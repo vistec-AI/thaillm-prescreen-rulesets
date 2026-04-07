@@ -859,6 +859,12 @@ class PrescreenEngine:
 
     # --- Phase 2: Symptom Selection ---
 
+    # Sentinel value for "none of the above" primary symptom selection.
+    # When chosen, the session terminates immediately as out-of-scope
+    # because the system only supports diseases in the NHSO symptom list.
+    NONE_OF_THE_ABOVE_ID = "__none_of_the_above__"
+    NONE_OF_THE_ABOVE_LABEL = "ไม่มีอาการตรงกับตัวเลือกข้างต้น"
+
     def _step_symptom_selection(self) -> QuestionsStep:
         """Build the symptom selection step — present NHSO symptom list."""
         symptom_options = [
@@ -867,7 +873,19 @@ class PrescreenEngine:
         ]
         symptom_ids = [sym.name for sym in self._store.nhso_symptoms.values()]
 
-        primary_schema = {"type": "string", "enum": symptom_ids}
+        # Add "none of the above" as the last option so users can opt out
+        # when their symptom is not in the NHSO list.
+        symptom_options.append({
+            "id": self.NONE_OF_THE_ABOVE_ID,
+            "label": self.NONE_OF_THE_ABOVE_LABEL,
+        })
+
+        # Primary schema accepts any known symptom ID, the none-of-the-above
+        # sentinel, or null.
+        primary_schema = {
+            "type": ["string", "null"],
+            "enum": symptom_ids + [self.NONE_OF_THE_ABOVE_ID, None],
+        }
         secondary_schema = {
             "type": "array",
             "items": {"type": "string", "enum": symptom_ids},
@@ -1498,8 +1516,13 @@ class PrescreenEngine:
     ) -> StepResult:
         """Process phase 2 symptom selection submission.
 
-        ``value`` is a dict with keys "primary_symptom" (str) and optionally
-        "secondary_symptoms" (list[str]).
+        ``value`` is a dict with keys "primary_symptom" (str | None) and
+        optionally "secondary_symptoms" (list[str]).
+
+        When ``primary_symptom`` is ``None`` or the none-of-the-above
+        sentinel, the session terminates immediately as "out of scope"
+        — the system only supports diseases covered by the NHSO symptom
+        list, so no meaningful routing or diagnosis is possible.
 
         After saving symptom selection, checks ER checklist auto_complete
         items.  If any auto_complete condition is met (e.g. child under 1
@@ -1509,9 +1532,26 @@ class PrescreenEngine:
         primary = value["primary_symptom"]
         secondary = value.get("secondary_symptoms")
 
+        # Treat the none-of-the-above sentinel the same as None so
+        # downstream code only has to check for None.
+        if primary == self.NONE_OF_THE_ABOVE_ID:
+            primary = None
+
         await self._repo.save_symptom_selection(
             db, row, primary_symptom=primary, secondary_symptoms=secondary,
         )
+
+        # --- Out-of-scope early exit ---
+        # No primary symptom means the patient's complaint is not covered
+        # by any NHSO symptom tree, so we cannot route or diagnose.
+        if primary is None:
+            return await self._terminate(
+                db, row,
+                departments=[],
+                severity=None,
+                reason="The system does not currently support prescreening for symptoms outside the provided list. Please consult a medical professional for further assistance.",
+            )
+
         await self._repo.advance_phase(db, row, 3)
 
         # Check if any ER checklist auto_complete condition is met — if so,

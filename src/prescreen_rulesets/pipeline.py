@@ -506,20 +506,27 @@ class PrescreenPipeline:
             history = self._build_full_history(row)
 
             result = row.result
+            departments = [
+                self._store.resolve_department(d)
+                for d in (result.get("departments") or [])
+            ]
+            severity = (
+                self._store.resolve_severity(result["severity"])
+                if result.get("severity")
+                else None
+            )
+            reason = result.get("reason") or row.termination_reason
+
             return PipelineResult(
-                departments=[
-                    self._store.resolve_department(d)
-                    for d in (result.get("departments") or [])
-                ],
-                severity=(
-                    self._store.resolve_severity(result["severity"])
-                    if result.get("severity")
-                    else None
-                ),
+                departments=departments,
+                severity=severity,
                 diagnoses=[],
-                reason=result.get("reason") or row.termination_reason,
+                reason=reason,
                 terminated_early=True,
                 history=history,
+                tool_content=self._build_tool_content(
+                    [], severity, departments, reason,
+                ),
             )
 
         # COMPLETED — all 8 phases done, rule-based flow finished normally
@@ -605,6 +612,59 @@ class PrescreenPipeline:
         row.result = result
         await db.flush()
 
+    def _build_tool_content(
+        self,
+        diagnoses: list[DiagnosisResult],
+        severity: dict | None,
+        departments: list[dict],
+        reason: str | None,
+    ) -> dict:
+        """Build a consumer-friendly summary with only display fields (no IDs).
+
+        Shape::
+
+            {
+                "differential_diagnosis": [{"name": ..., "name_th": ..., "description": ...}, ...],
+                "severity": {"name": ..., "name_th": ..., "description": ...} | null,
+                "department": [{"name": ..., "name_th": ..., "description": ...}, ...],
+                "note": <reason/advice string or null>
+            }
+        """
+        # Resolve each disease_id to its display fields via the store
+        ddx = []
+        for d in diagnoses:
+            disease = self._store.diseases.get(d.disease_id)
+            if disease:
+                ddx.append({
+                    "name": disease.original_value,
+                    "name_th": disease.name_th,
+                    "description": disease.description,
+                })
+
+        sev_display = None
+        if severity:
+            sev_display = {
+                "name": severity.get("name"),
+                "name_th": severity.get("name_th"),
+                "description": severity.get("description"),
+            }
+
+        dept_display = [
+            {
+                "name": dept.get("name"),
+                "name_th": dept.get("name_th"),
+                "description": dept.get("description"),
+            }
+            for dept in departments
+        ]
+
+        return {
+            "differential_diagnosis": ddx,
+            "severity": sev_display,
+            "department": dept_display,
+            "note": reason or None,
+        }
+
     def _build_pipeline_result(self, row: PrescreenSession) -> PipelineResult:
         """Construct a PipelineResult from the session's current state.
 
@@ -642,14 +702,19 @@ class PrescreenPipeline:
         # Build full Q&A history: rule-based phases + LLM follow-ups
         history = self._build_full_history(row)
 
+        reason = result.get("reason") or row.termination_reason
+
         return PipelineResult(
             departments=departments,
             severity=severity,
             diagnoses=diagnoses,
-            reason=result.get("reason") or row.termination_reason,
+            reason=reason,
             terminated_early=(row.status == SessionStatus.TERMINATED),
             history=history,
             skipped_terminations=row.skipped_terminations or [],
+            tool_content=self._build_tool_content(
+                diagnoses, severity, departments, reason,
+            ),
         )
 
     # ==================================================================
@@ -695,10 +760,23 @@ class PrescreenPipeline:
                 ))
 
         # --- Phase 2: Symptom Selection ---
-        if row.primary_symptom:
+        # Record primary symptom even when None (out-of-scope selection)
+        # so the Q&A history reflects the patient's choice.
+        if row.primary_symptom is not None:
             pairs.append(QAPair(
                 question="อาการหลัก",
                 answer=row.primary_symptom,
+                source="rule_based",
+                qid="primary_symptom",
+                question_type="single_select",
+                phase=2,
+            ))
+        elif row.status in (SessionStatus.TERMINATED, SessionStatus.COMPLETED):
+            # primary_symptom is None and session terminated — the patient
+            # chose "none of the above", record it explicitly.
+            pairs.append(QAPair(
+                question="อาการหลัก",
+                answer="ไม่มีอาการตรงกับตัวเลือกข้างต้น",
                 source="rule_based",
                 qid="primary_symptom",
                 question_type="single_select",

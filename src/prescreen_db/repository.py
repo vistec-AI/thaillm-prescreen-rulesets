@@ -173,7 +173,7 @@ class SessionRepository:
         db: AsyncSession,
         session: PrescreenSession,
         *,
-        primary_symptom: str,
+        primary_symptom: str | None,
         secondary_symptoms: list[str] | None = None,
     ) -> PrescreenSession:
         """Save the Phase 2 symptom selection."""

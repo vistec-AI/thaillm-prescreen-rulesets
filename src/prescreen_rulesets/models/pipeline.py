@@ -155,6 +155,15 @@ class PipelineResult(BaseModel):
         default_factory=list,
         description="Termination events skipped due to disable_early_termination.",
     )
+    # Consumer-friendly summary with only display fields (no IDs).
+    # Built by the pipeline when constructing the result.
+    tool_content: dict | None = Field(
+        default=None,
+        description=(
+            "Simplified result for downstream tool consumers: "
+            "differential_diagnosis, severity, department, note."
+        ),
+    )
 
 
 # Union for pipeline step dispatching — callers match on step.type.

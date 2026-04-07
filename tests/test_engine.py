@@ -550,6 +550,44 @@ class TestPhase2Symptoms:
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         assert step.phase == 3, "Should advance to phase 3"
 
+    @pytest.mark.asyncio
+    async def test_none_of_the_above_terminates_out_of_scope(self, engine, mock_db):
+        """Submitting None as primary symptom terminates with 'out of scope'."""
+        await self._setup_phase2(engine, mock_db)
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms",
+            value={"primary_symptom": None, "secondary_symptoms": []},
+        )
+        assert isinstance(step, TerminationStep), (
+            "None primary symptom should terminate immediately"
+        )
+        assert step.type == "terminated", "Should be a termination, not completion"
+        assert step.departments == [], "No department for out-of-scope"
+        assert step.severity is None, "No severity for out-of-scope"
+        assert "does not currently support" in step.reason, (
+            "Reason should be 'out of scope'"
+        )
+
+    @pytest.mark.asyncio
+    async def test_none_of_the_above_sentinel_terminates(self, engine, mock_db):
+        """Submitting the __none_of_the_above__ sentinel also terminates."""
+        await self._setup_phase2(engine, mock_db)
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms",
+            value={
+                "primary_symptom": "__none_of_the_above__",
+                "secondary_symptoms": [],
+            },
+        )
+        assert isinstance(step, TerminationStep), (
+            "Sentinel value should terminate immediately"
+        )
+        assert "does not currently support" in step.reason, (
+            "Reason should be 'out of scope'"
+        )
+
 
 # =====================================================================
 # Phase 3: ER Checklist
@@ -1375,13 +1413,16 @@ class TestSchemaFields:
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         assert step.phase == 2, "Should be phase 2"
 
-        # primary_symptom: string with enum
+        # primary_symptom: string-or-null with enum (includes none-of-the-above)
         primary = [q for q in step.questions if q.qid == "primary_symptom"][0]
-        assert primary.answer_schema["type"] == "string", (
-            "primary_symptom should be string type"
+        assert primary.answer_schema["type"] == ["string", "null"], (
+            "primary_symptom should allow string or null"
         )
         assert "enum" in primary.answer_schema, (
             "primary_symptom should have enum list"
+        )
+        assert None in primary.answer_schema["enum"], (
+            "primary_symptom enum should include None for none-of-the-above"
         )
 
         # secondary_symptoms: array of strings
