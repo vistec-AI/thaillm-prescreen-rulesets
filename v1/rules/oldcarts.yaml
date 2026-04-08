@@ -3004,7 +3004,7 @@ Constipation:
     - con_c_001
 - qid: con_c_001
   question: ลักษณะของอุจจาระเป็นอย่างไร แข็งหรือเป็นก้อนเล็ก ๆ
-  question_type: single_select
+  question_type: image_single_select
   image: stool_type.png
   options:
   - id: Type1
