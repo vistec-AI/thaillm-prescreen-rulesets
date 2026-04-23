@@ -115,6 +115,21 @@ def _demographic_answer_schema(field) -> dict:
         return {"type": "string"}
 
 
+def _nullable_schema(schema: dict) -> dict:
+    """Wrap a JSON-Schema dict to also accept null.
+
+    Conditional fields may not apply to every patient (e.g. pregnancy
+    fields for males), so the submission_schema allows null for them.
+    """
+    schema = dict(schema)  # shallow copy to avoid mutating the original
+    t = schema.get("type")
+    if isinstance(t, str):
+        schema["type"] = [t, "null"]
+    elif isinstance(t, list) and "null" not in t:
+        schema["type"] = list(t) + ["null"]
+    return schema
+
+
 def _evaluate_field_condition(condition, demographics: dict) -> bool:
     """Check if a demographic field's condition is satisfied.
 
@@ -767,16 +782,24 @@ class PrescreenEngine:
                     # from_yaml: the values field is a filename reference
                     payload.metadata["values_source"] = field.values
 
-            if not field.optional:
+            # Only unconditional, non-optional fields are always required.
+            # Conditional fields are required only when their condition is
+            # met, which can't be known at schema-generation time — so they
+            # are excluded from the required list and accept null.
+            if not field.optional and not field.condition:
                 required_keys.append(field.key)
 
             questions.append(payload)
 
-        # submission_schema: an object keyed by demographic field key
-        properties = {
-            f.key: _demographic_answer_schema(f)
-            for f in self._store.demographics
-        }
+        # submission_schema: an object keyed by demographic field key.
+        # Conditional fields get a nullable schema because the field may
+        # not apply to this patient (e.g. pregnancy fields for males).
+        properties = {}
+        for f in self._store.demographics:
+            schema = _demographic_answer_schema(f)
+            if f.condition:
+                schema = _nullable_schema(schema)
+            properties[f.key] = schema
         submission_schema = {
             "type": "object",
             "properties": properties,
@@ -836,6 +859,12 @@ class PrescreenEngine:
 
     # --- Phase 2: Symptom Selection ---
 
+    # Sentinel value for "none of the above" primary symptom selection.
+    # When chosen, the session terminates immediately as out-of-scope
+    # because the system only supports diseases in the NHSO symptom list.
+    NONE_OF_THE_ABOVE_ID = "__none_of_the_above__"
+    NONE_OF_THE_ABOVE_LABEL = "ไม่มีอาการตรงกับตัวเลือกข้างต้น"
+
     def _step_symptom_selection(self) -> QuestionsStep:
         """Build the symptom selection step — present NHSO symptom list."""
         symptom_options = [
@@ -844,7 +873,19 @@ class PrescreenEngine:
         ]
         symptom_ids = [sym.name for sym in self._store.nhso_symptoms.values()]
 
-        primary_schema = {"type": "string", "enum": symptom_ids}
+        # Add "none of the above" as the last option so users can opt out
+        # when their symptom is not in the NHSO list.
+        symptom_options.append({
+            "id": self.NONE_OF_THE_ABOVE_ID,
+            "label": self.NONE_OF_THE_ABOVE_LABEL,
+        })
+
+        # Primary schema accepts any known symptom ID, the none-of-the-above
+        # sentinel, or null.
+        primary_schema = {
+            "type": ["string", "null"],
+            "enum": symptom_ids + [self.NONE_OF_THE_ABOVE_ID, None],
+        }
         secondary_schema = {
             "type": "array",
             "items": {"type": "string", "enum": symptom_ids},
@@ -1217,13 +1258,25 @@ class PrescreenEngine:
         field_by_key = {f.key: f for f in fields}
         valid_ud_names = {ud.name for ud in self._store.underlying_diseases}
 
+        # Build active values progressively: only include submitted values
+        # from fields whose conditions are met.  This prevents chained
+        # condition confusion — e.g. a male submitting pregnancy_status
+        # won't activate downstream menstrual fields that condition on
+        # pregnancy_status, because pregnancy_status itself is skipped
+        # (its condition "gender == Female" is not met) and therefore
+        # never enters active_values.
+        active_values = dict(existing_demographics)
+
         for key, field in field_by_key.items():
             # Check condition — skip validation for fields whose condition is not met
             if field.condition:
-                # Merge existing demographics with submitted value for chained conditions
-                merged = {**existing_demographics, **value}
-                if not _evaluate_field_condition(field.condition, merged):
+                if not _evaluate_field_condition(field.condition, active_values):
                     continue
+
+            # Condition met (or no condition) — register the submitted
+            # value so downstream conditions can reference it.
+            if key in value and value[key] is not None:
+                active_values[key] = value[key]
 
             is_present = key in value and value[key] is not None
 
@@ -1382,12 +1435,16 @@ class PrescreenEngine:
         """Process phase 6 personal history submission.
 
         Merges personal history data into the existing demographics JSONB.
+        If the subsequent OPD phase (7) auto-evaluates entirely (all
+        questions are filters/conditionals), the completion is persisted
+        via ``_persist_step_if_terminal``.
         """
         existing = dict(row.demographics or {})
         self._validate_bulk_fields(value, self._store.personal_history, existing)
         await self._repo.save_demographics(db, row, value)
         await self._repo.advance_phase(db, row, 7)
-        return self._compute_step(row)
+        step = self._compute_step(row)
+        return await self._persist_step_if_terminal(db, row, step)
 
     async def _submit_er_critical(
         self, db: AsyncSession, row: PrescreenSession, value: dict[str, Any]
@@ -1459,8 +1516,13 @@ class PrescreenEngine:
     ) -> StepResult:
         """Process phase 2 symptom selection submission.
 
-        ``value`` is a dict with keys "primary_symptom" (str) and optionally
-        "secondary_symptoms" (list[str]).
+        ``value`` is a dict with keys "primary_symptom" (str | None) and
+        optionally "secondary_symptoms" (list[str]).
+
+        When ``primary_symptom`` is ``None`` or the none-of-the-above
+        sentinel, the session terminates immediately as "out of scope"
+        — the system only supports diseases covered by the NHSO symptom
+        list, so no meaningful routing or diagnosis is possible.
 
         After saving symptom selection, checks ER checklist auto_complete
         items.  If any auto_complete condition is met (e.g. child under 1
@@ -1470,9 +1532,26 @@ class PrescreenEngine:
         primary = value["primary_symptom"]
         secondary = value.get("secondary_symptoms")
 
+        # Treat the none-of-the-above sentinel the same as None so
+        # downstream code only has to check for None.
+        if primary == self.NONE_OF_THE_ABOVE_ID:
+            primary = None
+
         await self._repo.save_symptom_selection(
             db, row, primary_symptom=primary, secondary_symptoms=secondary,
         )
+
+        # --- Out-of-scope early exit ---
+        # No primary symptom means the patient's complaint is not covered
+        # by any NHSO symptom tree, so we cannot route or diagnose.
+        if primary is None:
+            return await self._terminate(
+                db, row,
+                departments=[],
+                severity=None,
+                reason="The system does not currently support prescreening for symptoms outside the provided list. Please consult a medical professional for further assistance.",
+            )
+
         await self._repo.advance_phase(db, row, 3)
 
         # Check if any ER checklist auto_complete condition is met — if so,
@@ -1551,6 +1630,7 @@ class PrescreenEngine:
                 )
                 await self._repo.advance_phase(db, row, 4)
                 step = self._compute_step(row)
+                step = await self._persist_step_if_terminal(db, row, step)
                 if isinstance(step, QuestionsStep):
                     step.skipped_termination = skipped
                 return step
@@ -1564,7 +1644,8 @@ class PrescreenEngine:
 
         # All negative — advance to phase 4 (OLDCARTS)
         await self._repo.advance_phase(db, row, 4)
-        return self._compute_step(row)
+        step = self._compute_step(row)
+        return await self._persist_step_if_terminal(db, row, step)
 
     async def _submit_sequential(
         self, db: AsyncSession, row: PrescreenSession, qid: str, value: Any
@@ -1578,12 +1659,14 @@ class PrescreenEngine:
         source = "oldcarts" if phase == 4 else "opd"
         symptom = row.primary_symptom
 
-        # Record the answer
-        await self._repo.record_response(db, row, qid, value)
-
-        # Look up the question to determine the action
+        # Look up the question and validate/determine the action BEFORE
+        # recording the answer — this prevents invalid values from polluting
+        # session state.
         question = self._store.get_question(source, symptom, qid)
         action = self._determine_action(question, value)
+
+        # Record the answer only after validation passes
+        await self._repo.record_response(db, row, qid, value)
 
         if action is None:
             logger.warning("No action determined for %s=%r, using pending queue", qid, value)
@@ -1700,7 +1783,7 @@ class PrescreenEngine:
                 phase=row.current_phase,
                 departments=[self._store.resolve_department(d) for d in dept_ids],
                 severity=self._store.resolve_severity(severity) if severity else None,
-                reason=action.reason,
+                reason=action.reason or action.advice,
             )
 
         if isinstance(action, UrgencyAction):
@@ -1742,8 +1825,11 @@ class PrescreenEngine:
             for opt in question.options:
                 if opt.id == value:
                     return opt.action
-            logger.warning("No option matched value=%r for %s", value, question.qid)
-            return None
+            valid_ids = [opt.id for opt in question.options]
+            raise ValueError(
+                f"Unknown option '{value}' for {question.qid}. "
+                f"Valid option IDs: {valid_ids}"
+            )
 
         if isinstance(question, (MultiSelectQuestion, ImageMultiSelectQuestion)):
             return question.next
@@ -1883,6 +1969,35 @@ class PrescreenEngine:
         await self._repo.complete_session(db, row, result_payload)
         return step
 
+    async def _persist_step_if_terminal(
+        self,
+        db: AsyncSession,
+        row: PrescreenSession,
+        step: StepResult,
+    ) -> StepResult:
+        """Persist terminal outcomes returned by ``_compute_step``.
+
+        When a bulk submit handler (e.g. ``_submit_personal_history``)
+        advances to a sequential phase that auto-evaluates entirely,
+        ``_compute_step`` returns a ``TerminationStep`` without persisting
+        the session status or result.  This helper ensures the session is
+        properly completed or terminated in the DB.
+
+        Non-terminal steps (``QuestionsStep``) are returned unchanged.
+        """
+        if not isinstance(step, TerminationStep):
+            return step
+        if step.type == "terminated":
+            dept_ids = [d["id"] for d in step.departments]
+            sev_id = step.severity["id"] if step.severity else None
+            return await self._terminate(
+                db, row,
+                departments=dept_ids,
+                severity=sev_id,
+                reason=step.reason,
+            )
+        return await self._complete(db, row, step)
+
     async def _save_pending(
         self, db: AsyncSession, row: PrescreenSession, pending: list[str]
     ) -> None:
@@ -1908,11 +2023,22 @@ class PrescreenEngine:
         re-computes the step from the persisted pending) derives the
         *same* qid that was just presented — not the *next* one.
         """
+        # Capture the phase we started from *before* _resolve_next runs,
+        # because _build_advance_step (called inside _resolve_next) may
+        # modify row.current_phase in-memory.  We need the original phase
+        # to detect phase advances correctly.
+        starting_phase = row.current_phase
+
         step = self._resolve_next(row, source, symptom, pending)
 
-        # If the step is a phase advance, persist it
-        if isinstance(step, QuestionsStep) and step.phase != row.current_phase:
+        # Phase advance: the step targets a different phase than we started
+        # from (e.g. OLDCARTS auto-eval chain → OPD action → phase 5 step).
+        # Persist the advance and return immediately — the old pending queue
+        # is stale and must NOT be saved.  advance_phase() also clears
+        # __pending in the responses JSONB.
+        if isinstance(step, QuestionsStep) and step.phase != starting_phase:
             await self._repo.advance_phase(db, row, step.phase)
+            return step
 
         # If it's a termination, persist it — or skip it when flag is set
         if isinstance(step, TerminationStep):
@@ -1936,8 +2062,7 @@ class PrescreenEngine:
                     )
                 else:
                     # Pending exhausted — advance to next phase or complete.
-                    phase = row.current_phase
-                    if phase == 4:
+                    if starting_phase == 4:
                         await self._repo.advance_phase(db, row, 5)
                         next_step = self._compute_step(row)
                     else:
@@ -1954,7 +2079,7 @@ class PrescreenEngine:
             # queue exhausted in OLDCARTS → OPD auto-eval chain terminates),
             # advance the session phase so the record correctly reflects
             # that the next phase was processed.
-            if step.phase != row.current_phase:
+            if step.phase != starting_phase:
                 await self._repo.advance_phase(db, row, step.phase)
             if step.type == "terminated":
                 dept_ids = [d["id"] for d in step.departments]
@@ -1994,7 +2119,7 @@ class PrescreenEngine:
             reason=result.get("reason") or row.termination_reason,
         )
 
-    def _build_advance_step(self, row: PrescreenSession, next_phase: int) -> QuestionsStep:
+    def _build_advance_step(self, row: PrescreenSession, next_phase: int) -> StepResult:
         """Build a step for the next phase (used when current phase is exhausted)."""
         # Temporarily adjust phase to compute the next step
         original_phase = row.current_phase

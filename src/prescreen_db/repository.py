@@ -173,7 +173,7 @@ class SessionRepository:
         db: AsyncSession,
         session: PrescreenSession,
         *,
-        primary_symptom: str,
+        primary_symptom: str | None,
         secondary_symptoms: list[str] | None = None,
     ) -> PrescreenSession:
         """Save the Phase 2 symptom selection."""
@@ -190,10 +190,22 @@ class SessionRepository:
 
         Also transitions status from ``created`` to ``in_progress`` on the
         first advance (phase 0 -> 1).
+
+        Clears the ``__pending`` queue from responses because it belongs to
+        the previous sequential phase and must not leak into the next phase.
+        Without this, stale qids from OLDCARTS (phase 4) can corrupt OPD
+        (phase 7) initialization, causing the entire OPD phase to be skipped.
         """
         session.current_phase = next_phase
         if session.status == SessionStatus.CREATED:
             session.status = SessionStatus.IN_PROGRESS
+        # Clear stale sequential pending queue — it belongs to the old phase.
+        # See revert_session_state() for the same pattern.
+        responses = session.responses or {}
+        if "__pending" in responses:
+            session.responses = {
+                k: v for k, v in responses.items() if k != "__pending"
+            }
         session.updated_at = datetime.now(timezone.utc)
         await db.flush()
         return session

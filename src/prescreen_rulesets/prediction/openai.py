@@ -103,32 +103,84 @@ class OpenAIPredictionModule(PredictionModule):
         self._min_severity = min_severity
         self._er_override = er_override
 
+    _MIN_DIAGNOSES_REPROMPT = (
+        "Your response contained fewer than 3 differential diagnoses. "
+        "You MUST predict at least 3 diseases to ensure sufficient "
+        "differential coverage for safe clinical triage. "
+        "Please re-evaluate the patient history and provide your "
+        "prediction again with at least 3 diagnoses."
+    )
+
     async def predict(self, qa_pairs: list[QAPair]) -> PredictionResult:
         """Run prediction on the combined Q&A history.
 
         Filters QA pairs, renders prompts, calls the OpenAI API with
         structured output, and parses/validates the response.
 
+        If the LLM returns fewer than 3 diagnoses, it is re-prompted once
+        with an additional message turn requesting at least 3.  If the
+        retry still returns fewer than 3, the result is accepted as-is
+        (the LLM genuinely could not produce more).
+
         Returns an empty ``PredictionResult`` on transient API errors
         so the pipeline can continue without predictions.
         """
-        filtered = self._filter_qa_pairs(qa_pairs)
+        # Capture and reset context early so it's cleared regardless of
+        # which code path returns (transient error, re-prompt, etc.).
+        er_override = self._er_override
+        min_severity = self._min_severity
+        self._er_override = False
+        self._min_severity = None
 
-        # Render the min_severity label for the prompt (e.g. "sev002")
-        min_sev_label = self._min_severity if self._min_severity else None
+        filtered = self._filter_qa_pairs(qa_pairs)
 
         system_prompt = self._prompt_manager.render_system()
         user_prompt = self._prompt_manager.render_prompt(
-            filtered, min_severity=min_sev_label,
+            filtered, min_severity=min_severity,
         )
 
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        content = await self._call_api(messages)
+        if content is None:
+            return PredictionResult()
+
+        result = self._parse_response(content)
+
+        # Re-prompt once if fewer than 3 diagnoses — the LLM may have
+        # been overly conservative and can usually produce more when asked.
+        if len(result.diagnoses) < 3:
+            logger.info(
+                "Prediction returned %d diagnoses (< 3), re-prompting",
+                len(result.diagnoses),
+            )
+            messages.append({"role": "assistant", "content": content})
+            messages.append(
+                {"role": "user", "content": self._MIN_DIAGNOSES_REPROMPT},
+            )
+            retry_content = await self._call_api(messages)
+            if retry_content is not None:
+                result = self._parse_response(retry_content)
+
+        return self._apply_safety_constraints(
+            result, er_override=er_override, min_severity=min_severity,
+        )
+
+    async def _call_api(
+        self, messages: list[dict[str, str]],
+    ) -> str | None:
+        """Call the OpenAI chat completions API.
+
+        Returns the response content string, or ``None`` on transient errors.
+        Permanent errors are re-raised.
+        """
         try:
             kwargs: dict[str, Any] = {
                 "model": self._model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
+                "messages": messages,
                 "response_format": self._response_format,
             }
             if self._temperature is not None:
@@ -145,10 +197,9 @@ class OpenAIPredictionModule(PredictionModule):
             logger.warning(
                 "OpenAI transient error during prediction: %s", exc,
             )
-            return PredictionResult()
+            return None
 
-        content = response.choices[0].message.content or ""
-        return self._parse_and_validate(content)
+        return response.choices[0].message.content or ""
 
     def _filter_qa_pairs(self, qa_pairs: list[QAPair]) -> list[QAPair]:
         """Filter QA pairs before sending to the LLM.
@@ -223,14 +274,12 @@ class OpenAIPredictionModule(PredictionModule):
         }
         return schema
 
-    def _parse_and_validate(self, content: str) -> PredictionResult:
-        """Parse the structured JSON response and enforce safety constraints.
+    def _parse_response(self, content: str) -> PredictionResult:
+        """Parse the structured JSON response into a ``PredictionResult``.
 
-        Enforcements:
-          1. ER override — if ``er_override`` is set, force sev003 + dept002.
-          2. Min severity — if ``min_severity`` is set, ensure the predicted
-             severity is at least as severe.
-          3. Max diagnoses — cap the diagnosis list.
+        Extracts diagnoses (capped at ``max_diagnoses``), departments, and
+        severity.  Does NOT apply safety constraints (ER override, min
+        severity) — those are applied separately by ``_apply_safety_constraints``.
         """
         try:
             data = json.loads(content)
@@ -238,7 +287,7 @@ class OpenAIPredictionModule(PredictionModule):
             logger.warning("Failed to parse prediction response as JSON")
             return PredictionResult()
 
-        # Extract and cap diagnoses
+        # Extract and cap diagnoses at max_diagnoses
         raw_diagnoses = data.get("diagnoses", [])
         diagnoses = [
             DiagnosisResult(disease_id=d["disease_id"])
@@ -254,9 +303,32 @@ class OpenAIPredictionModule(PredictionModule):
         if reasoning:
             logger.debug("Prediction reasoning: %s", reasoning)
 
+        return PredictionResult(
+            diagnoses=diagnoses,
+            departments=departments,
+            severity=severity,
+        )
+
+    def _apply_safety_constraints(
+        self,
+        result: PredictionResult,
+        *,
+        er_override: bool,
+        min_severity: str | None,
+    ) -> PredictionResult:
+        """Apply post-prediction safety constraints.
+
+        Enforcements:
+          1. ER override — if set, force sev003 + dept002.
+          2. Min severity — if set, ensure the predicted severity is at
+             least as severe as the rule-based floor.
+        """
+        departments = list(result.departments)
+        severity = result.severity
+
         # --- Enforce ER override ---
         # When rule-based detects ER, always keep ER regardless of LLM output
-        if self._er_override:
+        if er_override:
             from prescreen_rulesets.constants import (
                 DEFAULT_ER_DEPARTMENT,
                 DEFAULT_ER_SEVERITY,
@@ -266,10 +338,10 @@ class OpenAIPredictionModule(PredictionModule):
                 departments = [DEFAULT_ER_DEPARTMENT] + departments
 
         # --- Enforce minimum severity ---
-        if self._min_severity and severity:
+        if min_severity and severity:
             min_idx = (
-                SEVERITY_ORDER.index(self._min_severity)
-                if self._min_severity in SEVERITY_ORDER
+                SEVERITY_ORDER.index(min_severity)
+                if min_severity in SEVERITY_ORDER
                 else -1
             )
             pred_idx = (
@@ -279,14 +351,10 @@ class OpenAIPredictionModule(PredictionModule):
             )
             # If predicted severity is less severe than the minimum, bump it up
             if pred_idx < min_idx:
-                severity = self._min_severity
-
-        # Reset context after use to avoid stale state on next call
-        self._min_severity = None
-        self._er_override = False
+                severity = min_severity
 
         return PredictionResult(
-            diagnoses=diagnoses,
+            diagnoses=result.diagnoses,
             departments=departments,
             severity=severity,
         )

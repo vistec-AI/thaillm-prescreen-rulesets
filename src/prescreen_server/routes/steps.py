@@ -1,12 +1,13 @@
 """Step endpoints — get current step and submit answers.
 
-These endpoints drive the rule-based prescreening flow.  The pipeline
+These endpoints drive the full prescreening flow.  The pipeline
 dispatches by ``pipeline_stage``:
   - ``rule_based``: questions come from the PrescreenEngine
   - ``llm_questioning``: returns stored LLM questions
   - ``done``: returns the cached pipeline result
 
-``submit_answer`` is only valid during the ``rule_based`` stage.
+``submit_answer`` works during both ``rule_based`` and ``llm_questioning``
+stages, so clients can use a single ``POST /step`` endpoint throughout.
 """
 
 from typing import Any
@@ -81,9 +82,13 @@ async def submit_answer(
 ) -> PipelineStep:
     """Submit an answer and advance the session.
 
-    Only valid during the ``rule_based`` pipeline stage.  Returns the
-    next step (which may be another ``questions`` step, ``llm_questions``,
-    or the final ``pipeline_result``).
+    Works during both pipeline stages:
+      - ``rule_based``: ``value`` is the answer to the current question(s)
+      - ``llm_questioning``: ``value`` is a list of ``{question, answer}``
+        dicts responding to the LLM-generated follow-up questions
+
+    Returns the next step (``questions``, ``llm_questions``, or
+    ``pipeline_result``).
     """
     return await pipeline.submit_answer(
         db,

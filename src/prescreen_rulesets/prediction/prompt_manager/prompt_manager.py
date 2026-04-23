@@ -43,11 +43,12 @@ class PredictionPromptManager:
             v, ensure_ascii=False,
         )
 
-    def render_system(self) -> str:
-        """Render the system prompt with disease/department/severity reference tables."""
-        template = self._env.get_template("system.md")
+    def _build_reference_data(self) -> dict:
+        """Build disease/department/severity reference lists from the store.
 
-        # Build reference lists from the store
+        Returns a dict with ``diseases``, ``departments``, and
+        ``severity_levels`` keys, each containing a list of dicts.
+        """
         diseases = [
             {"id": d.id, "disease_name": d.disease_name, "name_th": d.name_th}
             for d in sorted(self._store.diseases.values(), key=lambda d: d.id)
@@ -61,19 +62,23 @@ class PredictionPromptManager:
             for s in self._store.get_severity_ids()
             for s in [self._store.severity_levels[s]]
         ]
+        return {
+            "diseases": diseases,
+            "departments": departments,
+            "severity_levels": severity_levels,
+        }
 
-        return template.render(
-            diseases=diseases,
-            departments=departments,
-            severity_levels=severity_levels,
-        )
+    def render_system(self) -> str:
+        """Render the system prompt — lean role definition only."""
+        template = self._env.get_template("system.md")
+        return template.render()
 
     def render_prompt(
         self,
         qa_pairs: list[QAPair],
         min_severity: str | None = None,
     ) -> str:
-        """Render the user prompt with QA history grouped by phase.
+        """Render the user prompt with QA history, reference tables, and instructions.
 
         Args:
             qa_pairs: ordered list of QA pairs from all stages.
@@ -81,10 +86,12 @@ class PredictionPromptManager:
                 as an instruction in the prompt.
         """
         grouped = self._group_by_phase(qa_pairs)
+        refs = self._build_reference_data()
         template = self._env.get_template("prompt.md")
         return template.render(
             grouped_pairs=grouped,
             min_severity=min_severity,
+            **refs,
         )
 
     @staticmethod

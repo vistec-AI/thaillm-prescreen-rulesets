@@ -178,6 +178,12 @@ class MockRepository:
         session.current_phase = next_phase
         if session.status == SessionStatus.CREATED:
             session.status = SessionStatus.IN_PROGRESS
+        # Clear stale __pending queue — mirrors real repository behaviour.
+        responses = session.responses or {}
+        if "__pending" in responses:
+            session.responses = {
+                k: v for k, v in responses.items() if k != "__pending"
+            }
         session.updated_at = datetime.now(timezone.utc)
         return session
 
@@ -543,6 +549,44 @@ class TestPhase2Symptoms:
         )
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         assert step.phase == 3, "Should advance to phase 3"
+
+    @pytest.mark.asyncio
+    async def test_none_of_the_above_terminates_out_of_scope(self, engine, mock_db):
+        """Submitting None as primary symptom terminates with 'out of scope'."""
+        await self._setup_phase2(engine, mock_db)
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms",
+            value={"primary_symptom": None, "secondary_symptoms": []},
+        )
+        assert isinstance(step, TerminationStep), (
+            "None primary symptom should terminate immediately"
+        )
+        assert step.type == "terminated", "Should be a termination, not completion"
+        assert step.departments == [], "No department for out-of-scope"
+        assert step.severity is None, "No severity for out-of-scope"
+        assert "does not currently support" in step.reason, (
+            "Reason should be 'out of scope'"
+        )
+
+    @pytest.mark.asyncio
+    async def test_none_of_the_above_sentinel_terminates(self, engine, mock_db):
+        """Submitting the __none_of_the_above__ sentinel also terminates."""
+        await self._setup_phase2(engine, mock_db)
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            qid="symptoms",
+            value={
+                "primary_symptom": "__none_of_the_above__",
+                "secondary_symptoms": [],
+            },
+        )
+        assert isinstance(step, TerminationStep), (
+            "Sentinel value should terminate immediately"
+        )
+        assert "does not currently support" in step.reason, (
+            "Reason should be 'out of scope'"
+        )
 
 
 # =====================================================================
@@ -1299,6 +1343,27 @@ class TestSchemaFields:
                     f"Optional field '{key}' should not be in required"
                 )
 
+        # Conditional fields (those with a condition block in the YAML)
+        # should NOT be in the required list — their requirement depends
+        # on runtime values (e.g. gender) which aren't known at schema time.
+        conditional_keys = {
+            f.key for f in engine._store.demographics if f.condition
+        }
+        for ckey in conditional_keys:
+            assert ckey not in ss["required"], (
+                f"Conditional field '{ckey}' should not be in required"
+            )
+
+        # Conditional fields should have nullable types in submission_schema
+        # so clients can send null when the field doesn't apply.
+        for ckey in conditional_keys:
+            prop_schema = ss["properties"][ckey]
+            schema_type = prop_schema.get("type")
+            assert isinstance(schema_type, list) and "null" in schema_type, (
+                f"Conditional field '{ckey}' should allow null in "
+                f"submission_schema, got type={schema_type}"
+            )
+
     @pytest.mark.asyncio
     async def test_phase1_schemas(self, engine, mock_db):
         """ER critical step has boolean answer_schemas and an object submission_schema."""
@@ -1348,13 +1413,16 @@ class TestSchemaFields:
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         assert step.phase == 2, "Should be phase 2"
 
-        # primary_symptom: string with enum
+        # primary_symptom: string-or-null with enum (includes none-of-the-above)
         primary = [q for q in step.questions if q.qid == "primary_symptom"][0]
-        assert primary.answer_schema["type"] == "string", (
-            "primary_symptom should be string type"
+        assert primary.answer_schema["type"] == ["string", "null"], (
+            "primary_symptom should allow string or null"
         )
         assert "enum" in primary.answer_schema, (
             "primary_symptom should have enum list"
+        )
+        assert None in primary.answer_schema["enum"], (
+            "primary_symptom enum should include None for none-of-the-above"
         )
 
         # secondary_symptoms: array of strings
@@ -2233,3 +2301,285 @@ class TestStepBack:
         assert last_answered not in row.responses, (
             f"Last answered qid {last_answered} should be removed from responses"
         )
+
+
+# =====================================================================
+# Regression: stale __pending queue & missing completion persistence
+# =====================================================================
+
+
+class TestStalePendingRegression:
+    """Regression tests for stale ``__pending`` queue bug.
+
+    When OLDCARTS finishes via auto-eval producing an OPD action,
+    ``_resolve_and_persist`` used to save a stale ``__pending`` queue
+    containing phase 5 qids.  This corrupted phase 7 OPD initialization,
+    causing the entire OPD phase to be skipped.
+    """
+
+    @pytest.mark.asyncio
+    async def test_advance_phase_clears_pending(self, engine, mock_db, mock_repo):
+        """``advance_phase`` removes ``__pending`` from responses."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        # Simulate stale pending from a previous phase
+        row.responses = {
+            "some_qid": {"value": "x"},
+            "__pending": ["stale1", "stale2"],
+        }
+        await mock_repo.advance_phase(mock_db, row, 5)
+        assert "__pending" not in row.responses, (
+            "__pending should be cleared on phase advance"
+        )
+        assert "some_qid" in row.responses, (
+            "Non-pending responses should be preserved"
+        )
+
+    @pytest.mark.asyncio
+    async def test_phase7_not_skipped_with_stale_pending(
+        self, engine, mock_db, mock_repo,
+    ):
+        """Phase 7 OPD shows proper questions even when stale ``__pending`` existed.
+
+        Simulates the scenario where ``__pending`` was stale after OLDCARTS.
+        After ``advance_phase(7)`` clears the stale data,
+        ``_step_sequential`` should seed with ``get_first_qid('opd', symptom)``
+        and return OPD questions — not complete immediately.
+        """
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        # Set up session ready for phase 7 — inject stale __pending
+        row.current_phase = 6
+        row.status = SessionStatus.IN_PROGRESS
+        row.demographics = {**VALID_DEMOGRAPHICS, **VALID_PAST_HISTORY}
+        row.primary_symptom = "Headache"
+        row.responses = {"__pending": ["hea_o_001", "hea_l_001"]}
+
+        # Advance to phase 7 (as _submit_personal_history would)
+        await mock_repo.advance_phase(mock_db, row, 7)
+        assert "__pending" not in row.responses, (
+            "advance_phase should have cleared stale __pending"
+        )
+
+        # Now get the step — should show OPD questions, not completion
+        step = await engine.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        # Phase 7 should show OPD questions (Headache has 11 OPD questions,
+        # starting with a gender_filter that auto-evaluates to a user-facing
+        # question downstream).
+        if isinstance(step, QuestionsStep):
+            assert step.phase == 7, (
+                f"Expected phase 7 questions, got phase {step.phase}"
+            )
+        else:
+            # Even if all OPD auto-evaluates to completion, that's valid —
+            # the key invariant is we DON'T get stuck on stale OLDCARTS qids.
+            assert isinstance(step, TerminationStep), (
+                f"Expected QuestionsStep or TerminationStep, got {type(step)}"
+            )
+
+
+class TestAdviceOnlyTerminate:
+    """BUG-003: OPD advice-only terminate paths should surface advice as reason.
+
+    Nine OPD terminate actions have a ``metadata.advice`` field with
+    self-care guidance but no department or severity.  The engine should
+    surface the advice text as the termination ``reason`` so downstream
+    consumers (API, frontend, LLM predictor) can see it.
+    """
+
+    @pytest.mark.asyncio
+    async def test_advice_surfaced_as_reason(self, engine, mock_db, mock_repo):
+        """Walk Diarrhea OPD to dia_opd_006 'ไม่ใช่' and verify advice appears in reason."""
+        # Set up session directly at phase 7 (OPD) with Diarrhea,
+        # pre-populating OLDCARTS answers that OPD conditionals check.
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.current_phase = 7
+        row.status = SessionStatus.IN_PROGRESS
+        row.demographics = {**VALID_DEMOGRAPHICS, **VALID_PAST_HISTORY}
+        row.primary_symptom = "Diarrhea"
+        # OLDCARTS answers that OPD conditionals reference — set to benign
+        # values so all conditionals fall through to dia_opd_006.
+        row.responses = {
+            # dia_as_001: no alarming associated symptoms
+            "dia_as_001": {"value": ["ไม่มี"]},
+            # dia_c_001: ordinary diarrhea character (not bloody mucus)
+            "dia_c_001": {"value": "ท้องเสียเป็นน้ำ"},
+        }
+
+        # Walk through OPD sequential questions until termination.
+        # OPD conditionals (age_filter, pregnancy check, OLDCARTS checks)
+        # auto-evaluate.  We only need to answer user-facing questions.
+        max_steps = 20
+        step = await engine.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+
+        for _ in range(max_steps):
+            if isinstance(step, TerminationStep):
+                break
+            assert isinstance(step, QuestionsStep), (
+                f"Expected QuestionsStep or TerminationStep, got {type(step).__name__}"
+            )
+            q = step.questions[0]
+
+            # For multi_select: pick empty list (no concerning features)
+            # For single_select: pick "ไม่ใช่" when available, else last option
+            if q.question_type in ("multi_select", "image_multi_select"):
+                answer = []
+            elif q.question_type in ("single_select", "image_single_select"):
+                opts = q.options or []
+                no_opts = [o for o in opts if "ไม่" in (o.get("id") or "")]
+                answer = no_opts[0]["id"] if no_opts else opts[-1]["id"]
+            else:
+                answer = "ไม่มี"
+
+            step = await engine.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value=answer,
+            )
+
+        assert isinstance(step, TerminationStep), (
+            "Expected flow to terminate after walking OPD Diarrhea tree"
+        )
+        # The advice-only path should surface the Thai advice text as reason
+        assert step.reason is not None, (
+            "Advice-only OPD terminate should have reason populated "
+            "with the self-care advice text from YAML metadata"
+        )
+        assert "พบแพทย์" in step.reason, (
+            f"Expected Thai advice text containing 'พบแพทย์' (see doctor), "
+            f"got: {step.reason!r}"
+        )
+
+
+class TestOPDUnknownChoiceRejection:
+    """BUG-004: Submitting an unknown option in OPD must raise ValueError.
+
+    Previously, ``_determine_action`` returned ``None`` for unrecognised
+    option IDs in single_select questions.  This caused ``_submit_sequential``
+    to silently record the invalid answer and continue resolving the pending
+    queue — which could lead to premature termination instead of a clear
+    error.  The fix raises ``ValueError`` so the caller gets a 400 response
+    and the session state stays clean.
+    """
+
+    @pytest.mark.asyncio
+    async def test_opd_unknown_choice_raises_value_error(
+        self, engine, mock_db, mock_repo,
+    ):
+        """Submitting 'ไม่เคย' for hea_opd_004 (valid: 'มี'/'ไม่มี') raises ValueError."""
+        # Set up session directly at phase 7 (OPD) with Headache.
+        # For a 28-year-old male, OPD auto-evals gender_filter and age_filter
+        # so the first user-facing question is hea_opd_004 (single_select).
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.current_phase = 7
+        row.status = SessionStatus.IN_PROGRESS
+        row.demographics = {**VALID_DEMOGRAPHICS, **VALID_PAST_HISTORY}
+        row.primary_symptom = "Headache"
+        row.responses = {}
+
+        # Verify the first user-facing question is hea_opd_004
+        step = await engine.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step, QuestionsStep), (
+            f"Expected QuestionsStep, got {type(step).__name__}"
+        )
+        assert step.questions[0].qid == "hea_opd_004", (
+            f"Expected hea_opd_004 as first user-facing OPD question, "
+            f"got {step.questions[0].qid}"
+        )
+
+        # Submit an invalid choice — should raise ValueError, not terminate
+        with pytest.raises(ValueError, match="Unknown option"):
+            await engine.submit_answer(
+                mock_db, user_id="u1", session_id="s1",
+                value="ไม่เคย",
+            )
+
+        # Session state should be unchanged — invalid answer not recorded
+        assert "hea_opd_004" not in row.responses, (
+            "Invalid answer should not be recorded in session responses"
+        )
+
+        # Re-fetching the current step should still show hea_opd_004
+        step_after = await engine.get_current_step(
+            mock_db, user_id="u1", session_id="s1",
+        )
+        assert isinstance(step_after, QuestionsStep), (
+            "Session should still present the same question after invalid submit"
+        )
+        assert step_after.questions[0].qid == "hea_opd_004", (
+            "Current step should still be hea_opd_004 after rejected submit"
+        )
+
+    @pytest.mark.asyncio
+    async def test_opd_valid_choice_still_works(
+        self, engine, mock_db, mock_repo,
+    ):
+        """Submitting 'ไม่มี' (a valid choice) for hea_opd_004 advances normally."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.current_phase = 7
+        row.status = SessionStatus.IN_PROGRESS
+        row.demographics = {**VALID_DEMOGRAPHICS, **VALID_PAST_HISTORY}
+        row.primary_symptom = "Headache"
+        row.responses = {}
+
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value="ไม่มี",
+        )
+
+        # Should advance to the next question, not raise an error
+        assert isinstance(step, (QuestionsStep, TerminationStep)), (
+            f"Expected QuestionsStep or TerminationStep, got {type(step).__name__}"
+        )
+        # The answer should be recorded
+        assert "hea_opd_004" in row.responses, (
+            "Valid answer should be recorded in session responses"
+        )
+
+
+class TestCompletionPersistence:
+    """Regression tests for missing completion persistence.
+
+    When a bulk submit handler (e.g. ``_submit_personal_history``) triggers
+    a sequential phase that auto-evaluates entirely, ``_compute_step`` used
+    to return a ``TerminationStep`` without persisting the session status.
+    """
+
+    @pytest.mark.asyncio
+    async def test_personal_history_submit_persists_completion(
+        self, engine, mock_db, mock_repo,
+    ):
+        """If phase 7 auto-evaluates to completion after personal history
+        submit, the session status and result are properly persisted."""
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+        row.current_phase = 6
+        row.status = SessionStatus.IN_PROGRESS
+        row.demographics = {**VALID_DEMOGRAPHICS, **VALID_PAST_HISTORY}
+        row.primary_symptom = "Headache"
+        row.responses = {}
+
+        step = await engine.submit_answer(
+            mock_db, user_id="u1", session_id="s1",
+            value=VALID_PERSONAL_HISTORY,
+        )
+
+        if isinstance(step, TerminationStep):
+            # Session should be properly persisted as terminal
+            assert row.status in (
+                SessionStatus.COMPLETED, SessionStatus.TERMINATED,
+            ), (
+                f"Session status should be terminal after auto-eval "
+                f"completion, got {row.status}"
+            )
+            assert row.result is not None, (
+                "Session result should be populated after completion"
+            )

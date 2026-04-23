@@ -227,10 +227,12 @@ class APIClient:
     async def submit_llm_answers(
         self, user_id: str, session_id: str, answers: list[dict],
     ) -> dict:
+        # Use the unified /step endpoint — the pipeline detects
+        # llm_questioning stage and routes to submit_llm_answers.
         return await self._post(
-            f"/api/v1/sessions/{session_id}/llm-answers",
+            f"/api/v1/sessions/{session_id}/step",
             user_id=user_id,
-            json=answers,
+            json={"value": answers},
         )
 
     async def _get(self, path: str, user_id: str) -> dict:

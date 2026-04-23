@@ -47,10 +47,12 @@ class TerminateMetadata(BaseModel):
 
     - department: list of {id} refs (can be empty for self-care / observation)
     - severity: optional list of {id} refs for severity override
+    - advice: optional self-care guidance text for observe-at-home paths
     """
 
     department: List[DepartmentRef] = []
     severity: Optional[List[SeverityRef]] = None
+    advice: Optional[str] = None
 
 
 class TerminateAction(BaseModel):
@@ -71,6 +73,11 @@ class TerminateAction(BaseModel):
         if self.metadata.severity is None:
             return []
         return [s.id for s in self.metadata.severity]
+
+    @property
+    def advice(self) -> str | None:
+        """Self-care advice text from metadata, if present."""
+        return self.metadata.advice
 
 
 class UrgencyMetadata(BaseModel):

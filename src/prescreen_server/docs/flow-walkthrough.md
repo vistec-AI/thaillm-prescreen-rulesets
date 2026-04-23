@@ -158,13 +158,16 @@ The demographic form collects 14 fields total. Some fields are conditionally vis
 | Current Medication | `current_medication` | `yes_no_detail` | Yes | `{"answer": bool, "detail": str \| null}` |
 | Drug/Food Allergies | `drug_food_allergies` | `yes_no_detail` | Yes | `{"answer": bool, "detail": str \| null}` |
 | Surgical History | `surgical_history` | `yes_no_detail` | Yes | `{"answer": bool, "detail": str \| null}` |
-| Pregnancy Status | `pregnancy_status` | `enum` | Conditional | `"pregnant"` or `"not_pregnant"` — only shown for females |
-| Total Pregnancies | `total_pregnancies` | `int` | Conditional | Only shown when `pregnancy_status == "pregnant"` |
-| Number of Fetuses | `fetuses_count` | `int` | Conditional | Only shown when `pregnancy_status == "pregnant"` |
-| Gestational Age (weeks) | `gestational_age_weeks` | `int` | Conditional | Max 42; only shown when `pregnancy_status == "pregnant"` |
-| Last Menstrual Period | `last_menstrual_period` | `date` | Conditional | ISO date; only shown when `pregnancy_status == "not_pregnant"` |
-| Menstrual Duration (days) | `menstrual_duration_days` | `int` | Conditional | Only shown when `pregnancy_status == "not_pregnant"` |
-| Menstrual Flow | `menstrual_flow` | `enum` | Conditional | `"same"`, `"more"`, or `"less"`; only shown when `pregnancy_status == "not_pregnant"` |
+| Pregnancy Status | `pregnancy_status` | `enum` | Conditional | `"pregnant"`, `"not_pregnant"`, or `null` — only required for females |
+| Total Pregnancies | `total_pregnancies` | `int` | Conditional | Only required when `pregnancy_status == "pregnant"`; `null` otherwise |
+| Number of Fetuses | `fetuses_count` | `int` | Conditional | Only required when `pregnancy_status == "pregnant"`; `null` otherwise |
+| Gestational Age (weeks) | `gestational_age_weeks` | `int` | Conditional | Max 42; only required when `pregnancy_status == "pregnant"`; `null` otherwise |
+| Last Menstrual Period | `last_menstrual_period` | `date` | Conditional | ISO date; only required when `pregnancy_status == "not_pregnant"`; `null` otherwise |
+| Menstrual Duration (days) | `menstrual_duration_days` | `int` | Conditional | Only required when `pregnancy_status == "not_pregnant"`; `null` otherwise |
+| Menstrual Flow | `menstrual_flow` | `enum` | Conditional | `"same"`, `"more"`, `"less"`, or `null`; only required when `pregnancy_status == "not_pregnant"` |
+
+!!! note "Conditional fields accept `null`"
+    Conditional fields are **not** listed in the `submission_schema.required` array and their types allow `null`. When a field's condition is not met (e.g. pregnancy fields for male patients), you may omit the field entirely or send `null`. The server will skip validation for those fields.
 
 ### Example: Submit demographics
 
@@ -858,28 +861,32 @@ Collects occupation, hometown, smoking history, and alcohol history. Smoking and
 |-------|-----|------|----------|-------|
 | Occupation | `occupation` | `enum` | Yes | Thai occupation categories (includes `"other"`) |
 | Hometown / Province | `hometown_province` | `str` | Yes | |
-| Smoking History | `smoking_history` | `yes_no_detail` | Yes | If yes: detail includes `cigarettes_per_day` (int) and `smoking_years` (int) |
-| Alcohol History | `alcohol_history` | `yes_no_detail` | Yes | If yes: detail includes `drinking_frequency` (enum) and `drinking_years` (int) |
+| Smoking History | `smoking_history` | `yes_no_detail` | Yes | See detail_fields below |
+| Alcohol History | `alcohol_history` | `yes_no_detail` | Yes | See detail_fields below |
+
+#### Smoking & Alcohol `detail_fields`
+
+When `answer` is `true`, the `detail` field is an **object** containing follow-up sub-fields:
+
+**`smoking_history`** detail fields:
+
+| Sub-field | Type | Description |
+|-----------|------|-------------|
+| `cigarettes_per_day` | `int` | Number of cigarettes smoked per day |
+| `smoking_years` | `int` | Number of years smoking |
+
+**`alcohol_history`** detail fields:
+
+| Sub-field | Type | Description |
+|-----------|------|-------------|
+| `drinking_frequency` | `enum` | `"ทุกวัน"` (daily), `"ทุกสัปดาห์"` (weekly), `"ทุกเดือน"` (monthly), or `"นาน ๆ ครั้ง"` (occasionally) |
+| `drinking_years` | `int` | Number of years drinking |
+
+When `answer` is `false`, set `detail` to `null`.
 
 ### Example: Submit personal history
 
-=== "curl"
-
-    ```bash
-    curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step \
-      -H "Content-Type: application/json" \
-      -H "X-User-ID: patient-1" \
-      -d '{
-        "value": {
-          "occupation": "พนักงานบริษัท/เอกชน/ลูกจ้าง",
-          "hometown_province": "กรุงเทพมหานคร",
-          "smoking_history": {"answer": false, "detail": null},
-          "alcohol_history": {"answer": false, "detail": null}
-        }
-      }'
-    ```
-
-=== "Python"
+=== "Non-smoker, non-drinker"
 
     ```python
     next_step = client.post(
@@ -890,6 +897,35 @@ Collects occupation, hometown, smoking history, and alcohol history. Smoking and
                 "hometown_province": "กรุงเทพมหานคร",
                 "smoking_history": {"answer": False, "detail": None},
                 "alcohol_history": {"answer": False, "detail": None},
+            }
+        },
+        headers=headers,
+    ).json()
+    ```
+
+=== "Smoker and drinker (with details)"
+
+    ```python
+    next_step = client.post(
+        "/api/v1/sessions/sess-001/step",
+        json={
+            "value": {
+                "occupation": "รับจ้างทั่วไป",
+                "hometown_province": "เชียงใหม่",
+                "smoking_history": {
+                    "answer": True,
+                    "detail": {
+                        "cigarettes_per_day": 10,
+                        "smoking_years": 5
+                    }
+                },
+                "alcohol_history": {
+                    "answer": True,
+                    "detail": {
+                        "drinking_frequency": "ทุกสัปดาห์",
+                        "drinking_years": 3
+                    }
+                },
             }
         },
         headers=headers,
@@ -1101,32 +1137,37 @@ If the pipeline has a question generator configured, after the rule-based phases
 }
 ```
 
-Submit answers using the LLM answers endpoint:
+Submit answers using the same `/step` endpoint — the pipeline detects that the session is in `llm_questioning` stage and routes accordingly:
 
 === "curl"
 
     ```bash
-    curl -X POST http://localhost:8080/api/v1/sessions/sess-001/llm-answers \
+    curl -X POST http://localhost:8080/api/v1/sessions/sess-001/step \
       -H "Content-Type: application/json" \
       -H "X-User-ID: patient-1" \
-      -d '[
+      -d '{"value": [
         {"question": "Does the headache get worse when you bend forward?", "answer": "Yes"},
         {"question": "Have you experienced any visual disturbances?", "answer": "No"}
-      ]'
+      ]}'
     ```
 
 === "Python"
 
     ```python
     result = client.post(
-        "/api/v1/sessions/sess-001/llm-answers",
-        json=[
+        "/api/v1/sessions/sess-001/step",
+        json={"value": [
             {"question": "Does the headache get worse when you bend forward?", "answer": "Yes"},
             {"question": "Have you experienced any visual disturbances?", "answer": "No"},
-        ],
+        ]},
         headers=headers,
     ).json()
     ```
+
+!!! tip "Unified `/step` endpoint"
+    The `POST /step` endpoint handles both `rule_based` and `llm_questioning` stages. Clients can use a single endpoint throughout the entire prescreening flow — no need to switch to a different endpoint for LLM answers.
+
+    The legacy `POST /llm-answers` endpoint is still available for backward compatibility.
 
 ## LLM Prompt Rendering
 

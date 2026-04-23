@@ -30,7 +30,7 @@ This page provides a quick-reference endpoint table and key model shapes.
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/api/v1/sessions/{session_id}/step` | `X-User-ID` | Get the current step. Response type depends on pipeline stage. |
-| `POST` | `/api/v1/sessions/{session_id}/step` | `X-User-ID` | Submit an answer. Body: `{"qid": "...", "value": ...}`. `qid` is optional. |
+| `POST` | `/api/v1/sessions/{session_id}/step` | `X-User-ID` | Submit an answer. Body: `{"qid": "...", "value": ...}`. `qid` is optional. Works in both `rule_based` and `llm_questioning` stages. |
 | `POST` | `/api/v1/sessions/{session_id}/back-edit` | `X-User-ID` | Revert to a previous phase or question. Body: `{"target_phase": N, "target_qid": "..."}`. `target_qid` optional, only for phases 4 and 7. |
 | `POST` | `/api/v1/sessions/{session_id}/step-back` | `X-User-ID` | Go back one step automatically. No request body needed — the engine determines the previous step. Returns 400 if already at phase 0. |
 
@@ -38,7 +38,7 @@ This page provides a quick-reference endpoint table and key model shapes.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/sessions/{session_id}/llm-answers` | `X-User-ID` | Submit LLM follow-up answers. Body: list of `{"question": "...", "answer": "..."}`. |
+| `POST` | `/api/v1/sessions/{session_id}/llm-answers` | `X-User-ID` | Submit LLM follow-up answers (legacy — prefer `POST /step`). Body: list of `{"question": "...", "answer": "..."}`. |
 | `GET` | `/api/v1/sessions/{session_id}/llm-prompt` | `X-User-ID` | Get the current step rendered as an LLM-ready prompt string. |
 
 ### Reference Data
