@@ -600,6 +600,19 @@ class PrescreenPipeline:
             for d in prediction.diagnoses
         ]
 
+        # Attach a custom termination reason when the predicted DDx includes a
+        # disease configured in disease_reasons.yaml (e.g. telemedicine-eligible
+        # conditions).  "Any match wins" — the first configured reason among the
+        # predicted diseases is used.  An existing reason — e.g. carried over
+        # from a rule-based phase-7 OPD terminate — is preserved, never
+        # overwritten, since it reflects a deliberate clinical routing decision.
+        if not result.get("reason"):
+            for d in prediction.diagnoses:
+                custom_reason = self._store.get_disease_reason(d.disease_id)
+                if custom_reason:
+                    result["reason"] = custom_reason
+                    break
+
         # LLM departments/severity OVERRIDE rule-based
         # (ER override and min severity are already enforced inside the predictor)
         if prediction.departments:

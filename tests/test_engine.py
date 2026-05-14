@@ -192,6 +192,17 @@ class MockRepository:
         session.updated_at = datetime.now(timezone.utc)
         return session
 
+    async def append_skipped_termination(self, db, session, skipped):
+        # Mirrors SessionRepository.append_skipped_termination: append the
+        # would-be termination event to the JSONB list instead of terminating.
+        # Reassign the list (not in-place append) to match the real repo's
+        # SQLAlchemy-change-detection pattern.
+        existing = list(session.skipped_terminations or [])
+        existing.append(skipped)
+        session.skipped_terminations = existing
+        session.updated_at = datetime.now(timezone.utc)
+        return session
+
     async def terminate_session(self, db, session, *, phase, reason):
         now = datetime.now(timezone.utc)
         session.status = SessionStatus.TERMINATED

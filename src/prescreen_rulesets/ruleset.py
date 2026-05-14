@@ -74,6 +74,8 @@ class RulesetStore:
         severity_levels    — dict[id, SeverityConst]
         nhso_symptoms      — dict[name, NHSOSymptom]
         underlying_diseases — list[UnderlyingDisease]
+        diseases           — dict[id, Disease]
+        disease_reasons    — dict[disease_id, reason_text]
         demographics       — list[DemographicField]   (phase 0)
         past_history       — list[DemographicField]   (phase 5)
         personal_history   — list[DemographicField]   (phase 6)
@@ -95,6 +97,9 @@ class RulesetStore:
         self.nhso_symptoms: dict[str, NHSOSymptom] = {}
         self.underlying_diseases: list[UnderlyingDisease] = []
         self.diseases: dict[str, Disease] = {}
+        # Custom termination reasons keyed by disease ID (from disease_reasons.yaml).
+        # Resolved to a flat {disease_id: reason_text} map during _load_constants().
+        self.disease_reasons: dict[str, str] = {}
         self.demographics: list[DemographicField] = []
         self.past_history: list[DemographicField] = []
         self.personal_history: list[DemographicField] = []
@@ -168,6 +173,22 @@ class RulesetStore:
         for raw in load_yaml(const_dir / "diseases.yaml"):
             disease = Disease(**raw)
             self.diseases[disease.id] = disease
+
+        # Disease custom reasons — resolved to a flat {disease_id: reason_text} map.
+        # The YAML has two sections: `reasons` (named, reusable strings) and
+        # `disease_reasons` (disease_id -> reason key).  Resolving here keeps
+        # lookups O(1) and decoupled from the file's two-section shape.
+        disease_reasons_raw = load_yaml(const_dir / "disease_reasons.yaml") or {}
+        named_reasons: dict[str, str] = disease_reasons_raw.get("reasons") or {}
+        for disease_id, reason_key in (disease_reasons_raw.get("disease_reasons") or {}).items():
+            # Fail loud on a dangling reference — mirrors the ValueError guard
+            # used in _load_decision_trees() for unknown question types.
+            if reason_key not in named_reasons:
+                raise ValueError(
+                    f"disease_reasons.yaml: disease '{disease_id}' references "
+                    f"unknown reason key '{reason_key}'"
+                )
+            self.disease_reasons[disease_id] = named_reasons[reason_key]
 
     def _load_demographics(self) -> None:
         """Load v1/rules/demographic.yaml into DemographicField list."""
@@ -325,6 +346,16 @@ class RulesetStore:
         """
         sev = self.severity_levels[sev_id]
         return {"id": sev.id, "name": sev.name, "name_th": sev.name_th, "description": sev.description}
+
+    def get_disease_reason(self, disease_id: str) -> str | None:
+        """Return the configured custom termination reason for a disease ID.
+
+        Returns ``None`` when the disease has no entry in disease_reasons.yaml.
+        Used by the pipeline to surface extra guidance (e.g. telemedicine
+        eligibility) when a disease appears in the predicted differential
+        diagnosis.
+        """
+        return self.disease_reasons.get(disease_id)
 
     # ------------------------------------------------------------------
     # ID enumeration helpers (used by prediction module for structured output)

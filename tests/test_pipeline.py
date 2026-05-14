@@ -1383,3 +1383,111 @@ class TestStepBackPipeline:
         )
         assert isinstance(step, QuestionsStep), "Expected QuestionsStep"
         assert step.phase == 2, "Should advance to phase 2 after re-submit"
+
+
+# =====================================================================
+# Tests: Disease-driven custom termination reason
+# =====================================================================
+
+
+class TestDiseaseDrivenReason:
+    """Pipeline attaches a custom reason when the predicted DDx contains a
+    disease configured in v1/const/disease_reasons.yaml (telemedicine-eligible)."""
+
+    async def _run_to_prediction(
+        self, engine, store, mock_repo, mock_db, predictor, *, result,
+    ):
+        """Drive a completed session through ``_handle_rule_based_end`` with the
+        given predictor and seed ``result`` dict, returning the PipelineResult.
+
+        Uses EmptyQuestionGenerator so the flow skips LLM questioning and goes
+        straight to prediction — the path where the disease-driven reason is set.
+        """
+        p = PrescreenPipeline(
+            engine, store,
+            generator=EmptyQuestionGenerator(),
+            predictor=predictor,
+        )
+        p._repo = mock_repo
+
+        await engine.create_session(mock_db, user_id="u1", session_id="s1")
+        row = mock_repo._sessions[("u1", "s1")]
+
+        # Simulate a session that finished the rule-based flow normally.
+        row.status = SessionStatus.COMPLETED
+        row.current_phase = 5
+        row.primary_symptom = "Headache"
+        row.demographics = {"gender": "Male", "age": 30}
+        row.result = result
+
+        term_step = TerminationStep(
+            type="completed", phase=5,
+            departments=[], severity=None, reason=result.get("reason"),
+        )
+        return await p._handle_rule_based_end(mock_db, row, term_step)
+
+    @pytest.mark.asyncio
+    async def test_telemed_disease_in_ddx_sets_reason(
+        self, engine, store, mock_repo, mock_db,
+    ):
+        """A telemedicine-eligible disease in the DDx populates PipelineResult.reason."""
+        telemed_reason = store.get_disease_reason("d437")  # Upper respiratory tract infections
+        assert telemed_reason, "d437 must be configured in disease_reasons.yaml"
+
+        # d001 is not telemed-eligible; d437 is — "any match wins".
+        predictor = MockPredictionModule(diagnoses=[
+            DiagnosisResult(disease_id="d001"),
+            DiagnosisResult(disease_id="d437"),
+        ])
+        result = await self._run_to_prediction(
+            engine, store, mock_repo, mock_db, predictor,
+            result={"departments": ["dept001"], "severity": "sev001"},
+        )
+
+        assert result.reason == telemed_reason, (
+            "A telemed-eligible disease in the DDx should set the telemedicine reason"
+        )
+        assert result.tool_content["note"] == telemed_reason, (
+            "tool_content.note should mirror the telemedicine reason"
+        )
+
+    @pytest.mark.asyncio
+    async def test_non_telemed_ddx_leaves_reason_unset(
+        self, engine, store, mock_repo, mock_db,
+    ):
+        """A DDx with no configured disease leaves reason as None."""
+        predictor = MockPredictionModule(diagnoses=[
+            DiagnosisResult(disease_id="d001"),
+            DiagnosisResult(disease_id="d003"),
+        ])
+        result = await self._run_to_prediction(
+            engine, store, mock_repo, mock_db, predictor,
+            result={"departments": ["dept001"], "severity": "sev001"},
+        )
+
+        assert result.reason is None, (
+            "A DDx without a configured disease should not set a reason"
+        )
+
+    @pytest.mark.asyncio
+    async def test_existing_reason_not_overwritten(
+        self, engine, store, mock_repo, mock_db,
+    ):
+        """An existing rule-based reason is preserved even when the DDx contains
+        a telemedicine-eligible disease — the telemed note never clobbers a
+        deliberate clinical routing reason."""
+        predictor = MockPredictionModule(diagnoses=[
+            DiagnosisResult(disease_id="d437"),  # telemed-eligible
+        ])
+        result = await self._run_to_prediction(
+            engine, store, mock_repo, mock_db, predictor,
+            result={
+                "departments": ["dept001"],
+                "severity": "sev001",
+                "reason": "OPD routing",
+            },
+        )
+
+        assert result.reason == "OPD routing", (
+            "An existing rule-based reason must not be overwritten by the telemed reason"
+        )

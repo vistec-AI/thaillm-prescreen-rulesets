@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 """Simulate the PrescreenPipeline end-to-end with mocked DB and LLM.
 
-Drives through all 6 rule-based phases, then the LLM questioning and
-prediction stages, printing rich audit logs of every question asked,
-the mock answer chosen, and available choices.
+Drives through all 8 rule-based phases (demographics, ER critical, symptom
+selection, ER checklist, OLDCARTS, past history, personal history, OPD), then
+the LLM questioning and prediction stages, printing rich audit logs of every
+question asked, the mock answer chosen, and available choices.
 
 By default answers are **randomised** (``--random``, on by default) so each
 run explores a different path through the rule graph.  Use ``--no-random``
 for the original deterministic behaviour.
+
+Note: the rule-based decision trees usually terminate early (well before
+phase 7), so a plain run rarely reaches the LLM/prediction stages.  Pass
+``--disable-early-termination`` to force the engine through all 8 phases —
+this is required to exercise prediction and the disease-driven custom
+termination reason.
 
 Usage::
 
@@ -19,6 +26,9 @@ Usage::
 
     # Choose a specific symptom with random answers
     python scripts/simulate_pipeline.py -s Fever
+
+    # Run all 8 phases through to prediction (no early exit)
+    python scripts/simulate_pipeline.py --no-random --disable-early-termination
 
     # List available symptoms
     python scripts/simulate_pipeline.py --list-symptoms
@@ -78,21 +88,62 @@ _DEFAULT_SYMPTOM = "Headache"
 
 # Phase 0: Hardcoded demographics — an adult male so we use the adult ER
 # checklist in phase 3 and avoid pediatric branching.
+#
+# The demographic schema (v1/rules/demographic.yaml) requires `age`, `gender`,
+# `underlying_diseases`, and the three `yes_no_detail` history fields.  A
+# `yes_no_detail` value is an object: {"answer": bool[, "detail": {...}]}.
+# Female additionally requires the pregnancy block (see the pool below).
 MOCK_DEMOGRAPHICS = {
-    "date_of_birth": "1994-06-15",
+    "age": 31,
     "gender": "Male",
-    "height": 175,
-    "weight": 70,
+    "underlying_diseases": [],
+    "current_medication": {"answer": False},
+    "drug_food_allergies": {"answer": False},
+    "surgical_history": {"answer": False},
 }
 
 # Pool of random demographics for --random mode.
-# All entries are adults to avoid pediatric branching edge cases.
+# All entries are adults to avoid pediatric branching edge cases.  Female
+# entries carry the not_pregnant block (last_menstrual_period,
+# menstrual_duration_days, menstrual_flow) — the schema makes those required
+# once pregnancy_status is "not_pregnant".
 _RANDOM_DEMOGRAPHICS_POOL = [
-    {"date_of_birth": "1994-06-15", "gender": "Male", "height": 175, "weight": 70},
-    {"date_of_birth": "1988-03-22", "gender": "Female", "height": 160, "weight": 55},
-    {"date_of_birth": "2000-11-01", "gender": "Male", "height": 180, "weight": 85},
-    {"date_of_birth": "1975-08-10", "gender": "Female", "height": 165, "weight": 62},
-    {"date_of_birth": "1990-01-30", "gender": "Male", "height": 170, "weight": 78},
+    {
+        "age": 31, "gender": "Male", "underlying_diseases": [],
+        "current_medication": {"answer": False},
+        "drug_food_allergies": {"answer": False},
+        "surgical_history": {"answer": False},
+    },
+    {
+        "age": 38, "gender": "Female", "underlying_diseases": [],
+        "current_medication": {"answer": False},
+        "drug_food_allergies": {"answer": False},
+        "surgical_history": {"answer": False},
+        "pregnancy_status": "not_pregnant",
+        "last_menstrual_period": "2026-04-20",
+        "menstrual_duration_days": 5, "menstrual_flow": "same",
+    },
+    {
+        "age": 25, "gender": "Male", "underlying_diseases": [],
+        "current_medication": {"answer": False},
+        "drug_food_allergies": {"answer": False},
+        "surgical_history": {"answer": False},
+    },
+    {
+        "age": 50, "gender": "Female", "underlying_diseases": [],
+        "current_medication": {"answer": False},
+        "drug_food_allergies": {"answer": False},
+        "surgical_history": {"answer": False},
+        "pregnancy_status": "not_pregnant",
+        "last_menstrual_period": "2026-04-15",
+        "menstrual_duration_days": 4, "menstrual_flow": "less",
+    },
+    {
+        "age": 36, "gender": "Male", "underlying_diseases": [],
+        "current_medication": {"answer": False},
+        "drug_food_allergies": {"answer": False},
+        "surgical_history": {"answer": False},
+    },
 ]
 
 # Pool of free-text answers for --random mode.
@@ -142,13 +193,23 @@ class SimQuestionGenerator(QuestionGenerator):
 
 
 class SimPredictionModule(PredictionModule):
-    """Returns two mock diagnoses with confidence scores."""
+    """Returns two mock diagnoses (ranked most-likely first).
+
+    ``DiagnosisResult`` carries only ``disease_id`` — no confidence score is
+    exposed, by design, to avoid clinical misinterpretation.
+
+    ``d437`` (Upper respiratory tract infections) is telemedicine-eligible per
+    v1/const/disease_reasons.yaml, so it exercises the disease-driven custom
+    termination reason: the pipeline should surface the telemedicine note in
+    ``PipelineResult.reason``.  ``d001`` is *not* configured — keeping it first
+    verifies the "any match wins" scan skips it and still finds ``d437``.
+    """
 
     async def predict(self, qa_pairs: list[QAPair]) -> PredictionResult:
         return PredictionResult(
             diagnoses=[
-                DiagnosisResult(disease_id="d001", confidence=0.85),
-                DiagnosisResult(disease_id="d003", confidence=0.45),
+                DiagnosisResult(disease_id="d001"),
+                DiagnosisResult(disease_id="d437"),
             ],
             departments=[],
             severity=None,
@@ -160,6 +221,14 @@ class SimPredictionModule(PredictionModule):
 # ---------------------------------------------------------------------------
 
 
+# The 8-phase rule-based flow splits into bulk phases (a whole form submitted
+# at once) and sequential phases (one question per step, phases 4 & 7).
+# Keeping the bulk set named avoids scattered `phase <= 3` magic numbers that
+# silently rot when phases are inserted — e.g. phases 5 & 6 (past/personal
+# history) are bulk but come *after* the sequential OLDCARTS phase 4.
+_BULK_PHASES = frozenset({0, 1, 2, 3, 5, 6})
+
+
 def generate_mock_answer(step: QuestionsStep) -> Any:
     """Produce a mock answer for the given QuestionsStep.
 
@@ -167,11 +236,13 @@ def generate_mock_answer(step: QuestionsStep) -> Any:
     Otherwise falls back to the original deterministic strategy.
 
     The strategy varies by phase:
-    - Phase 0 (Demographics): hardcoded dict (or random from pool)
-    - Phase 1 (ER Critical): all False (or random True/False)
-    - Phase 2 (Symptom Selection): configurable primary symptom, no secondary
-    - Phase 3 (ER Checklist): all False (or random True/False)
-    - Phases 4-5 (Sequential): auto-generate based on question_type
+    - Phase 0 (Demographics):       hardcoded dict (or random from pool)
+    - Phase 1 (ER Critical):        all False (or random True/False)
+    - Phase 2 (Symptom Selection):  configurable primary symptom, no secondary
+    - Phase 3 (ER Checklist):       all False (or random True/False)
+    - Phases 5, 6 (Past/Personal History): bulk dict keyed by field key,
+      auto-generated from each field's demographic type
+    - Phases 4, 7 (OLDCARTS / OPD): sequential — auto-generate from question_type
     """
     phase = step.phase
 
@@ -199,10 +270,69 @@ def generate_mock_answer(step: QuestionsStep) -> Any:
             return {q.qid: random.choice([True, False]) for q in step.questions}
         return {q.qid: False for q in step.questions}
 
-    # --- Sequential phases (4/5): exactly one question per step ---
+    if phase in (5, 6):
+        # Past/personal history — bulk, but (unlike phases 1 & 3) the
+        # submission dict is keyed by each field's `key`, not its qid,
+        # because these phases reuse the demographic-field schema.
+        return {
+            q.metadata["key"]: _answer_for_field_type(q)
+            for q in step.questions
+        }
+
+    # --- Sequential phases (4, 7): exactly one question per step ---
 
     q = step.questions[0]
     return _answer_for_question_type(q)
+
+
+def _answer_for_field_type(q) -> Any:
+    """Pick a mock answer for a demographic-style bulk field (phases 0, 5, 6).
+
+    These phases carry *demographic field types* (``int``, ``float``, ``enum``,
+    ``str``, ``date``, ``yes_no_detail``, ``from_yaml``) — a different type
+    vocabulary from the sequential-phase question types handled by
+    ``_answer_for_question_type()``.
+
+    Answers are deliberately "negative/minimal" (no, empty, first option) so
+    they never activate conditional sub-fields the simulation has no schema to
+    fill — e.g. answering ``yes_no_detail`` with ``yes`` would demand a
+    ``detail`` object whose shape varies per field.
+    """
+    qtype = q.question_type
+
+    if qtype == "yes_no_detail":
+        # Always "no" — "yes" would require a detail_fields payload.
+        return {"answer": False}
+
+    if qtype == "enum":
+        if q.options:
+            if _random_mode:
+                return random.choice(q.options)["id"]
+            return q.options[0]["id"]
+        return ""
+
+    if qtype == "int":
+        # Small positive int (these fields are counts/years) — 1 clears any
+        # min/max range present on history fields.
+        return random.randint(1, 5) if _random_mode else 1
+
+    if qtype == "float":
+        # Must be > 0 (engine rejects non-positive floats). Range loosely
+        # covers both height (cm) and weight (kg) fields.
+        return round(random.uniform(40.0, 180.0), 1) if _random_mode else 65.0
+
+    if qtype in ("date", "datetime"):
+        # A fixed past date — `datetime` fields additionally reject the future.
+        return "2020-01-01"
+
+    if qtype == "from_yaml":
+        # List-valued field (e.g. underlying diseases) — empty list is valid.
+        return []
+
+    # `str` and any unexpected type fall back to free text.
+    if _random_mode:
+        return random.choice(_RANDOM_FREE_TEXT_POOL)
+    return "ไม่มี"
 
 
 def _answer_for_question_type(q) -> Any:
@@ -345,12 +475,13 @@ def log_question_and_answer(
 
 def log_bulk_answers(step: QuestionsStep, answer: Any, *, verbose: bool = False) -> None:
     """Log all questions and answers for a bulk phase."""
-    # For bulk phases, answer is a dict keyed by qid or field key.
-    # Match questions to their answers.
+    # For bulk phases, answer is a dict keyed either by field `key` or by qid.
+    # Phases 0, 5, 6 reuse the demographic-field schema and are keyed by
+    # `metadata["key"]`; the ER phases (1, 3) are keyed by qid.
+    keyed_by_field = step.phase in (0, 5, 6)
     for q in step.questions:
         qid = q.qid
-        # Phase 0 maps by metadata key, not qid
-        if step.phase == 0:
+        if keyed_by_field:
             key = q.metadata.get("key", qid) if q.metadata else qid
             ans = answer.get(key, "--")
         else:
@@ -478,8 +609,17 @@ async def run_simulation(
     quiet: bool = False,
     use_random: bool = True,
     skip_er: bool = False,
+    disable_early_termination: bool = False,
 ) -> None:
-    """Drive the full pipeline simulation and print audit logs."""
+    """Drive the full pipeline simulation and print audit logs.
+
+    ``disable_early_termination`` is passed straight through to
+    ``create_session``.  When set, the engine skips every early-exit point
+    (ER phases 1 & 3, OLDCARTS/OPD terminates) and runs all 8 phases to
+    completion — the only path that reaches ``_finalize_with_prediction``,
+    so it is required to exercise the LLM prediction and disease-driven
+    custom-reason stages.
+    """
     global _quiet, _random_mode, _skip_er
     _quiet = quiet
     _random_mode = use_random
@@ -523,10 +663,14 @@ async def run_simulation(
     _print(f" PRESCREEN PIPELINE SIMULATION")
     _print(f" Symptom: {symptom}")
     _print(f" Random:  {'ON' if _random_mode else 'OFF'}")
+    _print(f" Early termination: {'DISABLED' if disable_early_termination else 'enabled'}")
     _print(f"{'=' * 62}")
 
     # --- Phase 0: Demographics (bulk) ---
-    await pipeline.create_session(mock_db, user_id=USER_ID, session_id=SESSION_ID)
+    await pipeline.create_session(
+        mock_db, user_id=USER_ID, session_id=SESSION_ID,
+        disable_early_termination=disable_early_termination,
+    )
     step = await pipeline.get_current_step(mock_db, user_id=USER_ID, session_id=SESSION_ID)
 
     log_phase_header(0, step.phase_name, "bulk")
@@ -537,7 +681,7 @@ async def run_simulation(
         mock_db, user_id=USER_ID, session_id=SESSION_ID, value=answer,
     )
 
-    # --- Phases 1-5: adaptive loop ---
+    # --- Phases 1-7: adaptive loop ---
     # Each phase may trigger early termination (e.g. ER critical flags),
     # so we check the step type after every submission instead of asserting
     # a fixed phase sequence.
@@ -550,8 +694,7 @@ async def run_simulation(
         # Print transition / phase header when the phase changes
         if phase != current_phase:
             current_phase = phase
-            # Phases 0-3 are bulk; 4+ are sequential (one question at a time)
-            mode = "bulk" if phase <= 3 else "sequential"
+            mode = "bulk" if phase in _BULK_PHASES else "sequential"
             log_transition(f"Phase {phase} ({step.phase_name})")
             log_phase_header(phase, step.phase_name, mode)
 
@@ -568,13 +711,14 @@ async def run_simulation(
             if verbose and step.submission_schema:
                 _print(f"\n     submission_schema: {json.dumps(step.submission_schema, ensure_ascii=False)}")
 
-        elif phase <= 3:
-            # Bulk phases (1, 3): generate_mock_answer handles randomisation
+        elif phase in _BULK_PHASES:
+            # Bulk phases (1, 3, 5, 6): generate_mock_answer returns the
+            # whole-form dict and handles randomisation.
             answer = generate_mock_answer(step)
             log_bulk_answers(step, answer, verbose=verbose)
 
         else:
-            # Sequential phases (4, 5): one question per step
+            # Sequential phases (4, 7): one question per step
             q = step.questions[0]
             answer = _answer_for_question_type(q)
             log_question_and_answer(q, answer, verbose=verbose)
@@ -587,14 +731,14 @@ async def run_simulation(
         )
 
     # --- Post-rule-based: log OPD if it was auto-evaluated ---
-    # When OPD (phase 5) is entirely conditional/filter questions, no user-facing
-    # QuestionsStep is returned, so the loop above never logs Phase 5.  Check the
+    # When OPD (phase 7) is entirely conditional/filter questions, no user-facing
+    # QuestionsStep is returned, so the loop above never logs Phase 7.  Check the
     # session state to detect this and print an informational header.
-    if current_phase != 5:
+    if current_phase != 7:
         session_row = await mock_repo.get_by_user_and_session(mock_db, USER_ID, SESSION_ID)
-        if session_row and session_row.current_phase >= 5:
-            log_transition("Phase 5 (OPD)")
-            log_phase_header(5, "OPD", "auto-evaluated")
+        if session_row and session_row.current_phase >= 7:
+            log_transition("Phase 7 (OPD)")
+            log_phase_header(7, "OPD", "auto-evaluated")
             log_opd_auto_eval_chain(store, session_row, verbose=verbose)
 
     # --- Post-rule-based: check what the pipeline returned ---
@@ -662,12 +806,11 @@ async def run_simulation(
     else:
         _print(" Severity:    (none)")
 
-    # Diagnoses
+    # Diagnoses — DiagnosisResult exposes only disease_id (ranked most-likely
+    # first); no confidence score is surfaced, by design, to avoid clinical
+    # misinterpretation.
     if result.diagnoses:
-        dx_strs = [
-            f"{d.disease_id} ({d.confidence * 100:.0f}%)" if d.confidence else d.disease_id
-            for d in result.diagnoses
-        ]
+        dx_strs = [d.disease_id for d in result.diagnoses]
         _print(f" Diagnoses:   {', '.join(dx_strs)}")
     else:
         _print(" Diagnoses:   (none)")
@@ -729,6 +872,15 @@ def main() -> None:
         default=False,
         help="Force all ER answers to False (phases 1 & 3) to skip early termination.",
     )
+    parser.add_argument(
+        "--disable-early-termination",
+        action="store_true",
+        default=False,
+        help="Pass disable_early_termination=True to create_session so the engine "
+             "runs all 8 phases to completion. This is the only way the simulation "
+             "reaches the LLM prediction + disease-reason stages (the rule-based "
+             "trees otherwise terminate well before phase 7).",
+    )
     args = parser.parse_args()
 
     if args.list_symptoms:
@@ -737,7 +889,10 @@ def main() -> None:
         list_symptoms(store)
         sys.exit(0)
 
-    asyncio.run(run_simulation(args.symptom, args.verbose, args.quiet, args.random, args.skip_er))
+    asyncio.run(run_simulation(
+        args.symptom, args.verbose, args.quiet, args.random, args.skip_er,
+        args.disable_early_termination,
+    ))
 
 
 if __name__ == "__main__":

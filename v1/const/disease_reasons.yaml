@@ -1,0 +1,28 @@
+reasons:
+  telemedicine: >-
+    Based on your prescreening results, your condition may be suitable for
+    remote care. You can contact a telemedicine service for further
+    evaluation and advice before deciding whether an in-person hospital
+    visit is needed.
+
+# Inline comments: disease name — ICD-10 code(s).
+disease_reasons:
+  d089: telemedicine   # Cellulitis — L03
+  d114: telemedicine   # Conjunctivitis — H10/H10.3/B30/B30.9
+  d119: telemedicine   # Crystal arthropathy (gout, pseudogout) — M13.1/M13
+  d142: telemedicine   # Disorders of vestibular function and vertiginous syndrome — H81/H81.1
+  d151: telemedicine   # Emerging infectious diseases (e.g., COVID-19) — U07.1/U07.2
+  d167: telemedicine   # Fibromyalgia — M79.1
+  d176: telemedicine   # Functional gastrointestinal disorders — K30/R10/R10.4
+  d181: telemedicine   # Gastrointestinal infection and food-borne intoxication — A05.9/A09
+  d199: telemedicine   # Hordeolum and chalazion — H00
+  d276: telemedicine   # Migraine — R51
+  d277: telemedicine   # Mild muscle and tendon injuries (strains and sprains grade 1) — M62.6/M79.1
+  d310: telemedicine   # Osteoarthritis — M15/M15.0
+  d326: telemedicine   # Peptic ulcer, gastritis — K29.7/R10.4
+  d374: telemedicine   # Rheumatoid arthritis — M13.0/M13
+  d392: telemedicine   # Soft-tissue rheumatism — M79.1
+  d410: telemedicine   # Tension headache — R51
+  d437: telemedicine   # Upper respiratory tract infections — J00/J01/J01.9/J02/J02.9/J03/J03.9/J06/J06.9
+  d440: telemedicine   # Urticaria — L50/L50.9
+  d446: telemedicine   # Vasomotor and allergic rhinitis — J30/J30.4
