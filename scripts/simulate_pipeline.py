@@ -30,6 +30,16 @@ Usage::
     # Run all 8 phases through to prediction (no early exit)
     python scripts/simulate_pipeline.py --no-random --disable-early-termination
 
+    # Drive the real medgemma prediction backend (config sourced from .env)
+    python scripts/simulate_pipeline.py --no-random --disable-early-termination \
+        --prediction_backend medgemma_prescreen --question_generation_backend none
+
+    # Emit the run as JSON using prescreen_server response shapes
+    python scripts/simulate_pipeline.py --json
+
+    # Emit the rendered medgemma prompt (medgemma-prescreen prompt templates)
+    python scripts/simulate_pipeline.py --output-prompt
+
     # List available symptoms
     python scripts/simulate_pipeline.py --list-symptoms
 
@@ -57,6 +67,12 @@ _REPO_ROOT = _SCRIPT_DIR.parent
 sys.path.insert(0, str(_REPO_ROOT / "tests"))
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 
+# Load .env *before* importing the SDK so the real LLM backends (selected via
+# --question_generation_backend / --prediction_backend) can resolve their
+# credentials and endpoints, and env-driven constants are picked up too.
+from dotenv import load_dotenv  # noqa: E402
+load_dotenv(_REPO_ROOT / ".env")
+
 from test_engine import MockRepository, MockSessionRow  # noqa: E402
 from unittest.mock import AsyncMock  # noqa: E402
 
@@ -76,6 +92,7 @@ from prescreen_rulesets.models.pipeline import (  # noqa: E402
 )
 from prescreen_rulesets.models.session import QuestionsStep, TerminationStep  # noqa: E402
 from prescreen_rulesets.pipeline import PrescreenPipeline  # noqa: E402
+from prescreen_rulesets.prediction.prompt_manager import MedgemmaPromptManager  # noqa: E402
 from prescreen_rulesets.ruleset import RulesetStore  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -85,6 +102,12 @@ from prescreen_rulesets.ruleset import RulesetStore  # noqa: E402
 USER_ID = "sim_user"
 SESSION_ID = "sim_session"
 _DEFAULT_SYMPTOM = "Headache"
+
+# --output-prompt renders the medgemma-prescreen prompt templates via
+# MedgemmaPromptManager (the same renderer the MedgemmaPredictionModule
+# connector uses) and wraps them in a chat-completion request for the medical
+# LLM that consumes them.
+_OUTPUT_PROMPT_MODEL = "google/medgemma-27b-text-it"
 
 # Phase 0: Hardcoded demographics — an adult male so we use the adult ER
 # checklist in phase 3 and avoid pediatric branching.
@@ -214,6 +237,52 @@ class SimPredictionModule(PredictionModule):
             departments=[],
             severity=None,
         )
+
+
+# ---------------------------------------------------------------------------
+# Backend selection (--question_generation_backend / --prediction_backend)
+# ---------------------------------------------------------------------------
+# By default the simulation uses the in-process mocks above (fully offline).
+# The CLI flags can swap in the real SDK connectors instead — those read their
+# credentials / endpoints from the environment, loaded from .env at startup.
+
+
+def _build_generator(backend: str) -> QuestionGenerator | None:
+    """Construct the question generator selected by --question_generation_backend.
+
+    - ``sim``    — the in-process mock (default; offline)
+    - ``none``   — disabled; the pipeline skips the LLM questioning stage
+    - ``openai`` — the real ``OpenAIQuestionGenerator`` (needs ``OPENAI_API_KEY``
+                   or ``OPENROUTER_API_KEY`` in the environment / .env)
+    """
+    if backend == "sim":
+        return SimQuestionGenerator()
+    if backend == "none":
+        return None
+    if backend == "openai":
+        from prescreen_rulesets.question_generator import OpenAIQuestionGenerator
+        return OpenAIQuestionGenerator()
+    raise ValueError(f"Unknown question generation backend: {backend!r}")
+
+
+def _build_predictor(store: RulesetStore, backend: str) -> PredictionModule:
+    """Construct the prediction module selected by --prediction_backend.
+
+    - ``sim``                — the in-process mock (default; offline)
+    - ``openai``             — the real ``OpenAIPredictionModule``
+    - ``medgemma_prescreen`` — the real ``MedgemmaPredictionModule`` (needs
+                               ``VLLM_PREDICTOR_URL`` / ``VLLM_PREDICTOR_MODEL``
+                               in the environment / .env)
+    """
+    if backend == "sim":
+        return SimPredictionModule()
+    if backend == "openai":
+        from prescreen_rulesets.prediction import OpenAIPredictionModule
+        return OpenAIPredictionModule(store=store)
+    if backend == "medgemma_prescreen":
+        from prescreen_rulesets.prediction import MedgemmaPredictionModule
+        return MedgemmaPredictionModule(store=store)
+    raise ValueError(f"Unknown prediction backend: {backend!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -599,6 +668,57 @@ def log_opd_auto_eval_chain(
 
 
 # ---------------------------------------------------------------------------
+# JSON export helpers
+# ---------------------------------------------------------------------------
+
+
+def _to_server_json(obj: Any) -> Any:
+    """Serialize a pipeline object the way prescreen_server's JSON responses do.
+
+    The server's route handlers return the raw Pydantic models (``PipelineStep``,
+    ``SessionInfo``, ``PipelineResult``) and let FastAPI serialize them — so a
+    plain ``model_dump(mode="json")`` reproduces the exact HTTP response body
+    shape (datetimes as ISO strings, enums as values, etc.).  Non-model values
+    are returned untouched.
+    """
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump(mode="json")
+    return obj
+
+
+# ---------------------------------------------------------------------------
+# Prompt rendering helpers (--output-prompt)
+# ---------------------------------------------------------------------------
+
+
+def _render_output_prompt(
+    store: RulesetStore,
+    history: list[QAPair],
+) -> dict[str, Any]:
+    """Render the medgemma-prescreen prompt templates into a chat-completion request.
+
+    Delegates to ``MedgemmaPromptManager`` — the same renderer the
+    ``MedgemmaPredictionModule`` connector uses — so this script's
+    ``--output-prompt`` output stays in lockstep with what the connector
+    actually sends.  The full Q&A ``history`` carries everything the templates
+    need (demographics and presenting problem included); the two rendered
+    messages are wrapped in the request payload shape the downstream medical
+    LLM expects.
+    """
+    pm = MedgemmaPromptManager(store)
+    return {
+        "messages": [
+            {"role": "system", "content": pm.render_system()},
+            {"role": "user", "content": pm.render_instruction(history)},
+        ],
+        "model": _OUTPUT_PROMPT_MODEL,
+        "temperature": 0,
+        "stream": False,
+        "skip_special_tokens": False,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Main simulation
 # ---------------------------------------------------------------------------
 
@@ -610,6 +730,10 @@ async def run_simulation(
     use_random: bool = True,
     skip_er: bool = False,
     disable_early_termination: bool = False,
+    json_mode: bool = False,
+    output_prompt: bool = False,
+    question_generation_backend: str = "sim",
+    prediction_backend: str = "sim",
 ) -> None:
     """Drive the full pipeline simulation and print audit logs.
 
@@ -619,14 +743,34 @@ async def run_simulation(
     completion — the only path that reaches ``_finalize_with_prediction``,
     so it is required to exercise the LLM prediction and disease-driven
     custom-reason stages.
+
+    ``question_generation_backend`` and ``prediction_backend`` choose the LLM
+    connectors (see ``_build_generator`` / ``_build_predictor``).  Both default
+    to ``"sim"`` — the in-process mocks — so a plain run stays fully offline;
+    the real backends read their config from the environment (loaded from .env).
+
+    ``json_mode`` switches output from the human-readable audit log to a single
+    JSON document on stdout, with the session and every step serialized exactly
+    as prescreen_server returns them (see ``_emit_json``).
+
+    ``output_prompt`` instead renders the prescreen_server prompt templates
+    (``system.md`` + ``instruction.md``) from the simulated session and prints
+    the resulting chat-completion request (see ``_emit_output_prompt``).
+
+    Both alternate-output modes share the ``_print`` suppression gate with
+    ``quiet``; passing ``quiet`` as well suppresses their JSON document too.
     """
     global _quiet, _random_mode, _skip_er
-    _quiet = quiet
+    # The alternate-output modes (--json / --output-prompt) reuse the --quiet
+    # gate to silence the human-readable audit log; their JSON document is
+    # emitted at the end via a raw print().
+    _quiet = quiet or json_mode or output_prompt
     _random_mode = use_random
     _skip_er = skip_er
 
-    # Suppress SDK logger output in quiet mode
-    if quiet:
+    # Suppress SDK logger output whenever readable output is suppressed (quiet
+    # or an alternate-output mode) so stray log lines never corrupt stdout.
+    if quiet or json_mode or output_prompt:
         logging.getLogger("prescreen_rulesets").setLevel(logging.CRITICAL)
 
     # --- Setup: load rulesets, create engine + pipeline with mocks ---
@@ -654,8 +798,8 @@ async def run_simulation(
 
     pipeline = PrescreenPipeline(
         engine, store,
-        generator=SimQuestionGenerator(),
-        predictor=SimPredictionModule(),
+        generator=_build_generator(question_generation_backend),
+        predictor=_build_predictor(store, prediction_backend),
     )
     pipeline._repo = mock_repo
 
@@ -664,19 +808,77 @@ async def run_simulation(
     _print(f" Symptom: {symptom}")
     _print(f" Random:  {'ON' if _random_mode else 'OFF'}")
     _print(f" Early termination: {'DISABLED' if disable_early_termination else 'enabled'}")
+    _print(f" Generator backend: {question_generation_backend}")
+    _print(f" Predictor backend: {prediction_backend}")
     _print(f"{'=' * 62}")
 
     # --- Phase 0: Demographics (bulk) ---
-    await pipeline.create_session(
+    # ``session_info`` is the POST /sessions response body; ``exchanges``
+    # accumulates each subsequent GET/POST /step interaction.  Both feed --json
+    # and are otherwise unused.
+    session_info = await pipeline.create_session(
         mock_db, user_id=USER_ID, session_id=SESSION_ID,
         disable_early_termination=disable_early_termination,
     )
+    exchanges: list[dict[str, Any]] = []
+
+    def _record_exchange(response: Any, answer: Any = None) -> None:
+        """Capture one server-shaped interaction for --json output.
+
+        ``response`` is a PipelineStep / PipelineResult / TerminationStep,
+        serialized exactly as prescreen_server would return it.  ``answer`` is
+        the value submitted to advance from this step — omitted for the terminal
+        step, which has nothing to submit.  No-op unless --json is active.
+        """
+        if not json_mode:
+            return
+        entry: dict[str, Any] = {"response": _to_server_json(response)}
+        if answer is not None:
+            entry["answer"] = answer
+        exchanges.append(entry)
+
+    def _emit_json() -> None:
+        """Print the accumulated run as a single JSON document on stdout.
+
+        Top-level shape mirrors prescreen_server: ``session`` is the
+        POST /sessions body (SessionInfo) and each ``exchanges`` entry pairs a
+        /step response body with the answer submitted to advance from it.
+        No-op unless --json is active; suppressed when --quiet is also set.
+        """
+        if not json_mode or quiet:
+            return
+        print(json.dumps({
+            "symptom": symptom,
+            "random": use_random,
+            "disable_early_termination": disable_early_termination,
+            "session": _to_server_json(session_info),
+            "exchanges": exchanges,
+        }, ensure_ascii=False, indent=2))
+
+    async def _emit_output_prompt() -> None:
+        """Render the medgemma-prescreen prompt templates for this run and print
+        the medgemma chat-completion request payload on stdout.
+
+        The full Q&A history carries everything the templates need —
+        demographics and presenting problem included — so no separate session
+        row fetch is required.  No-op unless --output-prompt is active;
+        suppressed when --quiet is also set.
+        """
+        if not output_prompt or quiet:
+            return
+        history = await pipeline.get_history(
+            mock_db, user_id=USER_ID, session_id=SESSION_ID,
+        )
+        payload = _render_output_prompt(store, history)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
     step = await pipeline.get_current_step(mock_db, user_id=USER_ID, session_id=SESSION_ID)
 
     log_phase_header(0, step.phase_name, "bulk")
     answer = generate_mock_answer(step)
     log_bulk_answers(step, answer, verbose=verbose)
 
+    _record_exchange(step, answer)
     step = await pipeline.submit_answer(
         mock_db, user_id=USER_ID, session_id=SESSION_ID, value=answer,
     )
@@ -726,6 +928,7 @@ async def run_simulation(
                 _print(f"     submission_schema: {json.dumps(step.submission_schema, ensure_ascii=False)}")
             seq_count += 1
 
+        _record_exchange(step, answer)
         step = await pipeline.submit_answer(
             mock_db, user_id=USER_ID, session_id=SESSION_ID, value=answer,
         )
@@ -764,17 +967,26 @@ async def run_simulation(
             for i, q in enumerate(step.questions)
         ]
 
+        # The submitted value mirrors a POST /step body during llm_questioning:
+        # a list of {question, answer} dicts.
+        _record_exchange(
+            step, [a.model_dump(mode="json") for a in llm_answers]
+        )
         result = await pipeline.submit_llm_answers(
             mock_db, user_id=USER_ID, session_id=SESSION_ID,
             answers=llm_answers,
         )
+        _record_exchange(result)
     elif isinstance(step, PipelineResult):
         # Pipeline skipped LLM or went straight to result (e.g. early termination)
         result = step
+        _record_exchange(result)
     elif isinstance(step, TerminationStep):
         # Engine-level early termination (ER redirect) — build a minimal result
         log_pipeline_stage("EARLY TERMINATION")
         _print(f"\n Terminated at phase {step.phase}: {step.reason or '(no reason)'}")
+        # Record the actual TerminationStep — that is the server-shaped object.
+        _record_exchange(step)
         result = PipelineResult(
             departments=step.departments,
             severity=step.severity,
@@ -786,6 +998,9 @@ async def run_simulation(
         # Unexpected step type — log it
         _print(f"\n [!] Unexpected step type: {type(step).__name__}")
         _print(f"     {step}")
+        _record_exchange(step)
+        _emit_json()
+        await _emit_output_prompt()
         return
 
     # --- Final result ---
@@ -825,6 +1040,11 @@ async def run_simulation(
     _print(f"\n{'=' * 62}")
     _print(f" Simulation complete ({seq_count} sequential questions answered)")
     _print(f"{'=' * 62}")
+
+    # In --json mode this prints the JSON document; otherwise it is a no-op.
+    _emit_json()
+    # In --output-prompt mode this prints the rendered prompt request; else no-op.
+    await _emit_output_prompt()
 
 
 def list_symptoms(store: RulesetStore) -> None:
@@ -881,6 +1101,46 @@ def main() -> None:
              "reaches the LLM prediction + disease-reason stages (the rule-based "
              "trees otherwise terminate well before phase 7).",
     )
+    parser.add_argument(
+        "--question_generation_backend",
+        choices=["sim", "none", "openai"],
+        default="sim",
+        help="Question generator backend (default: sim — the in-process mock). "
+             "'none' disables LLM question generation; 'openai' uses the real "
+             "OpenAIQuestionGenerator (requires OPENAI_API_KEY or "
+             "OPENROUTER_API_KEY in the environment / .env).",
+    )
+    parser.add_argument(
+        "--prediction_backend",
+        choices=["sim", "openai", "medgemma_prescreen"],
+        default="sim",
+        help="Prediction backend (default: sim — the in-process mock). "
+             "'openai' uses the real OpenAIPredictionModule; "
+             "'medgemma_prescreen' uses the real MedgemmaPredictionModule "
+             "(requires VLLM_PREDICTOR_URL / VLLM_PREDICTOR_MODEL in the "
+             "environment / .env).",
+    )
+    # --json and --output-prompt both replace the human-readable audit log with
+    # a JSON document on stdout, so at most one may be active at a time.
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Emit the run as a single JSON document on stdout instead of the "
+             "human-readable audit log. The session and every step are serialized "
+             "exactly as prescreen_server returns them (SessionInfo + per-step "
+             "PipelineStep shapes). Combine with --quiet to suppress the JSON too.",
+    )
+    output_group.add_argument(
+        "--output-prompt",
+        action="store_true",
+        default=False,
+        help="Emit the medgemma-prescreen prompt templates (system.md + "
+             "instruction.md) rendered from this run via Jinja2, wrapped in a "
+             "chat-completion request payload (messages / model / temperature / "
+             "stream / skip_special_tokens). Combine with --quiet to suppress it too.",
+    )
     args = parser.parse_args()
 
     if args.list_symptoms:
@@ -891,7 +1151,8 @@ def main() -> None:
 
     asyncio.run(run_simulation(
         args.symptom, args.verbose, args.quiet, args.random, args.skip_er,
-        args.disable_early_termination,
+        args.disable_early_termination, args.json, args.output_prompt,
+        args.question_generation_backend, args.prediction_backend,
     ))
 
 
