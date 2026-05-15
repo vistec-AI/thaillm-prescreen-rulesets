@@ -19,6 +19,7 @@ dependencies = [
     "psycopg2-binary>=2.9",
     "jinja2>=3.1",
     "openai>=1.0",
+    "httpx>=0.27",
 ]
 
 [project.scripts]
@@ -68,7 +69,7 @@ prescreen_server = "src/prescreen_server"
 inspector = ["static/*", "static/**/*", "frontend/out/**/*"]
 "prescreen_rulesets.prompt" = ["template/*.jinja2"]
 "prescreen_rulesets.question_generator.prompt_manager" = ["templates/llm_question_generator/*.md"]
-"prescreen_rulesets.prediction.prompt_manager" = ["templates/openai-prediction/*.md"]
+"prescreen_rulesets.prediction.prompt_manager" = ["templates/openai-prediction/*.md", "templates/medgemma-prescreen/*.md"]
 prescreen_server = ["docs_site/**/*"]
 
 [dependency-groups]

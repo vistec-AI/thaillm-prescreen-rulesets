@@ -111,3 +111,41 @@ def resolve_llm_config(model: str = "gpt-5.4") -> LLMClientConfig:
         model=model,
         provider="none",
     )
+
+
+# ------------------------------------------------------------------
+# vLLM predictor resolution
+# ------------------------------------------------------------------
+
+# Default model used when VLLM_PREDICTOR_MODEL is not set.  The medgemma
+# prediction connector targets a self-hosted vLLM endpoint serving this model.
+VLLM_DEFAULT_MODEL = "google/medgemma-27b-text-it"
+
+
+class VLLMClientConfig(NamedTuple):
+    """Resolved configuration for the self-hosted vLLM predictor endpoint.
+
+    Returned by :func:`resolve_vllm_config`.  Consumed by
+    ``MedgemmaPredictionModule``, which POSTs to ``url`` directly via ``httpx``.
+    """
+    url: str | None       # full chat-completions endpoint (used as-is, no munging)
+    model: str            # model identifier sent in the request body
+    api_key: str | None   # bearer token; None when VLLM_APIKEY is empty/unset
+
+
+def resolve_vllm_config() -> VLLMClientConfig:
+    """Resolve the vLLM predictor endpoint from environment variables.
+
+    Reads three env vars (typically set in ``.env``):
+
+      - ``VLLM_PREDICTOR_URL``   — full chat-completions URL, used verbatim.
+      - ``VLLM_PREDICTOR_MODEL`` — model name; falls back to ``VLLM_DEFAULT_MODEL``.
+      - ``VLLM_APIKEY``          — bearer token.  An empty string resolves to
+        ``None`` so the connector omits the ``Authorization`` header entirely
+        (self-hosted vLLM typically runs without auth).
+    """
+    return VLLMClientConfig(
+        url=os.getenv("VLLM_PREDICTOR_URL") or None,
+        model=os.getenv("VLLM_PREDICTOR_MODEL") or VLLM_DEFAULT_MODEL,
+        api_key=os.getenv("VLLM_APIKEY") or None,
+    )

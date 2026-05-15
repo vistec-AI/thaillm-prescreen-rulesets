@@ -1,11 +1,17 @@
-"""Prompt management for the OpenAI prediction module.
+"""Prompt management for the prediction modules.
 
-Provides ``PredictionPromptManager``, a Jinja2-based renderer that
-builds system and user prompts for the LLM prediction call.
+Provides:
+  - ``PredictionPromptManager`` — Jinja2 renderer for the OpenAI prediction
+    module (phase-grouped JSON prompt with reference tables).
+  - ``MedgemmaPromptManager`` — Jinja2 renderer for the medgemma-prescreen
+    connector (structured patient profile + conversation transcript).
 """
 
+from prescreen_rulesets.prediction.prompt_manager.medgemma_prompt_manager import (
+    MedgemmaPromptManager,
+)
 from prescreen_rulesets.prediction.prompt_manager.prompt_manager import (
     PredictionPromptManager,
 )
 
-__all__ = ["PredictionPromptManager"]
+__all__ = ["PredictionPromptManager", "MedgemmaPromptManager"]

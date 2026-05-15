@@ -26,7 +26,10 @@ Pipeline step models:
 
 from prescreen_rulesets.engine import PrescreenEngine
 from prescreen_rulesets.interfaces import PredictionModule, QuestionGenerator
-from prescreen_rulesets.prediction import OpenAIPredictionModule
+from prescreen_rulesets.prediction import (
+    MedgemmaPredictionModule,
+    OpenAIPredictionModule,
+)
 from prescreen_rulesets.question_generator import OpenAIQuestionGenerator
 from prescreen_rulesets.models.pipeline import (
     DiagnosisResult,
@@ -66,6 +69,7 @@ __all__ = [
     "PredictionModule",
     "OpenAIQuestionGenerator",
     "OpenAIPredictionModule",
+    "MedgemmaPredictionModule",
     # Pipeline data models
     "QAPair",
     "GeneratedQuestions",
