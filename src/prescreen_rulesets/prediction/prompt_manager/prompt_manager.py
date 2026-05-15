@@ -26,13 +26,13 @@ class PredictionPromptManager:
         store: ``RulesetStore`` instance — provides disease, department, and
             severity reference data for the system prompt.
         template_dir: optional override for the template directory.
-            Defaults to ``templates/prediction/`` sibling of this module.
+            Defaults to ``templates/openai-prediction/`` sibling of this module.
     """
 
     def __init__(self, store: RulesetStore, template_dir: Path | None = None) -> None:
         self._store = store
         if template_dir is None:
-            template_dir = Path(__file__).parent / "templates" / "prediction"
+            template_dir = Path(__file__).parent / "templates" / "openai-prediction"
         self._env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(str(template_dir)),
             trim_blocks=True,
