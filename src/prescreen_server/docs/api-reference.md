@@ -139,6 +139,9 @@ Returned when `type` is `"pipeline_result"` — the final outcome.
 }
 ```
 
+!!! note "Telemedicine guidance in `reason`"
+    When the predicted DDx contains a disease listed in `v1/const/disease_reasons.yaml`, the `reason` field carries a telemedicine guidance string instead of the default routing reason. This is a server-side determination — no request parameter is needed. See [Flow Walkthrough — Telemedicine-Eligible Diseases](flow-walkthrough.md#telemedicine-eligible-diseases) for details and a payload example.
+
 ### CleanupResult
 
 Returned by admin cleanup endpoints.

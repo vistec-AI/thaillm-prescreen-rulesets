@@ -21,6 +21,7 @@ A prescreening session progresses through **8 phases** of rule-based questions, 
 Key capabilities:
 
 - Self-hosted prediction (vLLM/medgemma) or OpenAI — selectable at deploy time via `PREDICTOR_BACKEND`
+- Telemedicine routing for eligible diagnoses — the result `reason` field carries guidance text when the DDx matches a configured telemedicine-eligible disease
 
 ```
 Client                          API Server

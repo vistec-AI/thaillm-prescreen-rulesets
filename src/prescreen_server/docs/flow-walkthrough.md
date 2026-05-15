@@ -1248,6 +1248,39 @@ Each entry in `history` contains:
 !!! tip "History is always present"
     The `history` array is included in every `pipeline_result` response, including early terminations. For early terminations, it will contain the questions answered up to the point of termination.
 
+### Telemedicine-Eligible Diseases
+
+When the predicted DDx contains a disease listed in `v1/const/disease_reasons.yaml`, the pipeline attaches a telemedicine guidance string to the `reason` field of the `PipelineResult`. This happens automatically on the server side — no new endpoint or request parameter is involved.
+
+Matching semantics:
+
+- **First match wins** — the first disease in the DDx list that has a configured reason supplies the `reason` string.
+- **Rule-based reasons take precedence** — telemedicine reasons are only attached after a full pipeline run (i.e. no early termination). If the session terminated early via ER routing or an ER checklist item, the rule-based `reason` (e.g. `"ER critical screen: emer_critical_001 positive"`) is kept and the telemedicine reason is not applied.
+
+Example `pipeline_result` with a telemedicine reason:
+
+```json
+{
+  "type": "pipeline_result",
+  "departments": [
+    {"id": "dept013", "name": "Primary Care Unit", "name_th": "หน่วยบริการปฐมภูมิ (แพทย์ทั่วไป)", "description": "..."}
+  ],
+  "severity": {
+    "id": "sev002",
+    "name": "Visit Hospital / Clinic",
+    "name_th": "เข้าพบโรงพยาบาลหรือคลินิกเมื่อสะดวกเพื่อตรวจสอบอาการเพิ่ม",
+    "description": "..."
+  },
+  "diagnoses": [
+    {"disease_id": "d437"}
+  ],
+  "reason": "Based on your prescreening results, your condition may be suitable for remote care. You can contact a telemedicine service for further evaluation and advice before deciding whether an in-person hospital visit is needed.",
+  "terminated_early": false
+}
+```
+
+See [API Reference — PipelineResult](api-reference.md#pipelineresult) for the full field description.
+
 ---
 
 ## Session History Endpoint
