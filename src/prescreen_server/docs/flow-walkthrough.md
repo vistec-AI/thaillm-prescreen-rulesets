@@ -1125,6 +1125,8 @@ No request body is needed. The response is the same `QuestionsStep` as back-edit
 
 ## LLM Follow-Up Questions
 
+LLM follow-up questions are produced by the configured `QUESTION_GENERATOR_BACKEND`. If the backend is set to an empty value (or the legacy `SKIP_GENERATOR=true` is used), the `llm_questioning` stage is skipped entirely — the pipeline transitions from rule-based completion straight to the final `pipeline_result`.
+
 If the pipeline has a question generator configured, after the rule-based phases complete, the step response will have `type: "llm_questions"`:
 
 ```json

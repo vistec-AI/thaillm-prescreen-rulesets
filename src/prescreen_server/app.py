@@ -13,6 +13,7 @@ The ``cli()`` function is the ``prescreen-server`` console-script entry point.
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
@@ -38,6 +39,91 @@ logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------------
+# Backend selection — pick the LLM connectors at startup
+# ------------------------------------------------------------------
+# Two env vars choose which connectors the pipeline uses:
+#   PREDICTOR_BACKEND          — "openai" | "medgemma". Never null: defaults
+#                                to "openai" so existing deployments are
+#                                unaffected. A predictor is always required.
+#   QUESTION_GENERATOR_BACKEND — "openai" | "" (empty/unset → "openai").
+#                                May be null: an explicitly empty value (or
+#                                the legacy SKIP_GENERATOR=true flag) disables
+#                                LLM question generation entirely.
+
+def _build_predictor(store: RulesetStore):
+    """Construct the prediction module selected by ``PREDICTOR_BACKEND``.
+
+    Always returns a predictor — the pipeline cannot run without one.  Raises
+    ``RuntimeError`` for an unrecognised backend name so misconfiguration fails
+    fast at startup rather than on the first prediction call.
+    """
+    backend = (
+        os.environ.get("PREDICTOR_BACKEND", "openai").strip().lower() or "openai"
+    )
+    if backend == "openai":
+        from prescreen_rulesets.prediction import OpenAIPredictionModule
+        logger.info("Prediction backend: OpenAIPredictionModule")
+        return OpenAIPredictionModule(store=store)
+    if backend == "medgemma":
+        from prescreen_rulesets.prediction import MedgemmaPredictionModule
+        logger.info("Prediction backend: MedgemmaPredictionModule")
+        return MedgemmaPredictionModule(store=store)
+    raise RuntimeError(
+        f"Unknown PREDICTOR_BACKEND={backend!r}. Valid values: openai, medgemma."
+    )
+
+
+def _build_generator():
+    """Construct the question generator selected by ``QUESTION_GENERATOR_BACKEND``.
+
+    Returns ``None`` when question generation is disabled — either by an
+    explicitly empty ``QUESTION_GENERATOR_BACKEND`` or by the legacy
+    ``SKIP_GENERATOR=true`` flag (still honoured for back-compat).  An unset
+    variable defaults to ``"openai"`` so the generator stays enabled by default.
+    Raises ``RuntimeError`` for an unrecognised non-empty backend name.
+    """
+    if os.environ.get("SKIP_GENERATOR", "").lower() == "true":
+        logger.warning("SKIP_GENERATOR=true — question generator disabled")
+        return None
+    backend = os.environ.get(
+        "QUESTION_GENERATOR_BACKEND", "openai",
+    ).strip().lower()
+    if not backend:
+        logger.warning(
+            "QUESTION_GENERATOR_BACKEND is empty — question generator disabled"
+        )
+        return None
+    if backend == "openai":
+        from prescreen_rulesets.question_generator import OpenAIQuestionGenerator
+        logger.info("Question generator backend: OpenAIQuestionGenerator")
+        return OpenAIQuestionGenerator()
+    raise RuntimeError(
+        f"Unknown QUESTION_GENERATOR_BACKEND={backend!r}. "
+        "Valid values: openai (or empty to disable)."
+    )
+
+
+def _openai_backend_selected() -> bool:
+    """True when any selected backend is OpenAI-based and so needs an API key.
+
+    The OpenAI connectors require ``OPENAI_API_KEY`` or ``OPENROUTER_API_KEY``;
+    the medgemma connector reads its own ``VLLM_*`` config and needs neither.
+    """
+    predictor = (
+        os.environ.get("PREDICTOR_BACKEND", "openai").strip().lower() or "openai"
+    )
+    if predictor == "openai":
+        return True
+    # Predictor is not OpenAI — the key is only needed if the generator is.
+    if os.environ.get("SKIP_GENERATOR", "").lower() == "true":
+        return False
+    generator = os.environ.get(
+        "QUESTION_GENERATOR_BACKEND", "openai",
+    ).strip().lower()
+    return generator == "openai"
+
+
+# ------------------------------------------------------------------
 # Lifespan — runs once at startup/shutdown
 # ------------------------------------------------------------------
 
@@ -60,35 +146,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     store.load()
     logger.info("RulesetStore loaded successfully")
 
-    # --- Build pipeline (LLM question generation + prediction required) ---
-    import os
+    # --- Build pipeline (prediction required; question generation optional) ---
     engine = PrescreenEngine(store)
 
-    has_api_key = bool(
+    # The OpenAI-backed connectors need an API key; the medgemma connector
+    # reads its own VLLM_* config, so only validate the key when an OpenAI
+    # backend is actually selected.
+    if _openai_backend_selected() and not (
         os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
-    )
-
-    if not has_api_key:
+    ):
         raise RuntimeError(
             "No LLM API key configured. Set OPENAI_API_KEY or "
             "OPENROUTER_API_KEY environment variable. "
-            "Both the question generator and prediction module require an API key."
+            "An OpenAI-backed prediction or question-generation backend is "
+            "selected and requires an API key."
         )
 
-    from prescreen_rulesets.question_generator import OpenAIQuestionGenerator
-    from prescreen_rulesets.prediction import OpenAIPredictionModule
-
-    # Generator may be skipped with SKIP_GENERATOR=true (e.g. for testing
-    # the rule-based flow without LLM follow-up questions).
-    skip_generator = os.environ.get("SKIP_GENERATOR", "").lower() == "true"
-    generator = None if skip_generator else OpenAIQuestionGenerator()
-    predictor = OpenAIPredictionModule(store=store)
-
-    if skip_generator:
-        logger.warning("SKIP_GENERATOR=true — question generator disabled")
-    else:
-        logger.info("OpenAIQuestionGenerator enabled")
-    logger.info("OpenAIPredictionModule enabled")
+    # Backend selection: PREDICTOR_BACKEND (required) + QUESTION_GENERATOR_BACKEND
+    # (optional — None disables LLM question generation).
+    predictor = _build_predictor(store)
+    generator = _build_generator()
 
     pipeline = PrescreenPipeline(engine, store, generator=generator, predictor=predictor)
 

@@ -33,8 +33,11 @@ graph TB
         Evaluator[ConditionalEvaluator<br/>Auto-eval logic]
     end
 
-    subgraph "LLM Layer (optional)"
-        Predictor[OpenAIPredictionModule<br/>DDx + dept + severity]
+    subgraph "LLM Layer"
+        Predictor[Predictor<br/>selected by PREDICTOR_BACKEND]
+        OpenAIPredictor[OpenAIPredictionModule]
+        MedgemmaPredictor[MedgemmaPredictionModule<br/>vLLM]
+        Generator[QuestionGenerator<br/>optional — disabled when<br/>QUESTION_GENERATOR_BACKEND is empty]
     end
 
     subgraph "Database Layer"
@@ -46,6 +49,9 @@ graph TB
     Deps --> Pipeline
     Pipeline --> Engine
     Pipeline --> Predictor
+    Pipeline --> Generator
+    Predictor --> OpenAIPredictor
+    Predictor --> MedgemmaPredictor
     Engine --> Store
     Engine --> Evaluator
     Engine --> Repo
@@ -77,6 +83,8 @@ stateDiagram-v2
     llm_questioning --> done: Submit LLM Answers (POST /step)
     done --> [*]
 ```
+
+When `QUESTION_GENERATOR_BACKEND` is empty (or `SKIP_GENERATOR=true`), the pipeline skips the `llm_questioning` stage and proceeds straight to prediction and `done`.
 
 ## Stateless Engine Pattern
 

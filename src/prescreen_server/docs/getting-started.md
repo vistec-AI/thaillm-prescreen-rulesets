@@ -50,6 +50,10 @@ Expected response:
 {"status": "ok"}
 ```
 
+## Configuration
+
+The LLM connectors are chosen by two environment variables: `PREDICTOR_BACKEND` (default `openai`; set to `medgemma` to use a self-hosted vLLM server) and `QUESTION_GENERATOR_BACKEND` (default `openai`; set to an empty string to disable LLM follow-up questions entirely). See [Environment Variables — LLM Backends](environment-variables.md#llm-backends) for the full reference including the `VLLM_*` variables needed for the medgemma backend.
+
 ## Your First Prescreening Session
 
 Here's a minimal walkthrough: create a session, get the first step, and submit demographics.

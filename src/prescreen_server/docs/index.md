@@ -18,6 +18,10 @@ The prescreening system achieves three goals:
 
 A prescreening session progresses through **8 phases** of rule-based questions, optionally followed by LLM-generated follow-up questions and a prediction stage. The API manages the session state, serves one step at a time, and returns a final result with department, severity, and diagnosis information.
 
+Key capabilities:
+
+- Self-hosted prediction (vLLM/medgemma) or OpenAI — selectable at deploy time via `PREDICTOR_BACKEND`
+
 ```
 Client                          API Server
   │                                │

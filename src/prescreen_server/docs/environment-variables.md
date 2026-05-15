@@ -100,13 +100,41 @@ These values control clinical decision logic in the prescreening engine. Overrid
 
 ---
 
-## LLM / OpenAI
+## LLM Backends
+
+Two environment variables select which LLM connectors the server instantiates at startup:
+
+| Variable | Default | Values | Notes |
+|----------|---------|--------|-------|
+| `PREDICTOR_BACKEND` | `openai` | `openai` \| `medgemma` | Selects the DDx / department / severity predictor. A predictor is always required — this variable is never null. |
+| `QUESTION_GENERATOR_BACKEND` | `openai` | `openai` \| *(empty)* | Selects the follow-up question generator. Setting this to an **explicitly empty value** disables LLM question generation entirely. An unset variable still defaults to `openai`. |
+
+### OpenAI Backend
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENAI_API_KEY` | *(none)* | OpenAI API key. **At least one of `OPENAI_API_KEY` or `OPENROUTER_API_KEY` is required** — the server will not start without it. Takes priority over `OPENROUTER_API_KEY`. |
+| `OPENAI_API_KEY` | *(none)* | OpenAI API key. Takes priority over `OPENROUTER_API_KEY`. |
 | `OPENROUTER_API_KEY` | *(none)* | OpenRouter API key. Used as a fallback when `OPENAI_API_KEY` is not set. Routes requests through `https://openrouter.ai/api/v1` using a provider-prefixed model name (`openai/gpt-5.4`). |
-| `SKIP_GENERATOR` | *(none)* | Set to `true` to skip LLM question generation (the predictor still runs). Useful for testing the rule-based flow without LLM follow-up questions. |
+
+!!! note "Key required only when OpenAI backend is selected"
+    At least one of `OPENAI_API_KEY` or `OPENROUTER_API_KEY` must be set **only when an OpenAI-backed connector is selected** (i.e. `PREDICTOR_BACKEND=openai` or `QUESTION_GENERATOR_BACKEND=openai`). When both connectors use non-OpenAI backends — for example `PREDICTOR_BACKEND=medgemma` with `QUESTION_GENERATOR_BACKEND=` — the server starts without any OpenAI key.
+
+### Medgemma Backend (self-hosted vLLM)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VLLM_PREDICTOR_URL` | *(none)* | Full chat-completions endpoint for the vLLM server (e.g. `http://host:8000/v1/chat/completions`). **Required at startup when `PREDICTOR_BACKEND=medgemma`.** |
+| `VLLM_PREDICTOR_MODEL` | `google/medgemma-27b-text-it` | Model name sent in the vLLM request body. When using the LoRA fine-tuned adapter, set this to the adapter name (e.g. `prescreen`) — see the hosting recipe below. |
+| `VLLM_APIKEY` | *(none)* | Bearer token for the vLLM endpoint. When empty, no `Authorization` header is sent. |
+
+!!! tip "Hosting the medgemma predictor"
+    See [Deployment — Medgemma (self-hosted vLLM)](deployment.md#medgemma-backend-self-hosted-vllm) for the docker run command and a step-by-step configuration guide.
+
+### Legacy flag
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SKIP_GENERATOR` | *(none)* | **Legacy.** Set to `true` to skip LLM question generation (the predictor still runs). Superseded by setting `QUESTION_GENERATOR_BACKEND` to an empty value, but still honoured for backward compatibility. |
 
 ---
 
@@ -159,9 +187,14 @@ All variables in one table:
 | `PG_MAX_OVERFLOW` | `10` | Database |
 | `ADMIN_API_KEY` | *(none)* | Auth |
 | `TRUSTED_PROXY_SECRET` | *(none)* | Auth |
+| `PREDICTOR_BACKEND` | `openai` | LLM |
+| `QUESTION_GENERATOR_BACKEND` | `openai` | LLM |
 | `OPENAI_API_KEY` | *(none)* | LLM (required) |
 | `OPENROUTER_API_KEY` | *(none)* | LLM (required fallback) |
 | `SKIP_GENERATOR` | *(none)* | LLM |
+| `VLLM_PREDICTOR_URL` | *(none)* | LLM (medgemma) |
+| `VLLM_PREDICTOR_MODEL` | `google/medgemma-27b-text-it` | LLM (medgemma) |
+| `VLLM_APIKEY` | *(none)* | LLM (medgemma) |
 | `PEDIATRIC_AGE_THRESHOLD` | `15` | Medical |
 | `DEFAULT_ER_SEVERITY` | `sev003` | Medical |
 | `DEFAULT_ER_DEPARTMENT` | `dept002` | Medical |
